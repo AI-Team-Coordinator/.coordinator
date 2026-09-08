@@ -1,0 +1,463 @@
+package repository
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"coordinator/model"
+)
+
+// FileRepository reads the data bus (settings, progress snapshots) with a one-release fallback to legacy paths.
+type FileRepository struct {
+	busPath    string
+	dataPath   string
+	docsPath   string
+	workspace  string
+	cursorPath string
+	appPath    string
+	gitMu      sync.Mutex
+	usageMu    sync.Mutex
+	usageSnap  *model.CursorUsage
+	usageAt    time.Time
+}
+
+// Paths locates workspace folders. Names are not assumed — callers pass them from env.
+type Paths struct {
+	Workspace string
+	Data      string
+	Docs      string
+	Bus       string
+	Cursor    string
+	App       string
+}
+
+func NewFileRepository(busPath, cursorPath string) *FileRepository {
+	return NewFileRepositoryWithPaths(Paths{
+		Bus:       busPath,
+		Cursor:    cursorPath,
+		Data:      filepath.Join(busPath, "data"),
+		Docs:      filepath.Join(busPath, "docs"),
+		Workspace: filepath.Dir(busPath),
+		App:       filepath.Join(busPath, "coordinator"),
+	})
+}
+
+func NewFileRepositoryWithPaths(p Paths) *FileRepository {
+	return &FileRepository{
+		busPath:    p.Bus,
+		dataPath:   p.Data,
+		docsPath:   p.Docs,
+		workspace:  p.Workspace,
+		cursorPath: p.Cursor,
+		appPath:    p.App,
+	}
+}
+
+func (r *FileRepository) dataDir() string {
+	if r.dataPath != "" {
+		return r.dataPath
+	}
+	return filepath.Join(r.busPath, "data")
+}
+
+func (r *FileRepository) settingsDir() string {
+	preferred := filepath.Join(r.dataDir(), "settings")
+	if fileExists(filepath.Join(preferred, "team.json")) {
+		return preferred
+	}
+	if r.cursorPath != "" && fileExists(filepath.Join(r.cursorPath, "team.json")) {
+		return r.cursorPath
+	}
+	return preferred
+}
+
+func (r *FileRepository) progressDir() string {
+	preferred := filepath.Join(r.dataDir(), "progress")
+	if dirExists(preferred) {
+		return preferred
+	}
+	legacy := filepath.Join(r.busPath, "progress")
+	if dirExists(legacy) {
+		return legacy
+	}
+	return preferred
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+func (r *FileRepository) GetTeam(_ context.Context) ([]model.TeamPerson, error) {
+	path := filepath.Join(r.settingsDir(), "team.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []model.TeamPerson{}, nil
+		}
+		return nil, err
+	}
+
+	var file model.TeamFile
+	if err := json.Unmarshal(data, &file); err != nil {
+		return nil, err
+	}
+	if file.Members == nil {
+		return []model.TeamPerson{}, nil
+	}
+	return file.Members, nil
+}
+
+func (r *FileRepository) SaveTeam(_ context.Context, members []model.TeamPerson) error {
+	if members == nil {
+		members = []model.TeamPerson{}
+	}
+
+	file := model.TeamFile{
+		Version: 1,
+		Members: members,
+	}
+	data, err := json.MarshalIndent(file, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+
+	if err := writeFileAtomic(filepath.Join(r.settingsDir(), "team.json"), data); err != nil {
+		return err
+	}
+
+	authorPath := filepath.Join(r.settingsDir(), "author.md")
+	current, err := os.ReadFile(authorPath)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	updated := rewriteAuthorMarkdown(string(current), members)
+	return writeFileAtomic(authorPath, []byte(updated))
+}
+
+func writeFileAtomic(path string, data []byte) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, ".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer func() { _ = os.Remove(tmpName) }()
+
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
+func (r *FileRepository) WorkspaceDir() string {
+	if r.workspace != "" {
+		return r.workspace
+	}
+	if r.busPath == "" {
+		return ""
+	}
+	return filepath.Dir(r.busPath)
+}
+
+func (r *FileRepository) appDir() string {
+	if r.appPath != "" {
+		return r.appPath
+	}
+	if r.busPath != "" {
+		return filepath.Join(r.busPath, "coordinator")
+	}
+	return ""
+}
+
+func (r *FileRepository) appScript(name string) string {
+	return filepath.Join(r.appDir(), name)
+}
+
+func (r *FileRepository) SaveProject(_ context.Context, profile *model.ProjectProfile) error {
+	if profile == nil {
+		return fmt.Errorf("project profile is nil")
+	}
+	if profile.Groups == nil {
+		profile.Groups = []model.ServiceGroup{}
+	}
+	if profile.Services == nil {
+		profile.Services = []model.ServiceNode{}
+	}
+	if profile.Edges == nil {
+		profile.Edges = []model.ServiceEdge{}
+	}
+	if profile.Version == 0 {
+		profile.Version = 2
+	}
+
+	data, err := json.MarshalIndent(profile, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	return writeFileAtomic(filepath.Join(r.settingsDir(), "project_profile.json"), data)
+}
+
+func (r *FileRepository) GetProject(_ context.Context) (*model.ProjectProfile, error) {
+	path := filepath.Join(r.settingsDir(), "project_profile.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &model.ProjectProfile{
+				Groups:   []model.ServiceGroup{},
+				Services: []model.ServiceNode{},
+				Edges:    []model.ServiceEdge{},
+			}, nil
+		}
+		return nil, err
+	}
+
+	var profile model.ProjectProfile
+	if err := json.Unmarshal(data, &profile); err != nil {
+		return nil, err
+	}
+	if profile.Groups == nil {
+		profile.Groups = []model.ServiceGroup{}
+	}
+	if profile.Services == nil {
+		profile.Services = []model.ServiceNode{}
+	}
+	if profile.Edges == nil {
+		profile.Edges = []model.ServiceEdge{}
+	}
+	return &profile, nil
+}
+
+func (r *FileRepository) GetAuthors(ctx context.Context) (map[string]string, error) {
+	authors := make(map[string]string)
+
+	team, err := r.GetTeam(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, person := range team {
+		if person.Alias == "" {
+			continue
+		}
+		name := person.Name
+		if name == "" {
+			name = person.Alias
+		}
+		authors[person.Alias] = name
+	}
+
+	fromMarkdown, err := r.authorsFromMarkdown()
+	if err != nil {
+		return nil, err
+	}
+	for alias, name := range fromMarkdown {
+		if _, exists := authors[alias]; exists {
+			continue
+		}
+		authors[alias] = name
+	}
+	return authors, nil
+}
+
+func (r *FileRepository) authorsFromMarkdown() (map[string]string, error) {
+	authors := make(map[string]string)
+	authorFile := filepath.Join(r.settingsDir(), "author.md")
+
+	file, err := os.Open(authorFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return authors, nil
+		}
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	inTable := false
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "| alias |") {
+			inTable = true
+			continue
+		}
+		if inTable && strings.HasPrefix(line, "|-") {
+			continue
+		}
+		if inTable && strings.HasPrefix(line, "|") {
+			parts := strings.Split(line, "|")
+			if len(parts) < 3 {
+				continue
+			}
+			alias := strings.TrimSpace(parts[1])
+			name := strings.TrimSpace(parts[2])
+			if alias == "" || name == "" {
+				continue
+			}
+			authors[alias] = name
+		}
+	}
+	return authors, scanner.Err()
+}
+
+func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error) {
+	authors, err := r.GetAuthors(ctx)
+	if err != nil {
+		return nil, err
+	}
+	roster, err := r.teamByAlias(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	progressDir := r.progressDir()
+	entries, err := os.ReadDir(progressDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return r.withRepoWork(r.idleAuthors(authors, roster, time.Now())), nil
+		}
+		return nil, err
+	}
+
+	now := time.Now()
+	members := make([]model.Member, 0)
+	seen := make(map[string]struct{})
+
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasPrefix(name, ".current_task_") {
+			continue
+		}
+		alias := strings.TrimPrefix(name, ".current_task_")
+		data, err := os.ReadFile(filepath.Join(progressDir, name))
+		if err != nil {
+			continue
+		}
+
+		var raw struct {
+			Alias       string             `json:"alias"`
+			TaskID      string             `json:"task_id"`
+			Branch      string             `json:"branch"`
+			Status      string             `json:"status"`
+			UpdatedAt   string             `json:"updated_at"`
+			Services    []string           `json:"services"`
+			CursorUsage *model.CursorUsage `json:"cursor_usage"`
+		}
+		if err := json.Unmarshal(data, &raw); err != nil {
+			continue
+		}
+		if raw.Alias == "" {
+			raw.Alias = alias
+		}
+		if raw.Status == "" {
+			raw.Status = "idle"
+		}
+
+		memberName := authors[raw.Alias]
+		if memberName == "" {
+			memberName = raw.Alias
+		}
+
+		updatedAt, parseErr := time.Parse(time.RFC3339, raw.UpdatedAt)
+		if parseErr != nil {
+			updatedAt = now
+		}
+
+		seen[raw.Alias] = struct{}{}
+		person := roster[raw.Alias]
+		members = append(members, model.Member{
+			Alias:       raw.Alias,
+			Name:        memberName,
+			Role:        person.Role,
+			Focus:       person.Focus,
+			Services:    raw.Services,
+			Status:      raw.Status,
+			TaskID:      raw.TaskID,
+			TaskTitle:   r.taskTitle(raw.TaskID),
+			Branch:      raw.Branch,
+			UpdatedAt:   updatedAt,
+			CursorUsage: raw.CursorUsage,
+		})
+	}
+
+	if len(members) == 0 {
+		return r.withRepoWork(r.idleAuthors(authors, roster, now)), nil
+	}
+
+	for alias, name := range authors {
+		if _, ok := seen[alias]; ok {
+			continue
+		}
+		person := roster[alias]
+		members = append(members, model.Member{
+			Alias:     alias,
+			Name:      name,
+			Role:      person.Role,
+			Focus:     person.Focus,
+			Status:    "idle",
+			UpdatedAt: now,
+		})
+	}
+
+	return r.withRepoWork(members), nil
+}
+
+func (r *FileRepository) withRepoWork(members []model.Member) []model.Member {
+	r.attachRepoWork(members)
+	r.attachLiveUsage(members)
+	return members
+}
+
+func (r *FileRepository) teamByAlias(ctx context.Context) (map[string]model.TeamPerson, error) {
+	team, err := r.GetTeam(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]model.TeamPerson, len(team))
+	for _, person := range team {
+		if person.Alias == "" {
+			continue
+		}
+		if person.Focus == nil {
+			person.Focus = []string{}
+		}
+		out[person.Alias] = person
+	}
+	return out, nil
+}
+
+func (r *FileRepository) idleAuthors(authors map[string]string, roster map[string]model.TeamPerson, now time.Time) []model.Member {
+	members := make([]model.Member, 0, len(authors))
+	for alias, name := range authors {
+		person := roster[alias]
+		members = append(members, model.Member{
+			Alias:     alias,
+			Name:      name,
+			Role:      person.Role,
+			Focus:     person.Focus,
+			Status:    "idle",
+			UpdatedAt: now,
+		})
+	}
+	return members
+}

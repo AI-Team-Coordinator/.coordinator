@@ -1,0 +1,15 @@
+export const api = {
+  health: '/api/v1/health',
+  pulse: '/api/v1/pulse',
+  team: '/api/v1/team',
+  project: '/api/v1/project',
+  projectServices: '/api/v1/project/services',
+  members: '/api/v1/members',
+  conflicts: '/api/v1/conflicts',
+  stats: '/api/v1/stats',
+  events: '/api/v1/events',
+  tasks: '/api/v1/tasks',
+  docs: '/api/v1/docs',
+  stream: '/api/v1/stream',
+  sync: '/api/v1/sync',
+} as const

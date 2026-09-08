@@ -1,0 +1,6 @@
+coordinator-server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib

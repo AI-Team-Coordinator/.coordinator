@@ -1,0 +1,196 @@
+{
+  "nav": {
+    "title": "Team Coordinator",
+    "badge": "Local Engine",
+    "subtitle": "Real-time branch synchronization & collision radar",
+    "liveSync": "Live Sync",
+    "connecting": "Connecting...",
+    "gathering": "Gathering workspace data…",
+    "noAuthor": "No Common/data/.current_author"
+  },
+  "sections": {
+    "overview": "Overview",
+    "team": "Team",
+    "project": "Project",
+    "stats": "Stats"
+  },
+  "radar": {
+    "warning": "Conflict Detected",
+    "affected": "Affected"
+  },
+  "metrics": {
+    "activeNow": "Active Now",
+    "inProgress": "in progress",
+    "avgCycleTime": "Avg Cycle Time",
+    "startToMerge": "start to merge",
+    "completedToday": "Completed Today",
+    "thisWeek": "this week",
+    "featuresAndFixes": "Features / Fixes",
+    "cursorSpend": "On-demand",
+    "cursorSpendHint": "exact extra past included pools",
+    "cursorBudget": "Share of plan",
+    "cursorBudgetHint": "100%+100% = seat price",
+    "onDemand": "on-demand",
+    "productSpend": "product",
+    "infraSpend": "infra",
+    "includesOpen": "in progress {{amount}}",
+    "cursorBudgetTooltip": "Share of the monthly Cursor seat. 100% Cursor Models plus 100% Other Models equals the plan price ($20 / $60 / $200). Product is AlinaAssist services; infra is docs and coordinator (Common, .cursor). The total includes open tasks.",
+    "cursorSpendTooltip": "Exact extra Cursor billed after included pools. In-plan spend is Share of plan (percent bars). The included cents field is a cap, not a running total."
+  },
+  "tasks": {
+    "title": "Tasks",
+    "subtitle": "Folded start/complete rows: in progress and done, not the raw event log",
+    "empty": "No tasks yet.",
+    "started": "started",
+    "finished": "closed",
+    "status": {
+      "all": "All",
+      "in_progress": "In progress",
+      "completed": "Completed"
+    },
+    "columns": {
+      "status": "Status",
+      "task": "Task",
+      "person": "Who",
+      "when": "When",
+      "duration": "Duration",
+      "plan": "Share of plan",
+      "ondemand": "On-demand"
+    }
+  },
+  "pulse": {
+    "title": "Team Pulse",
+    "trackedCount": "{{count}} members tracked",
+    "inProgress": "IN PROGRESS",
+    "idle": "IDLE",
+    "duration": "Duration",
+    "branch": "Active Branch",
+    "task": "Task",
+    "fix": "Fix",
+    "feature": "Feature",
+    "planShare": "Share of plan",
+    "meter": "On-demand",
+    "onDemand": "on-demand",
+    "noActiveTask": "No active task. Workspace is ready for assignment.",
+    "strayTitle": "Outside any task",
+    "strayBadge": "leftover",
+    "straySubtitle": "feat/fix branches that nobody currently has as their in-progress task.",
+    "notDeployed": "not deployed",
+    "dirty": "uncommitted",
+    "infra": "Infrastructure",
+    "infraHint": "Common + .cursor — docs and coordinator",
+    "repoState": {
+      "local": "local",
+      "pushed": "pushed",
+      "merged": "merged",
+      "deployed": "deployed",
+      "infra": "workspace"
+    },
+    "roles": {
+      "founder": "Founder",
+      "engineer": "Engineer"
+    }
+  },
+  "project": {
+    "serviceCount": "{{count}} services",
+    "mapTitle": "Services",
+    "mapSubtitle": "{{edges}} connections between services",
+    "github": {
+      "title": "GitHub organization",
+      "unbound": "No organization is bound in project_profile.json yet.",
+      "sshHost": "git SSH host: {{host}}",
+      "authOk": "Signed in as {{login}} ({{role}})",
+      "authMissing": "gh is not installed on this machine",
+      "authError": "gh: {{detail}}",
+      "authUnknown": "GitHub CLI status unknown"
+    },
+    "create": {
+      "title": "Add a project unit",
+      "subtitle": "Creates a private GitHub repository in {{org}} and a local folder next to Common.",
+      "needOrg": "Bind a GitHub organization before adding units.",
+      "needAuth": "Sign in with gh auth login; status updates automatically.",
+      "open": "New unit",
+      "cancel": "Close",
+      "name": "Name",
+      "namePlaceholder": "Billing Worker",
+      "group": "Group",
+      "kind": "Kind",
+      "id": "Id",
+      "folder": "Local folder",
+      "githubRepo": "GitHub repository",
+      "purposeEn": "Purpose (EN)",
+      "purposeRu": "Purpose (RU)",
+      "submit": "Create in organization",
+      "working": "Creating…",
+      "ok": "Unit created, profile pushed to Common. {{url}}",
+      "okLocal": "Unit created, but Common was not pushed: {{warning}} {{url}}",
+      "okNoClone": "GitHub repository created, clone skipped: {{warning}} {{url}}",
+      "failed": "Could not create the unit"
+    },
+    "kinds": {
+      "api": "API",
+      "worker": "Worker",
+      "bot": "Bot",
+      "web": "Web",
+      "mobile": "Mobile",
+      "bridge": "Bridge",
+      "ops": "Ops",
+      "workspace": "Workspace"
+    }
+  },
+  "team": {
+    "title": "Team roster",
+    "subtitle": "Saving writes the roster and pushes Common (main).",
+    "add": "Add",
+    "save": "Save",
+    "alias": "Alias",
+    "name": "Name",
+    "role": "Role",
+    "roleNone": "—",
+    "focus": "Focus",
+    "remove": "Remove",
+    "savedPushed": "Saved and pushed to Common.",
+    "savedLocal": "Saved locally, push failed: {{warning}}",
+    "saveFailed": "Could not save team"
+  },
+  "timeline": {
+    "title": "Activity Log",
+    "subtitle": "Chronological history of team events",
+    "filterAll": "All",
+    "filterFeatures": "Features",
+    "filterFixes": "Fixes",
+    "filterAlias": "All people",
+    "filterEvent": "All events",
+    "filterService": "All services",
+    "loadMore": "Load more ({{shown}} / {{total}})",
+    "empty": "No events recorded yet. Start a task to see events appear.",
+    "cursorModels": "Cursor Models +{{pct}}%",
+    "otherModels": "Other Models +{{pct}}%",
+    "planShare": "{{amount}} plan",
+    "meter": "od {{amount}}",
+    "onDemand": "od {{amount}}",
+    "infra": "infra",
+    "events": {
+      "task_started": "Started",
+      "task_completed": "Completed",
+      "repo_merged": "Merged",
+      "deploy_started": "Deploy started",
+      "deploy_finished": "Deployed",
+      "deploy_failed": "Deploy failed"
+    }
+  },
+  "docs": {
+    "close": "Close",
+    "loading": "Loading document…",
+    "missing": "No markdown file for this task in Common/docs."
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "lang": {
+    "en": "English",
+    "ru": "Русский"
+  }
+}

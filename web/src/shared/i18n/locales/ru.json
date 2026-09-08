@@ -1,0 +1,196 @@
+{
+  "nav": {
+    "title": "Координатор команды",
+    "badge": "Локальный движок",
+    "subtitle": "Синхронизация веток и радар конфликтов в реальном времени",
+    "liveSync": "Живой поток",
+    "connecting": "Подключение...",
+    "gathering": "Собираем данные воркспейса…",
+    "noAuthor": "Нет Common/data/.current_author"
+  },
+  "sections": {
+    "overview": "Обзор",
+    "team": "Команда",
+    "project": "Проект",
+    "stats": "Статистика"
+  },
+  "radar": {
+    "warning": "Обнаружен конфликт",
+    "affected": "Затронуты"
+  },
+  "metrics": {
+    "activeNow": "Сейчас в работе",
+    "inProgress": "активно",
+    "avgCycleTime": "Среднее время задачи",
+    "startToMerge": "от старта до слияния",
+    "completedToday": "Завершено сегодня",
+    "thisWeek": "на этой неделе",
+    "featuresAndFixes": "Фичи / Хотфиксы",
+    "cursorSpend": "On-demand",
+    "cursorSpendHint": "точная доплата сверх пулов",
+    "cursorBudget": "Доля подписки",
+    "cursorBudgetHint": "100%+100% = цена места",
+    "onDemand": "on-demand",
+    "productSpend": "продукт",
+    "infraSpend": "инфра",
+    "includesOpen": "в работе {{amount}}",
+    "cursorBudgetTooltip": "Доля месячного места Cursor. 100% Cursor Models плюс 100% Other Models — это цена подписки ($20 / $60 / $200). Продукт — сервисы AlinaAssist; инфра — документация и координатор (Common, .cursor). В сумму входят задачи в работе.",
+    "cursorSpendTooltip": "Точная доплата Cursor сверх included-пулов. Расход внутри тарифа — Share of plan (процентные полоски). Поле included-центов — потолок, не текущий spend."
+  },
+  "tasks": {
+    "title": "Задачи",
+    "subtitle": "Свернутые start/complete: что в работе и что уже закрыто",
+    "empty": "Задач пока нет.",
+    "started": "старт",
+    "finished": "закрыта",
+    "status": {
+      "all": "Все",
+      "in_progress": "В работе",
+      "completed": "Завершено"
+    },
+    "columns": {
+      "status": "Статус",
+      "task": "Задача",
+      "person": "Кто",
+      "when": "Когда",
+      "duration": "Длительность",
+      "plan": "Доля подписки",
+      "ondemand": "On-demand"
+    }
+  },
+  "pulse": {
+    "title": "Пульс команды",
+    "trackedCount": "участников: {{count}}",
+    "inProgress": "В РАБОТЕ",
+    "idle": "СВОБОДЕН",
+    "duration": "В работе",
+    "branch": "Активная ветка",
+    "task": "Задача",
+    "fix": "Фикс",
+    "feature": "Фича",
+    "planShare": "Доля подписки",
+    "meter": "On-demand",
+    "onDemand": "on-demand",
+    "noActiveTask": "Нет активной задачи. Воркспейс свободен.",
+    "strayTitle": "Вне задач",
+    "strayBadge": "остаток",
+    "straySubtitle": "Ветки feat/fix, которые сейчас ни у кого не числятся как задача in-progress.",
+    "notDeployed": "не задеплоено",
+    "dirty": "есть правки",
+    "infra": "Инфраструктура",
+    "infraHint": "Common + .cursor — документация и координатор",
+    "repoState": {
+      "local": "локально",
+      "pushed": "запушено",
+      "merged": "в main",
+      "deployed": "задеплоено",
+      "infra": "воркспейс"
+    },
+    "roles": {
+      "founder": "Основатель",
+      "engineer": "Инженер"
+    }
+  },
+  "project": {
+    "serviceCount": "сервисов: {{count}}",
+    "mapTitle": "Сервисы",
+    "mapSubtitle": "связей между сервисами: {{edges}}",
+    "github": {
+      "title": "Организация GitHub",
+      "unbound": "Организация ещё не записана в project_profile.json.",
+      "sshHost": "SSH-хост git: {{host}}",
+      "authOk": "Вход как {{login}} ({{role}})",
+      "authMissing": "gh на этой машине не установлен",
+      "authError": "gh: {{detail}}",
+      "authUnknown": "Статус GitHub CLI неизвестен"
+    },
+    "create": {
+      "title": "Новая единица проекта",
+      "subtitle": "Создаёт приватный репозиторий в {{org}} и папку рядом с Common.",
+      "needOrg": "Сначала привяжите организацию GitHub.",
+      "needAuth": "Нужен вход через gh auth login — статус подтянется сам.",
+      "open": "Новая единица",
+      "cancel": "Закрыть",
+      "name": "Название",
+      "namePlaceholder": "Billing Worker",
+      "group": "Группа",
+      "kind": "Тип",
+      "id": "Id",
+      "folder": "Локальная папка",
+      "githubRepo": "Репозиторий GitHub",
+      "purposeEn": "Назначение (EN)",
+      "purposeRu": "Назначение (RU)",
+      "submit": "Создать в организации",
+      "working": "Создаём…",
+      "ok": "Единица создана, профиль запушен в Common. {{url}}",
+      "okLocal": "Единица создана, но Common не запушен: {{warning}} {{url}}",
+      "okNoClone": "Репозиторий на GitHub создан, клон пропущен: {{warning}} {{url}}",
+      "failed": "Не удалось создать единицу"
+    },
+    "kinds": {
+      "api": "API",
+      "worker": "Воркер",
+      "bot": "Бот",
+      "web": "Веб",
+      "mobile": "Мобильное",
+      "bridge": "Мост",
+      "ops": "Ops",
+      "workspace": "Воркспейс"
+    }
+  },
+  "team": {
+    "title": "Состав команды",
+    "subtitle": "Сохранение пишет состав и сразу пушит Common (main).",
+    "add": "Добавить",
+    "save": "Сохранить",
+    "alias": "Алиас",
+    "name": "Имя",
+    "role": "Роль",
+    "roleNone": "—",
+    "focus": "Фокус",
+    "remove": "Удалить",
+    "savedPushed": "Сохранено и запушено в Common.",
+    "savedLocal": "Сохранено локально, пуш не удался: {{warning}}",
+    "saveFailed": "Не удалось сохранить команду"
+  },
+  "timeline": {
+    "title": "Журнал активности",
+    "subtitle": "Хронологическая история событий команды",
+    "filterAll": "Все",
+    "filterFeatures": "Фичи",
+    "filterFixes": "Фиксы",
+    "filterAlias": "Все люди",
+    "filterEvent": "Все события",
+    "filterService": "Все сервисы",
+    "loadMore": "Ещё ({{shown}} / {{total}})",
+    "empty": "Событий пока нет. Начните задачу, чтобы увидеть активность.",
+    "cursorModels": "Cursor Models +{{pct}}%",
+    "otherModels": "Other Models +{{pct}}%",
+    "planShare": "{{amount}} план",
+    "meter": "od {{amount}}",
+    "onDemand": "od {{amount}}",
+    "infra": "инфра",
+    "events": {
+      "task_started": "Старт",
+      "task_completed": "Завершено",
+      "repo_merged": "Влит в main",
+      "deploy_started": "Деплой начат",
+      "deploy_finished": "Задеплоено",
+      "deploy_failed": "Деплой не удался"
+    }
+  },
+  "docs": {
+    "close": "Закрыть",
+    "loading": "Загружаю документ…",
+    "missing": "В Common/docs нет markdown-файла этой задачи."
+  },
+  "theme": {
+    "light": "Светлая",
+    "dark": "Тёмная",
+    "system": "Системная"
+  },
+  "lang": {
+    "en": "English",
+    "ru": "Русский"
+  }
+}

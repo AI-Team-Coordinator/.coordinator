@@ -1,0 +1,74 @@
+#!/bin/bash
+# Resolve data-bus paths from .coordinator/.env.
+# Paths in .env are relative to the coordinator app root unless absolute.
+
+COORDINATOR_ROOT="${COORDINATOR_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+
+_coord_load_env() {
+    local f="$COORDINATOR_ROOT/.env"
+    if [ ! -f "$f" ]; then
+        return 0
+    fi
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            ''|\#*) continue ;;
+        esac
+        key=${line%%=*}
+        val=${line#*=}
+        key=$(printf '%s' "$key" | sed 's/[[:space:]]*$//')
+        val=$(printf '%s' "$val" | sed 's/^[[:space:]]*//;s/^["'\'']//;s/["'\'']$//')
+        if [ -n "$key" ] && [ -z "${!key+x}" ]; then
+            export "$key=$val"
+        fi
+    done < "$f"
+}
+
+_coord_abs() {
+    local p=$1
+    if [ -z "$p" ]; then
+        echo ""
+        return
+    fi
+    if [ "${p#/}" != "$p" ]; then
+        echo "$p"
+        return
+    fi
+    (cd "$COORDINATOR_ROOT" && cd "$p" && pwd)
+}
+
+_coord_load_env
+
+WORKSPACE_ROOT="$(_coord_abs "${WORKSPACE_ROOT:-..}")"
+COMMON_ROOT="$(_coord_abs "${BUS_DIR:-${COMMON_DIR:-../Common}}")"
+DATA_DIR="${DATA_DIR:-}"
+if [ -n "$DATA_DIR" ]; then
+    DATA_DIR="$(_coord_abs "$DATA_DIR")"
+else
+    DATA_DIR="${COMMON_ROOT}/data"
+fi
+PROGRESS_DIR="${DATA_DIR}/progress"
+EVENTS_DIR="${PROGRESS_DIR}/events"
+SETTINGS_DIR="${DATA_DIR}/settings"
+AUTHOR_FILE="${DATA_DIR}/.current_author"
+SYNC_LOG="${PROGRESS_DIR}/.sync.log"
+
+coordinator_current_author() {
+    local alias=""
+    if [ -f "$AUTHOR_FILE" ]; then
+        alias=$(grep -v '^#' "$AUTHOR_FILE" | grep -v '^[[:space:]]*$' | head -1 | tr -d '[:space:]')
+    fi
+    local cursor_dir
+    cursor_dir="$(_coord_abs "${CURSOR_DIR:-../.cursor}")"
+    if [ -z "$alias" ] && [ -f "${cursor_dir}/.current_author" ]; then
+        alias=$(grep -v '^#' "${cursor_dir}/.current_author" | grep -v '^[[:space:]]*$' | head -1 | tr -d '[:space:]')
+    fi
+    echo "$alias"
+}
+
+coordinator_events_file() {
+    local alias=$1
+    local year
+    year=$(date +%Y)
+    mkdir -p "${EVENTS_DIR}/${alias}"
+    echo "${EVENTS_DIR}/${alias}/${year}.jsonl"
+}
