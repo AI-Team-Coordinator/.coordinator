@@ -67,7 +67,7 @@ func isInfraService(label string) bool {
 	return key == "common" || key == "cursor"
 }
 
-// ComputeUsageDelta is the same formula as coordinator/cursor_usage.py.
+// ComputeUsageDelta is the same formula as coordinator/utils/cursor_usage.py.
 func ComputeUsageDelta(start, end *CursorUsage) *UsageDelta {
 	if start == nil || end == nil {
 		return nil

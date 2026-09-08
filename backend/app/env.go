@@ -68,7 +68,7 @@ func detectAppRoot(cwd string) string {
 		if err != nil {
 			continue
 		}
-		if fileExists(filepath.Join(abs, ".env")) || fileExists(filepath.Join(abs, ".env.example")) || fileExists(filepath.Join(abs, "run.sh")) {
+		if fileExists(filepath.Join(abs, ".env")) || fileExists(filepath.Join(abs, ".env.example")) || fileExists(filepath.Join(abs, "run.sh")) || fileExists(filepath.Join(abs, "utils", "run.sh")) {
 			return abs
 		}
 	}

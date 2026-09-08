@@ -22,6 +22,6 @@ cp .env.example .env   # поправить пути, если дерево пр
 | `CURSOR_DIR` | правила IDE, fallback автора | `../.cursor` |
 | `PORT` | дашборд (Go + собранный UI) | `4321` |
 
-Скрипты записи событий (`sync_event.sh`, `log_event.sh`) в этом каталоге читают тот же `.env`. Хуки Cursor и `coolify_deploy.sh` вызывают их отсюда.
+Скрипты записи событий и запуска — в `utils/` (`sync_event.sh`, `log_event.sh`, `run.sh`). Из корня `.coordinator` те же имена остаются обёртками. Хуки Cursor и `coolify_deploy.sh` вызывают `utils/`.
 
 Контракт шины: [data layer](../Common/docs/20260907-2225-EK-COORDINATOR_DATA_LAYER.md), [lifecycle](../Common/docs/20260907-2207-EK-COORDINATOR_TASK_LIFECYCLE.md).

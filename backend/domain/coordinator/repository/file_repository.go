@@ -195,7 +195,12 @@ func (r *FileRepository) appDir() string {
 }
 
 func (r *FileRepository) appScript(name string) string {
-	return filepath.Join(r.appDir(), name)
+	dir := r.appDir()
+	nested := filepath.Join(dir, "utils", name)
+	if fileExists(nested) {
+		return nested
+	}
+	return filepath.Join(dir, name)
 }
 
 func (r *FileRepository) SaveProject(_ context.Context, profile *model.ProjectProfile) error {

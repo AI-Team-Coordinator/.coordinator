@@ -1,8 +1,18 @@
 #!/bin/bash
 # Resolve data-bus paths from .coordinator/.env.
 # Paths in .env are relative to the coordinator app root unless absolute.
+# This file lives in utils/; the app root is the parent directory.
 
-COORDINATOR_ROOT="${COORDINATOR_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+_coord_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ "$(basename "$_coord_script_dir")" = "utils" ]; then
+    _coord_default_root="$(cd "$_coord_script_dir/.." && pwd)"
+else
+    _coord_default_root="$_coord_script_dir"
+fi
+if [ -n "${COORDINATOR_ROOT:-}" ] && [ "$(basename "$COORDINATOR_ROOT")" = "utils" ]; then
+    COORDINATOR_ROOT="$(cd "$COORDINATOR_ROOT/.." && pwd)"
+fi
+COORDINATOR_ROOT="${COORDINATOR_ROOT:-$_coord_default_root}"
 
 _coord_load_env() {
     local f="$COORDINATOR_ROOT/.env"
