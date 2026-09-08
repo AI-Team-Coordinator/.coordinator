@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Helper script to instantly update local coordinator state and asynchronously push to Common.
-# Usage: ./sync_event.sh <ALIAS> <EVENT_TYPE> [TASK_ID] [BRANCH_NAME] [Service1,Service2]
+# Usage: ./sync_event.sh <ALIAS> <EVENT_TYPE> [TASK_ID] [BRANCH_NAME] [Service1,Service2] [doc=...] [summary=...]
 # Example: ./sync_event.sh EK task_started 20260907-1756 feature/auth Core,InboxPanelWeb
+# Example: ./sync_event.sh EK task_started FIX-... fix/avatar Website summary="Restore dark header avatar"
 # Example: ./sync_event.sh EK task_completed 20260907-1756
 
 set -e
@@ -12,10 +13,24 @@ EVENT_TYPE=$2
 TASK_ID=$3
 BRANCH_NAME=${4:-""}
 SERVICES_CSV=${5:-""}
+DOC_PATH=""
+SUMMARY=""
 
 if [ -z "$ALIAS" ] || [ -z "$EVENT_TYPE" ]; then
-    echo "Usage: $0 <ALIAS> <EVENT_TYPE> [TASK_ID] [BRANCH_NAME] [Service1,Service2]"
+    echo "Usage: $0 <ALIAS> <EVENT_TYPE> [TASK_ID] [BRANCH_NAME] [Service1,Service2] [doc=...] [summary=...]"
     exit 1
+fi
+
+if [ "$#" -ge 6 ]; then
+    shift 5
+    for pair in "$@"; do
+        key=${pair%%=*}
+        val=${pair#*=}
+        case "$key" in
+            doc) DOC_PATH=$val ;;
+            summary) SUMMARY=$val ;;
+        esac
+    done
 fi
 
 COORDINATOR_ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -33,11 +48,28 @@ write_current_task() {
     local status=$1
     local task_id=$2
     local branch=$3
-    python3 - "$CURRENT_TASK_FILE" "$ALIAS" "$status" "$task_id" "$branch" "$ISO_DATE" "$SERVICES_CSV" "$COORD_DIR" <<'PY'
+    python3 - "$CURRENT_TASK_FILE" "$ALIAS" "$status" "$task_id" "$branch" "$ISO_DATE" "$SERVICES_CSV" "$COORD_DIR" "$COMMON_ROOT" "$DOC_PATH" "$SUMMARY" <<'PY'
 import json, os, sys
-path, alias, status, task_id, branch, iso, services_csv, coord_dir = sys.argv[1:]
+path, alias, status, task_id, branch, iso, services_csv, coord_dir, common_root, doc_path, summary = sys.argv[1:]
 sys.path.insert(0, coord_dir)
 services = [s.strip() for s in services_csv.split(",") if s.strip()]
+
+
+def find_task_doc(root, tid):
+    if not root or not tid:
+        return ""
+    docs = os.path.join(root, "docs")
+    name = tid + ".md"
+    candidates = [os.path.join(docs, name)]
+    if os.path.isdir(docs):
+        for entry in os.listdir(docs):
+            candidates.append(os.path.join(docs, entry, name))
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return os.path.relpath(candidate, root).replace("\\", "/")
+    return ""
+
+
 if status == "idle":
     payload = {
         "alias": alias,
@@ -68,6 +100,16 @@ else:
         "services": services,
         "updated_at": iso,
     }
+    doc = (doc_path or "").strip()
+    if not doc:
+        doc = find_task_doc(common_root, task_id)
+    if doc:
+        payload["doc"] = doc
+    text = " ".join((summary or "").split())
+    if len(text) > 280:
+        text = text[:277].rstrip() + "..."
+    if text:
+        payload["summary"] = text
     try:
         import cursor_usage
         snap = cursor_usage.take_snapshot()

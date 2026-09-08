@@ -15,19 +15,6 @@ import (
 
 const gitPublishInterval = 2 * time.Minute
 
-type currentTaskSnapshot struct {
-	Alias       string             `json:"alias"`
-	TaskID      *string            `json:"task_id"`
-	Branch      *string            `json:"branch"`
-	Status      string             `json:"status"`
-	Services    []string           `json:"services"`
-	UpdatedAt   string             `json:"updated_at"`
-	LastTaskID  string             `json:"last_task_id,omitempty"`
-	LastBranch  string             `json:"last_branch,omitempty"`
-	CursorUsage *model.CursorUsage `json:"cursor_usage,omitempty"`
-	GitReport   *model.GitReport   `json:"git_report,omitempty"`
-}
-
 func (r *FileRepository) maybePublishGitReport(author string, members []model.Member) {
 	if author == "" {
 		return
@@ -144,14 +131,23 @@ func writeGitReport(path string, report *model.GitReport) error {
 	if err != nil {
 		return err
 	}
-	var snap currentTaskSnapshot
+	var snap map[string]any
 	if err := json.Unmarshal(data, &snap); err != nil {
 		return err
 	}
-	if snap.Status != "in_progress" {
-		return fmt.Errorf("git_report skipped: status %s", snap.Status)
+	status, _ := snap["status"].(string)
+	if status != "in_progress" {
+		return fmt.Errorf("git_report skipped: status %s", status)
 	}
-	snap.GitReport = report
+	encoded, err := json.Marshal(report)
+	if err != nil {
+		return err
+	}
+	var reportVal any
+	if err := json.Unmarshal(encoded, &reportVal); err != nil {
+		return err
+	}
+	snap["git_report"] = reportVal
 	out, err := json.MarshalIndent(snap, "", "  ")
 	if err != nil {
 		return err

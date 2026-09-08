@@ -375,5 +375,91 @@ func detectConflicts(members []model.Member) []model.Conflict {
 		})
 	}
 
+	topicOwners := make(map[string][]string)
+	summaryOwners := make(map[string][]string)
+	for _, m := range members {
+		if m.Status != "in_progress" {
+			continue
+		}
+		if topic := taskTopicKey(m.TaskID); topic != "" {
+			topicOwners[topic] = appendUniqueAlias(topicOwners[topic], m.Alias)
+		}
+		if sum := normalizeTaskSummary(m.TaskSummary); sum != "" {
+			summaryOwners[sum] = appendUniqueAlias(summaryOwners[sum], m.Alias)
+		}
+	}
+
+	for topic, aliases := range topicOwners {
+		if len(aliases) <= 1 || aliasesShareExactTask(members, aliases) {
+			continue
+		}
+		conflicts = append(conflicts, model.Conflict{
+			Severity:        "warning",
+			Title:           "Same Fix Topic",
+			Description:     "Multiple developers started work on the same topic: " + topic,
+			AffectedAliases: aliases,
+		})
+	}
+
+	for sum, aliases := range summaryOwners {
+		if len(aliases) <= 1 || aliasesShareExactTask(members, aliases) {
+			continue
+		}
+		conflicts = append(conflicts, model.Conflict{
+			Severity:        "warning",
+			Title:           "Same Task Summary",
+			Description:     "Multiple developers described the same in-progress work: " + sum,
+			AffectedAliases: aliases,
+		})
+	}
+
 	return conflicts
+}
+
+func taskTopicKey(taskID string) string {
+	id := strings.ToUpper(strings.TrimSpace(taskID))
+	id = strings.TrimPrefix(id, "FIX-")
+	parts := strings.SplitN(id, "-", 4)
+	if len(parts) < 4 || strings.TrimSpace(parts[3]) == "" {
+		return ""
+	}
+	return strings.ToLower(parts[3])
+}
+
+func normalizeTaskSummary(summary string) string {
+	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(summary))), " ")
+}
+
+func appendUniqueAlias(aliases []string, alias string) []string {
+	alias = strings.TrimSpace(alias)
+	if alias == "" {
+		return aliases
+	}
+	for _, existing := range aliases {
+		if existing == alias {
+			return aliases
+		}
+	}
+	return append(aliases, alias)
+}
+
+func aliasesShareExactTask(members []model.Member, aliases []string) bool {
+	want := make(map[string]struct{}, len(aliases))
+	for _, alias := range aliases {
+		want[alias] = struct{}{}
+	}
+	counts := make(map[string]int)
+	for _, m := range members {
+		if m.Status != "in_progress" || m.TaskID == "" {
+			continue
+		}
+		if _, ok := want[m.Alias]; !ok {
+			continue
+		}
+		counts[m.TaskID]++
+		if counts[m.TaskID] >= 2 {
+			return true
+		}
+	}
+	return false
 }

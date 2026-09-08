@@ -365,6 +365,8 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 			Status      string             `json:"status"`
 			UpdatedAt   string             `json:"updated_at"`
 			Services    []string           `json:"services"`
+			Doc         string             `json:"doc"`
+			Summary     string             `json:"summary"`
 			CursorUsage *model.CursorUsage `json:"cursor_usage"`
 			GitReport   *model.GitReport   `json:"git_report"`
 		}
@@ -399,6 +401,8 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 			Status:      raw.Status,
 			TaskID:      raw.TaskID,
 			TaskTitle:   r.taskTitle(raw.TaskID),
+			TaskDoc:     raw.Doc,
+			TaskSummary: raw.Summary,
 			Branch:      raw.Branch,
 			UpdatedAt:   updatedAt,
 			CursorUsage: raw.CursorUsage,

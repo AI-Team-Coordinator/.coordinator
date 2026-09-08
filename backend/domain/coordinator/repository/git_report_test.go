@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -74,5 +77,44 @@ func TestGitReportEqualIgnoresReportedAt(t *testing.T) {
 	b.Repos[0].Dirty = false
 	if gitReportEqual(a, b) {
 		t.Fatal("expected different dirty")
+	}
+}
+
+func TestWriteGitReportPreservesDocAndSummary(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".current_task_EK")
+	initial := map[string]any{
+		"alias":    "EK",
+		"task_id":  "FIX-20260908-1635-EK-AVATAR",
+		"status":   "in_progress",
+		"doc":      "docs/foo.md",
+		"summary":  "restore dark header avatar",
+		"services": []string{"Website"},
+	}
+	raw, err := json.Marshal(initial)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, raw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	report := &model.GitReport{Repos: []model.GitReportRepo{{ID: "website", Repo: "Website", Dirty: true}}}
+	if err := writeGitReport(path, report); err != nil {
+		t.Fatal(err)
+	}
+	var snap map[string]any
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &snap); err != nil {
+		t.Fatal(err)
+	}
+	if snap["doc"] != "docs/foo.md" || snap["summary"] != "restore dark header avatar" {
+		t.Fatalf("intent dropped: %+v", snap)
+	}
+	gr, _ := snap["git_report"].(map[string]any)
+	if gr == nil {
+		t.Fatalf("git_report missing: %+v", snap)
 	}
 }

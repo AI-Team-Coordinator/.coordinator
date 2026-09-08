@@ -112,3 +112,38 @@ func TestComputeTasksStatusAndFilters(t *testing.T) {
 		t.Fatalf("page=%v", page)
 	}
 }
+
+func TestDetectConflictsSameFixTopic(t *testing.T) {
+	got := detectConflicts([]model.Member{
+		{Alias: "EK", Status: "in_progress", TaskID: "FIX-20260908-1635-EK-AVATAR_MISSING_STYLE", Branch: "fix/avatar-ek"},
+		{Alias: "AB", Status: "in_progress", TaskID: "FIX-20260908-1640-AB-AVATAR_MISSING_STYLE", Branch: "fix/avatar-ab"},
+	})
+	if len(got) != 1 || got[0].Title != "Same Fix Topic" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestDetectConflictsSameSummary(t *testing.T) {
+	got := detectConflicts([]model.Member{
+		{Alias: "EK", Status: "in_progress", TaskID: "FIX-20260908-1635-EK-HEADER", TaskSummary: "Restore dark header avatar"},
+		{Alias: "AB", Status: "in_progress", TaskID: "FIX-20260908-1640-AB-NAV", TaskSummary: "restore dark header avatar"},
+	})
+	if len(got) != 1 || got[0].Title != "Same Task Summary" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestDetectConflictsDuplicateTaskIDNotAlsoTopic(t *testing.T) {
+	got := detectConflicts([]model.Member{
+		{Alias: "EK", Status: "in_progress", TaskID: "FIX-20260908-1635-EK-AVATAR", Branch: "fix/avatar"},
+		{Alias: "AB", Status: "in_progress", TaskID: "FIX-20260908-1635-EK-AVATAR", Branch: "fix/avatar"},
+	})
+	if len(got) != 2 {
+		t.Fatalf("len=%d %+v", len(got), got)
+	}
+	for _, c := range got {
+		if c.Title == "Same Fix Topic" || c.Title == "Same Task Summary" {
+			t.Fatalf("redundant conflict: %+v", got)
+		}
+	}
+}

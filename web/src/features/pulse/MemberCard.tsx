@@ -55,6 +55,11 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
           ) : (
             <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{member.name}</h3>
           )}
+          {isActive && member.task_summary ? (
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug line-clamp-2" title={member.task_summary}>
+              {member.task_summary}
+            </p>
+          ) : null}
         </div>
         <Badge variant={isActive ? 'success' : 'neutral'} className="font-bold text-[10px] shrink-0">
           {isActive ? `● ${t('pulse.inProgress')}` : `○ ${t('pulse.idle')}`}

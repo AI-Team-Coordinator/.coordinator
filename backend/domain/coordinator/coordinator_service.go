@@ -556,6 +556,8 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 			Status:          m.Status,
 			TaskID:          m.TaskID,
 			TaskTitle:       m.TaskTitle,
+			TaskDoc:         m.TaskDoc,
+			TaskSummary:     m.TaskSummary,
 			Branch:          m.Branch,
 			UpdatedAt:       m.UpdatedAt,
 			Repos:           mapRepos(m.Repos),

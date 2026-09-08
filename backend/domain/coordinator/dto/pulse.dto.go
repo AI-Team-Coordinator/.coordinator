@@ -11,6 +11,8 @@ type MemberResponse struct {
 	Status          string             `json:"status"`
 	TaskID          string             `json:"task_id,omitempty"`
 	TaskTitle       string             `json:"task_title,omitempty"`
+	TaskDoc         string             `json:"task_doc,omitempty"`
+	TaskSummary     string             `json:"task_summary,omitempty"`
 	Branch          string             `json:"branch,omitempty"`
 	UpdatedAt       time.Time          `json:"updated_at"`
 	DurationSeconds int64              `json:"duration_seconds,omitempty"`

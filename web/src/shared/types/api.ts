@@ -12,6 +12,8 @@ export interface MemberState {
   status: 'in_progress' | 'idle'
   task_id?: string
   task_title?: string
+  task_doc?: string
+  task_summary?: string
   branch?: string
   updated_at: string
   duration_seconds?: number
