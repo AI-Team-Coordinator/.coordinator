@@ -28,7 +28,6 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
   const workspaceRepos = repos.filter((repo) => repo.kind === 'workspace')
   const productRepos = repos.filter((repo) => repo.kind !== 'workspace')
   const showInfraHint = productRepos.length === 0 && (workspaceRepos.length > 0 || (isActive && claimed.length > 0))
-  const focusLabels = (member.focus || []).map((id) => serviceNames[id] || id)
   const claimedLabels = claimed.map((id) => serviceNames[id] || id)
   const taskTitle = member.task_title || member.task_id || ''
 
@@ -149,17 +148,7 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
             ))}
           </div>
         </div>
-      ) : (
-        focusLabels.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1">
-            {focusLabels.map((label) => (
-              <Badge key={label} variant="neutral" className="text-[10px] font-medium">
-                {label}
-              </Badge>
-            ))}
-          </div>
-        )
-      )}
+      ) : null}
 
       {isActive ? (
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">

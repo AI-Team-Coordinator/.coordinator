@@ -54,9 +54,13 @@ func (a *App) mountStatic(mux *http.ServeMux) {
 		}
 		targetPath := filepath.Join(a.config.WebDir, filepath.Clean(r.URL.Path))
 		if fi, err := os.Stat(targetPath); err == nil && !fi.IsDir() {
+			if filepath.Base(targetPath) == "index.html" {
+				w.Header().Set("Cache-Control", "no-cache")
+			}
 			fileServer.ServeHTTP(w, r)
 			return
 		}
+		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, indexPath)
 	})
 }

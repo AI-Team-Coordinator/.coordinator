@@ -171,7 +171,31 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    let bootId: string | null = null
+    let reloading = false
+    let lastBootCheck = 0
+
+    const checkServerBoot = () => {
+      const now = Date.now()
+      if (reloading || now - lastBootCheck < 1000) return
+      lastBootCheck = now
+      fetch(api.health)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: { started_at?: string } | null) => {
+          const id = d?.started_at
+          if (!id || reloading) return
+          if (bootId && bootId !== id) {
+            reloading = true
+            window.location.reload()
+            return
+          }
+          bootId = id
+        })
+        .catch(() => {})
+    }
+
     loadAll()
+    checkServerBoot()
 
     const eventSource = new EventSource(api.stream)
     eventSource.onopen = () => setConnected(true)
@@ -187,9 +211,11 @@ export function App() {
     }
     eventSource.onerror = () => {
       setConnected(false)
+      checkServerBoot()
     }
 
     const statsInterval = setInterval(() => {
+      checkServerBoot()
       fetch(api.pulse)
         .then((r) => r.json())
         .then((d) => {

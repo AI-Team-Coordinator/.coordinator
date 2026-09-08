@@ -12,6 +12,8 @@ import (
 	"coordinator/infra"
 )
 
+var processStartedAt = time.Now().UTC().Format(time.RFC3339)
+
 type Controller struct {
 	service *Service
 }
@@ -22,8 +24,9 @@ func NewController(service *Service) *Controller {
 
 func (c *Controller) GetHealth(w http.ResponseWriter, r *http.Request) {
 	infra.ReturnJSON(w, http.StatusOK, dto.HealthResponse{
-		Status:  "ok",
-		Service: "coordinator",
+		Status:    "ok",
+		Service:   "coordinator",
+		StartedAt: processStartedAt,
 	})
 }
 
