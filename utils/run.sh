@@ -2,7 +2,6 @@
 
 # Rebuild Go + UI and serve the dashboard on :4321 (or PORT / first arg).
 # Usage: ./utils/run.sh [PORT]
-# From the app root: ./run.sh (wrapper) or ./utils/run.sh
 # Look at http://localhost:4321 — not Vite :5175.
 
 set -e
