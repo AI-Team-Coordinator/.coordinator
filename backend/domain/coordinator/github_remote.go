@@ -32,6 +32,17 @@ func githubRepoHTMLURL(binding model.GitHubBinding, slug string) string {
 	return orgURL + "/" + slug
 }
 
+func serviceGitHubBinding(profile model.GitHubBinding, svc model.ServiceNode) model.GitHubBinding {
+	if org := strings.TrimSpace(svc.GitHubOrg); org != "" {
+		profile.Org = org
+	}
+	return profile
+}
+
+func serviceHTMLURL(profile model.GitHubBinding, svc model.ServiceNode) string {
+	return githubRepoHTMLURL(serviceGitHubBinding(profile, svc), svc.GitHubRepo)
+}
+
 func parseGitHubRemote(raw string) (org, slug string) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

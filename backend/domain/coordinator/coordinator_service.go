@@ -273,7 +273,8 @@ func (s *Service) GetProject(ctx context.Context) (*dto.ProjectResponse, error) 
 			Kind:       svc.Kind,
 			Repo:       svc.Repo,
 			GitHubRepo: svc.GitHubRepo,
-			HTMLURL:    githubRepoHTMLURL(profile.GitHub, svc.GitHubRepo),
+			GitHubOrg:  svc.GitHubOrg,
+			HTMLURL:    serviceHTMLURL(profile.GitHub, svc),
 			Purpose:    dto.LocalizedText{EN: svc.Purpose.EN, RU: svc.Purpose.RU},
 		})
 	}

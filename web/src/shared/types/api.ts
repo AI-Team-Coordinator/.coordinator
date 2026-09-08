@@ -152,6 +152,7 @@ export interface ServiceNode {
   kind: string
   repo: string
   github_repo?: string
+  github_org?: string
   html_url?: string
   purpose: LocalizedText
 }

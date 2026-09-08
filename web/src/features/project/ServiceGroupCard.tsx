@@ -31,7 +31,9 @@ export function ServiceGroupCard({ group, services, githubOrg }: ServiceGroupCar
                 rel="noreferrer"
                 className="text-[11px] text-indigo-600 dark:text-indigo-300 hover:underline"
               >
-                {githubOrg ? `${githubOrg}/${svc.github_repo}` : svc.github_repo}
+                {svc.github_org || githubOrg
+                  ? `${svc.github_org || githubOrg}/${svc.github_repo}`
+                  : svc.github_repo}
               </a>
             )}
             <div className="text-xs text-slate-500 dark:text-slate-400 leading-snug">

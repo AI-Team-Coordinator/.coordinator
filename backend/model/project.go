@@ -29,6 +29,7 @@ type ServiceNode struct {
 	Kind       string        `json:"kind"`
 	Repo       string        `json:"repo"`
 	GitHubRepo string        `json:"github_repo,omitempty"`
+	GitHubOrg  string        `json:"github_org,omitempty"`
 	Purpose    LocalizedText `json:"purpose"`
 }
 
