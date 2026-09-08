@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS events (
   usage_plan TEXT NOT NULL DEFAULT '',
   plan_price_usd REAL,
   spend_kind TEXT NOT NULL DEFAULT '',
+  summary TEXT NOT NULL DEFAULT '',
+  findings TEXT NOT NULL DEFAULT '',
   source_file TEXT NOT NULL,
   source_line INTEGER NOT NULL,
   UNIQUE(source_file, source_line)

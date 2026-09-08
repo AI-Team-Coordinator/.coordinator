@@ -23,7 +23,18 @@ export interface MemberState {
   ondemand_usd?: number
   cursor_models_pct?: number
   other_models_pct?: number
-  spend_kind?: 'infra' | 'product' | string
+  spend_kind?: 'infra' | 'product' | 'research' | string
+  research?: ResearchState
+}
+
+export interface ResearchState {
+  status: 'active' | string
+  summary?: string
+  started_at?: string
+  duration_seconds?: number
+  cost_usd?: number
+  budget_usd?: number
+  ondemand_usd?: number
 }
 
 export interface RepoWork {
@@ -63,6 +74,9 @@ export interface Stats {
   avg_cycle_time_minutes: number
   features_completed: number
   fixes_completed: number
+  research_completed: number
+  research_completed_today: number
+  research_completed_week: number
   completed_today: number
   completed_this_week: number
   cost_usd_today: number
@@ -84,6 +98,12 @@ export interface Stats {
   budget_usd_open: number
   cost_usd_open: number
   ondemand_usd_open: number
+  budget_usd_research_today: number
+  budget_usd_research_week: number
+  budget_usd_research_open: number
+  cost_usd_research_today: number
+  cost_usd_research_week: number
+  cost_usd_research_open: number
 }
 
 export interface TaskItem {
@@ -119,7 +139,9 @@ export interface EventItem {
   other_models_pct?: number
   usage_plan?: string
   plan_price_usd?: number
-  spend_kind?: 'infra' | 'product' | string
+  spend_kind?: 'infra' | 'product' | 'research' | string
+  summary?: string
+  findings?: string
 }
 
 export interface ProjectMeta {

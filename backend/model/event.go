@@ -9,6 +9,8 @@ type Event struct {
 	TaskID          string   `json:"task_id"`
 	Branch          string   `json:"branch,omitempty"`
 	Alias           string   `json:"alias,omitempty"`
+	Summary         string   `json:"summary,omitempty"`
+	Findings        string   `json:"findings,omitempty"`
 	Repo            string   `json:"repo,omitempty"`
 	Service         string   `json:"service,omitempty"`
 	Status          string   `json:"status,omitempty"`

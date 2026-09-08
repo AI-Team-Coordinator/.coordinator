@@ -24,6 +24,8 @@
     "completedToday": "Completed Today",
     "thisWeek": "this week",
     "featuresAndFixes": "Features / Fixes",
+    "featuresFixesResearch": "Features / fixes / research",
+    "researchThisWeek": "research this week: {{count}}",
     "cursorSpend": "On-demand",
     "cursorSpendHint": "exact extra past included pools",
     "cursorBudget": "Share of plan",
@@ -32,6 +34,9 @@
     "productSpend": "product",
     "infraSpend": "infra",
     "includesOpen": "in progress {{amount}}",
+    "researchShare": "research {{pct}}%",
+    "researchSpend": "research",
+    "taskSpend": "tasks",
     "cursorBudgetTooltip": "Share of the monthly Cursor seat. 100% Cursor Models plus 100% Other Models equals the plan price ($20 / $60 / $200). Product is AlinaAssist services; infra is docs and coordinator (Common, .cursor). The total includes open tasks.",
     "cursorSpendTooltip": "Exact extra Cursor billed after included pools. In-plan spend is Share of plan (percent bars). The included cents field is a cap, not a running total."
   },
@@ -60,6 +65,7 @@
     "title": "Team Pulse",
     "trackedCount": "{{count}} members tracked",
     "inProgress": "IN PROGRESS",
+    "research": "RESEARCH",
     "idle": "IDLE",
     "duration": "Duration",
     "branch": "Active Branch",
@@ -70,6 +76,7 @@
     "meter": "On-demand",
     "onDemand": "on-demand",
     "noActiveTask": "No active task. Workspace is ready for assignment.",
+    "researchNoBranch": "Research is not tied to a branch — it can run next to a task.",
     "strayTitle": "Outside any task",
     "strayBadge": "leftover",
     "straySubtitle": "feat/fix branches that nobody currently has as their in-progress task.",
@@ -174,7 +181,9 @@
       "repo_merged": "Merged",
       "deploy_started": "Deploy started",
       "deploy_finished": "Deployed",
-      "deploy_failed": "Deploy failed"
+      "deploy_failed": "Deploy failed",
+      "research_started": "Research",
+      "research_completed": "Research done"
     }
   },
   "docs": {

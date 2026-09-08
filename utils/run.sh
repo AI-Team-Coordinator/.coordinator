@@ -63,6 +63,9 @@ stop_port 5175
 echo "📂 data $DATA_DIR"
 echo "🌐 Starting server on http://localhost:$PORT..."
 
-(sleep 1 && open "http://localhost:$PORT") &
+# SKIP_OPEN=1 — агент Cursor открывает дашборд сам (Simple Browser / Browser Tab).
+if [ -z "${SKIP_OPEN:-}" ]; then
+    (sleep 1 && open "http://localhost:$PORT") &
+fi
 
 exec "$BIN" -port "$PORT" -web "$WEB_DIR"

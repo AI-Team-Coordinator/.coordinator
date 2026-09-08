@@ -17,6 +17,8 @@ type EventResponse struct {
 	UsagePlan       string   `json:"usage_plan,omitempty"`
 	PlanPriceUSD    *float64 `json:"plan_price_usd,omitempty"`
 	SpendKind       string   `json:"spend_kind,omitempty"`
+	Summary         string   `json:"summary,omitempty"`
+	Findings        string   `json:"findings,omitempty"`
 }
 
 type EventsResponse struct {

@@ -17,6 +17,8 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
   const [copied, setCopied] = useState(false)
 
   const isActive = member.status === 'in_progress'
+  const isResearch = member.research?.status === 'active'
+  const isBusy = isActive || isResearch
   const isFix =
     member.task_id &&
     (member.task_id.startsWith('FIX-') || (member.branch && member.branch.startsWith('fix/')))
@@ -41,7 +43,7 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
   return (
     <Card
       className={`p-5 transition-all duration-200 ${
-        isActive
+        isBusy
           ? 'border-indigo-400/60 dark:border-indigo-500/40 bg-white/90 dark:bg-slate-900/90 shadow-md shadow-indigo-500/5'
           : 'bg-slate-50/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800/60 opacity-80 hover:opacity-100'
       }`}
@@ -52,6 +54,10 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
             <h3 className="font-semibold text-slate-900 dark:text-white text-sm leading-snug truncate" title={taskTitle}>
               {taskTitle}
             </h3>
+          ) : isResearch && member.research?.summary ? (
+            <h3 className="font-semibold text-slate-900 dark:text-white text-sm leading-snug line-clamp-2" title={member.research.summary}>
+              {member.research.summary}
+            </h3>
           ) : (
             <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{member.name}</h3>
           )}
@@ -61,9 +67,23 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
             </p>
           ) : null}
         </div>
-        <Badge variant={isActive ? 'success' : 'neutral'} className="font-bold text-[10px] shrink-0">
-          {isActive ? `● ${t('pulse.inProgress')}` : `○ ${t('pulse.idle')}`}
-        </Badge>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {isActive ? (
+            <Badge variant="success" className="font-bold text-[10px]">
+              ● {t('pulse.inProgress')}
+            </Badge>
+          ) : null}
+          {isResearch ? (
+            <Badge variant="default" className="font-bold text-[10px]">
+              ● {t('pulse.research')}
+            </Badge>
+          ) : null}
+          {!isBusy ? (
+            <Badge variant="neutral" className="font-bold text-[10px]">
+              ○ {t('pulse.idle')}
+            </Badge>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-2 flex items-center space-x-2">
@@ -208,11 +228,47 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
             </div>
           </div>
         </div>
-      ) : (
+      ) : null}
+
+      {isResearch ? (
+        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+            {t('pulse.research')}
+          </div>
+          {isActive && member.research?.summary ? (
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-snug">{member.research.summary}</p>
+          ) : null}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-500 dark:text-slate-400">{t('pulse.duration')}:</span>
+            <span className="font-mono text-indigo-600 dark:text-indigo-300 font-semibold">
+              {formatDuration(member.research?.duration_seconds)}
+            </span>
+          </div>
+          {typeof member.research?.budget_usd === 'number' && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500 dark:text-slate-400">{t('pulse.planShare')}</span>
+              <span className="font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+                {formatUSD(member.research?.budget_usd)}
+              </span>
+            </div>
+          )}
+          {(member.research?.ondemand_usd ?? 0) > 0 && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-500 dark:text-slate-400">{t('pulse.meter')}</span>
+              <span className="font-mono text-amber-600 dark:text-amber-400">
+                {formatUSD(member.research?.ondemand_usd)}
+              </span>
+            </div>
+          )}
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">{t('pulse.researchNoBranch')}</p>
+        </div>
+      ) : null}
+
+      {!isBusy ? (
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/40 text-xs text-slate-400 dark:text-slate-500 italic">
           {t('pulse.noActiveTask')}
         </div>
-      )}
+      ) : null}
     </Card>
   )
 }

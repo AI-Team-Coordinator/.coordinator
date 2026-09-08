@@ -24,6 +24,8 @@
     "completedToday": "Завершено сегодня",
     "thisWeek": "на этой неделе",
     "featuresAndFixes": "Фичи / Хотфиксы",
+    "featuresFixesResearch": "Фичи / фиксы / ресёрч",
+    "researchThisWeek": "ресёрчей за неделю: {{count}}",
     "cursorSpend": "On-demand",
     "cursorSpendHint": "точная доплата сверх пулов",
     "cursorBudget": "Доля подписки",
@@ -32,6 +34,9 @@
     "productSpend": "продукт",
     "infraSpend": "инфра",
     "includesOpen": "в работе {{amount}}",
+    "researchShare": "ресёрч {{pct}}%",
+    "researchSpend": "ресёрч",
+    "taskSpend": "задачи",
     "cursorBudgetTooltip": "Доля месячного места Cursor. 100% Cursor Models плюс 100% Other Models — это цена подписки ($20 / $60 / $200). Продукт — сервисы AlinaAssist; инфра — документация и координатор (Common, .cursor). В сумму входят задачи в работе.",
     "cursorSpendTooltip": "Точная доплата Cursor сверх included-пулов. Расход внутри тарифа — Share of plan (процентные полоски). Поле included-центов — потолок, не текущий spend."
   },
@@ -60,6 +65,7 @@
     "title": "Пульс команды",
     "trackedCount": "участников: {{count}}",
     "inProgress": "В РАБОТЕ",
+    "research": "РЕСЁРЧ",
     "idle": "СВОБОДЕН",
     "duration": "В работе",
     "branch": "Активная ветка",
@@ -70,6 +76,7 @@
     "meter": "On-demand",
     "onDemand": "on-demand",
     "noActiveTask": "Нет активной задачи. Воркспейс свободен.",
+    "researchNoBranch": "Ресёрч не привязан к ветке — может идти параллельно с задачей.",
     "strayTitle": "Вне задач",
     "strayBadge": "остаток",
     "straySubtitle": "Ветки feat/fix, которые сейчас ни у кого не числятся как задача in-progress.",
@@ -174,7 +181,9 @@
       "repo_merged": "Влит в main",
       "deploy_started": "Деплой начат",
       "deploy_finished": "Задеплоено",
-      "deploy_failed": "Деплой не удался"
+      "deploy_failed": "Деплой не удался",
+      "research_started": "Ресёрч",
+      "research_completed": "Ресёрч закончен"
     }
   },
   "docs": {

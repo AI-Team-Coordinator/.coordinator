@@ -23,6 +23,17 @@ type MemberResponse struct {
 	CursorModelsPct *float64           `json:"cursor_models_pct,omitempty"`
 	OtherModelsPct  *float64           `json:"other_models_pct,omitempty"`
 	SpendKind       string             `json:"spend_kind,omitempty"`
+	Research        *ResearchResponse  `json:"research,omitempty"`
+}
+
+type ResearchResponse struct {
+	Status          string    `json:"status"`
+	Summary         string    `json:"summary,omitempty"`
+	StartedAt       time.Time `json:"started_at,omitempty"`
+	DurationSeconds int64     `json:"duration_seconds,omitempty"`
+	CostUSD         *float64  `json:"cost_usd,omitempty"`
+	BudgetUSD       *float64  `json:"budget_usd,omitempty"`
+	OnDemandUSD     *float64  `json:"ondemand_usd,omitempty"`
 }
 
 type RepoWorkResponse struct {

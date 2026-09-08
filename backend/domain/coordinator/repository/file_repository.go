@@ -374,6 +374,13 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 			Summary     string             `json:"summary"`
 			CursorUsage *model.CursorUsage `json:"cursor_usage"`
 			GitReport   *model.GitReport   `json:"git_report"`
+			Research    *struct {
+				Status      string             `json:"status"`
+				Summary     string             `json:"summary"`
+				StartedAt   string             `json:"started_at"`
+				SessionID   string             `json:"session_id"`
+				CursorUsage *model.CursorUsage `json:"cursor_usage"`
+			} `json:"research"`
 		}
 		if err := json.Unmarshal(data, &raw); err != nil {
 			continue
@@ -397,7 +404,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 
 		seen[raw.Alias] = struct{}{}
 		person := roster[raw.Alias]
-		members = append(members, model.Member{
+		member := model.Member{
 			Alias:       raw.Alias,
 			Name:        memberName,
 			Role:        person.Role,
@@ -412,7 +419,28 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 			UpdatedAt:   updatedAt,
 			CursorUsage: raw.CursorUsage,
 			GitReport:   raw.GitReport,
-		})
+		}
+		if raw.Research != nil && raw.Research.Status == "active" {
+			started := updatedAt
+			if raw.Research.StartedAt != "" {
+				if t, err := time.Parse(time.RFC3339, raw.Research.StartedAt); err == nil {
+					started = t
+				}
+			}
+			d := int64(now.Sub(started).Seconds())
+			if d < 0 {
+				d = 0
+			}
+			member.Research = &model.Research{
+				Status:          "active",
+				Summary:         raw.Research.Summary,
+				StartedAt:       started,
+				SessionID:       raw.Research.SessionID,
+				CursorUsage:     raw.Research.CursorUsage,
+				DurationSeconds: d,
+			}
+		}
+		members = append(members, member)
 	}
 
 	if len(members) == 0 {
@@ -438,6 +466,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 }
 
 func (r *FileRepository) withRepoWork(members []model.Member) []model.Member {
+	r.maybeCloseStaleResearch(members)
 	r.attachRepoWork(members)
 	author, _ := r.CurrentAuthor(context.Background())
 	for i := range members {

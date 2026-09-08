@@ -393,32 +393,41 @@ func (s *Service) GetStats(ctx context.Context) (*dto.StatsEnvelope, error) {
 	stats := computeStats(events, members)
 	return &dto.StatsEnvelope{
 		Stats: dto.StatsResponse{
-			TotalCompleted:        stats.TotalCompleted,
-			ActiveNow:             stats.ActiveNow,
-			AvgCycleTimeMinutes:   stats.AvgCycleTimeMinutes,
-			FeaturesCompleted:     stats.FeaturesCompleted,
-			FixesCompleted:        stats.FixesCompleted,
-			CompletedToday:        stats.CompletedToday,
-			CompletedThisWeek:     stats.CompletedThisWeek,
-			CostUSDToday:          stats.CostUSDToday,
-			CostUSDWeek:           stats.CostUSDWeek,
-			CostUSDTotal:          stats.CostUSDTotal,
-			CostUSDAvg:            stats.CostUSDAvg,
-			CostTasks:             stats.CostTasks,
-			BudgetUSDToday:        stats.BudgetUSDToday,
-			BudgetUSDWeek:         stats.BudgetUSDWeek,
-			BudgetUSDTotal:        stats.BudgetUSDTotal,
-			BudgetUSDAvg:          stats.BudgetUSDAvg,
-			BudgetTasks:           stats.BudgetTasks,
-			BudgetUSDProductToday: stats.BudgetUSDProductToday,
-			BudgetUSDProductWeek:  stats.BudgetUSDProductWeek,
-			BudgetUSDInfraToday:   stats.BudgetUSDInfraToday,
-			BudgetUSDInfraWeek:    stats.BudgetUSDInfraWeek,
-			OnDemandUSDToday:      stats.OnDemandUSDToday,
-			OnDemandUSDWeek:       stats.OnDemandUSDWeek,
-			BudgetUSDOpen:         stats.BudgetUSDOpen,
-			CostUSDOpen:           stats.CostUSDOpen,
-			OnDemandUSDOpen:       stats.OnDemandUSDOpen,
+			TotalCompleted:         stats.TotalCompleted,
+			ActiveNow:              stats.ActiveNow,
+			AvgCycleTimeMinutes:    stats.AvgCycleTimeMinutes,
+			FeaturesCompleted:      stats.FeaturesCompleted,
+			FixesCompleted:         stats.FixesCompleted,
+			CompletedToday:         stats.CompletedToday,
+			CompletedThisWeek:      stats.CompletedThisWeek,
+			CostUSDToday:           stats.CostUSDToday,
+			CostUSDWeek:            stats.CostUSDWeek,
+			CostUSDTotal:           stats.CostUSDTotal,
+			CostUSDAvg:             stats.CostUSDAvg,
+			CostTasks:              stats.CostTasks,
+			BudgetUSDToday:         stats.BudgetUSDToday,
+			BudgetUSDWeek:          stats.BudgetUSDWeek,
+			BudgetUSDTotal:         stats.BudgetUSDTotal,
+			BudgetUSDAvg:           stats.BudgetUSDAvg,
+			BudgetTasks:            stats.BudgetTasks,
+			BudgetUSDProductToday:  stats.BudgetUSDProductToday,
+			BudgetUSDProductWeek:   stats.BudgetUSDProductWeek,
+			BudgetUSDInfraToday:    stats.BudgetUSDInfraToday,
+			BudgetUSDInfraWeek:     stats.BudgetUSDInfraWeek,
+			OnDemandUSDToday:       stats.OnDemandUSDToday,
+			OnDemandUSDWeek:        stats.OnDemandUSDWeek,
+			BudgetUSDOpen:          stats.BudgetUSDOpen,
+			CostUSDOpen:            stats.CostUSDOpen,
+			OnDemandUSDOpen:        stats.OnDemandUSDOpen,
+			BudgetUSDResearchToday: stats.BudgetUSDResearchToday,
+			BudgetUSDResearchWeek:  stats.BudgetUSDResearchWeek,
+			BudgetUSDResearchOpen:  stats.BudgetUSDResearchOpen,
+			CostUSDResearchToday:   stats.CostUSDResearchToday,
+			CostUSDResearchWeek:    stats.CostUSDResearchWeek,
+			CostUSDResearchOpen:    stats.CostUSDResearchOpen,
+			ResearchCompleted:      stats.ResearchCompleted,
+			ResearchCompletedToday: stats.ResearchCompletedToday,
+			ResearchCompletedWeek:  stats.ResearchCompletedWeek,
 		},
 	}, nil
 }
@@ -529,6 +538,8 @@ func (s *Service) GetEvents(ctx context.Context, query dto.EventsQuery) (*dto.Ev
 			UsagePlan:       ev.UsagePlan,
 			PlanPriceUSD:    ev.PlanPriceUSD,
 			SpendKind:       ev.SpendKind,
+			Summary:         ev.Summary,
+			Findings:        ev.Findings,
 		})
 	}
 
@@ -574,6 +585,17 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 				d = 0
 			}
 			item.DurationSeconds = d
+		}
+		if m.Research != nil {
+			item.Research = &dto.ResearchResponse{
+				Status:          m.Research.Status,
+				Summary:         m.Research.Summary,
+				StartedAt:       m.Research.StartedAt,
+				DurationSeconds: m.Research.DurationSeconds,
+				CostUSD:         m.Research.CostUSD,
+				BudgetUSD:       m.Research.BudgetUSD,
+				OnDemandUSD:     m.Research.OnDemandUSD,
+			}
 		}
 		out = append(out, item)
 	}

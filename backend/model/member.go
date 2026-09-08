@@ -26,4 +26,19 @@ type Member struct {
 	CursorModelsPct *float64
 	OtherModelsPct  *float64
 	SpendKind       string
+
+	Research *Research
+}
+
+// Research is an off-task Cursor chat running in parallel with (or without) a task.
+type Research struct {
+	Status          string
+	Summary         string
+	StartedAt       time.Time
+	SessionID       string
+	CursorUsage     *CursorUsage
+	CostUSD         *float64
+	BudgetUSD       *float64
+	OnDemandUSD     *float64
+	DurationSeconds int64
 }

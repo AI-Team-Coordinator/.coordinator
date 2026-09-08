@@ -12,7 +12,7 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 	stats := model.Stats{}
 
 	for _, m := range members {
-		if m.Status == "in_progress" {
+		if m.Status == "in_progress" || (m.Research != nil && m.Research.Status == "active") {
 			stats.ActiveNow++
 		}
 	}
@@ -34,6 +34,10 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 	var completedCount int
 
 	for _, ev := range events {
+		if ev.Event == "research_completed" {
+			addResearchSpend(&stats, ev, startOfToday, startOfWeek)
+			continue
+		}
 		if ev.Event == "task_started" {
 			starts[ev.TaskID] = ev.Timestamp
 			continue
@@ -120,7 +124,56 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 	}
 
 	addOpenTaskSpend(&stats, members)
+	addOpenResearchSpend(&stats, members)
 	return stats
+}
+
+func addResearchSpend(stats *model.Stats, ev model.Event, startOfToday, startOfWeek int64) {
+	stats.ResearchCompleted++
+	if ev.Timestamp >= startOfToday {
+		stats.ResearchCompletedToday++
+	}
+	if ev.Timestamp >= startOfWeek {
+		stats.ResearchCompletedWeek++
+	}
+	if ev.BudgetUSD != nil {
+		budget := *ev.BudgetUSD
+		if ev.Timestamp >= startOfToday {
+			stats.BudgetUSDResearchToday += budget
+		}
+		if ev.Timestamp >= startOfWeek {
+			stats.BudgetUSDResearchWeek += budget
+		}
+	}
+	if ev.CostUSD != nil {
+		cost := *ev.CostUSD
+		if ev.Timestamp >= startOfToday {
+			stats.CostUSDResearchToday += cost
+		}
+		if ev.Timestamp >= startOfWeek {
+			stats.CostUSDResearchWeek += cost
+		}
+	}
+}
+
+func addOpenResearchSpend(stats *model.Stats, members []model.Member) {
+	for _, m := range members {
+		if m.Research == nil {
+			continue
+		}
+		if m.Research.BudgetUSD != nil {
+			budget := *m.Research.BudgetUSD
+			stats.BudgetUSDResearchToday += budget
+			stats.BudgetUSDResearchWeek += budget
+			stats.BudgetUSDResearchOpen += budget
+		}
+		if m.Research.CostUSD != nil {
+			cost := *m.Research.CostUSD
+			stats.CostUSDResearchToday += cost
+			stats.CostUSDResearchWeek += cost
+			stats.CostUSDResearchOpen += cost
+		}
+	}
 }
 
 func taskKind(taskID, branch string) string {

@@ -11,10 +11,18 @@ interface MetricsGridProps {
 
 export function MetricsGrid({ stats, onStatusClick }: MetricsGridProps) {
   const { t } = useTranslation()
-  const hasBudget = Boolean(stats && stats.budget_tasks > 0)
-  const hasMeter = Boolean(stats && stats.cost_tasks > 0)
+  const hasBudget = Boolean(
+    stats && (stats.budget_tasks > 0 || (stats.budget_usd_research_today ?? 0) > 0 || (stats.research_completed ?? 0) > 0)
+  )
+  const hasMeter = Boolean(
+    stats && (stats.cost_tasks > 0 || (stats.cost_usd_research_today ?? 0) > 0)
+  )
   const budgetOpen = stats?.budget_usd_open ?? 0
-  const costOpen = stats?.cost_usd_open ?? 0
+  const costOpen = (stats?.cost_usd_open ?? 0) + (stats?.cost_usd_research_open ?? 0)
+  const taskToday = stats?.budget_usd_today ?? 0
+  const researchToday = stats?.budget_usd_research_today ?? 0
+  const attributed = taskToday + researchToday
+  const researchPct = attributed > 0 ? Math.round((researchToday / attributed) * 100) : null
 
   return (
     <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -68,7 +76,7 @@ export function MetricsGrid({ stats, onStatusClick }: MetricsGridProps) {
 
       <Card className="p-4 bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800/80">
         <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-          {t('metrics.featuresAndFixes')}
+          {t('metrics.featuresFixesResearch')}
         </div>
         <div className="mt-2 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white flex items-baseline gap-2">
           <span>{stats ? stats.features_completed : 0}</span>
@@ -76,6 +84,13 @@ export function MetricsGrid({ stats, onStatusClick }: MetricsGridProps) {
           <span className="text-amber-500 dark:text-amber-400">
             {stats ? stats.fixes_completed : 0}
           </span>
+          <span className="text-slate-400 font-light">/</span>
+          <span className="text-violet-500 dark:text-violet-400">
+            {stats ? stats.research_completed ?? 0 : 0}
+          </span>
+        </div>
+        <div className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+          {t('metrics.researchThisWeek', { count: stats?.research_completed_week ?? 0 })}
         </div>
       </Card>
 
@@ -85,7 +100,7 @@ export function MetricsGrid({ stats, onStatusClick }: MetricsGridProps) {
           <InfoTooltip text={t('metrics.cursorBudgetTooltip')} />
         </div>
         <div className="mt-2 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white">
-          {hasBudget ? formatUSD(stats?.budget_usd_today ?? 0) : '—'}
+          {hasBudget ? formatUSD(attributed) : '—'}
         </div>
         <div className="mt-1.5 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
           {hasBudget ? (
@@ -101,6 +116,13 @@ export function MetricsGrid({ stats, onStatusClick }: MetricsGridProps) {
                   {t('metrics.includesOpen', { amount: formatUSD(budgetOpen) })}
                 </div>
               )}
+              {researchToday > 0 || taskToday > 0 ? (
+                <div>
+                  {t('metrics.taskSpend')} {formatUSD(taskToday)} · {t('metrics.researchSpend')}{' '}
+                  {formatUSD(researchToday)}
+                  {researchPct != null ? ` · ${t('metrics.researchShare', { pct: researchPct })}` : ''}
+                </div>
+              ) : null}
             </>
           ) : (
             <div>{t('metrics.cursorBudgetHint')}</div>
@@ -114,13 +136,13 @@ export function MetricsGrid({ stats, onStatusClick }: MetricsGridProps) {
           <InfoTooltip text={t('metrics.cursorSpendTooltip')} />
         </div>
         <div className="mt-2 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white">
-          {hasMeter ? formatUSD(stats?.cost_usd_today ?? 0) : '—'}
+          {hasMeter ? formatUSD((stats?.cost_usd_today ?? 0) + (stats?.cost_usd_research_today ?? 0)) : '—'}
         </div>
         <div className="mt-1.5 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
           {hasMeter ? (
             <>
               <div>
-                {formatUSD(stats?.cost_usd_week ?? 0)} {t('metrics.thisWeek')}
+                {formatUSD((stats?.cost_usd_week ?? 0) + (stats?.cost_usd_research_week ?? 0))} {t('metrics.thisWeek')}
               </div>
               {costOpen > 0 && (
                 <div>

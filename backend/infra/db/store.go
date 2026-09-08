@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	schemaVersion = "4"
+	schemaVersion = "5"
 	hotYearSpan   = 3
 	dbFileName    = "coordinator.sqlite"
 )
@@ -76,7 +76,7 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		return nil, 0, err
 	}
 
-	listQ := "SELECT timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind FROM events" + where + " ORDER BY timestamp DESC"
+	listQ := "SELECT timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings FROM events" + where + " ORDER BY timestamp DESC"
 	if q.Limit > 0 {
 		listQ += " LIMIT ?"
 		args = append(args, q.Limit)
@@ -98,7 +98,7 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		var cost, budget, ondemand, cursorPct, otherPct, planPrice sql.NullFloat64
 		if err := rows.Scan(
 			&ev.Timestamp, &ev.Event, &ev.TaskID, &ev.Branch, &ev.Alias, &ev.Repo, &ev.Service, &ev.Status,
-			&cost, &budget, &ondemand, &cursorPct, &otherPct, &ev.UsagePlan, &planPrice, &ev.SpendKind,
+			&cost, &budget, &ondemand, &cursorPct, &otherPct, &ev.UsagePlan, &planPrice, &ev.SpendKind, &ev.Summary, &ev.Findings,
 		); err != nil {
 			return nil, 0, err
 		}
