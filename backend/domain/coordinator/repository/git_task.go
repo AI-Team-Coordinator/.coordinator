@@ -209,6 +209,7 @@ func inspectOneRepo(repoPath string, svc model.ServiceNode, branch, taskID strin
 	state, shownAhead := classifyProductRepo(ahead, taskOnMain(repoPath, taskID), hasRemote, unpushed)
 	work := productRepoWork(svc, state, shownAhead)
 	work.Dirty = repoDirtyOnBranch(repoPath, branch)
+	work.HasLocalBranch = hasLocal
 	return work, true
 }
 

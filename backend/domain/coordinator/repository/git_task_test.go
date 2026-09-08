@@ -85,8 +85,8 @@ func TestInspectOneRepoDirtyOnTaskBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	work, ok := inspectOneRepo(dir, sampleServices()[0], "feat/x", "TASK-1")
-	if !ok || work.State != "local" || !work.Dirty {
-		t.Fatalf("got ok=%v state=%s dirty=%v", ok, work.State, work.Dirty)
+	if !ok || work.State != "local" || !work.Dirty || !work.HasLocalBranch {
+		t.Fatalf("got ok=%v state=%s dirty=%v local=%v", ok, work.State, work.Dirty, work.HasLocalBranch)
 	}
 }
 

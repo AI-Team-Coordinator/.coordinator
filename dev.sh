@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Dev mode: Go API on :4321 + Vite HMR on :5175
-# Usage: ./dev.sh
+# Optional Vite HMR for React source (port 5175). Not the dashboard URL.
+# To look at the coordinator, use ./run.sh → http://localhost:4321
 
 set -e
 
@@ -36,6 +36,6 @@ if [ ! -d "$WEB_DIR/node_modules" ]; then
     (cd "$WEB_DIR" && npm install)
 fi
 
-echo "⚡ Vite HMR on http://127.0.0.1:5175"
+echo "⚡ Vite HMR on http://127.0.0.1:5175 (do not test here — use ./run.sh :4321)"
 cd "$WEB_DIR"
 exec npm run dev

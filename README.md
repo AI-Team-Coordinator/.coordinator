@@ -4,10 +4,11 @@
 
 Данные и доки **не** здесь. Их пути задаются в `.env` (скопировать `.env.example`).
 
+Смотреть дашборд: **http://localhost:4321** (`./run.sh` пересобирает Go + UI и поднимает всё на этом порту). Vite `:5175` — не адрес для проверки.
+
 ```bash
 cp .env.example .env   # поправить пути, если дерево проекта другое
-./dev.sh               # API :4321 + Vite :5175
-./run.sh               # API + собранный UI на :4321
+./run.sh               # пересобрать и открыть http://localhost:4321
 ```
 
 Для Alina Assist по умолчанию:
@@ -19,7 +20,7 @@ cp .env.example .env   # поправить пути, если дерево пр
 | `DOCS_DIR` | документы задач | `../Common/docs` |
 | `BUS_DIR` | git-шина (pull/push настроек) | `../Common` |
 | `CURSOR_DIR` | правила IDE, fallback автора | `../.cursor` |
-| `PORT` | HTTP API | `4321` |
+| `PORT` | дашборд (Go + собранный UI) | `4321` |
 
 Скрипты записи событий (`sync_event.sh`, `log_event.sh`) в этом каталоге читают тот же `.env`. Хуки Cursor и `coolify_deploy.sh` вызывают их отсюда.
 

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"coordinator/model"
@@ -16,16 +17,19 @@ import (
 
 // FileRepository reads the data bus (settings, progress snapshots) with a one-release fallback to legacy paths.
 type FileRepository struct {
-	busPath    string
-	dataPath   string
-	docsPath   string
-	workspace  string
-	cursorPath string
-	appPath    string
-	gitMu      sync.Mutex
-	usageMu    sync.Mutex
-	usageSnap  *model.CursorUsage
-	usageAt    time.Time
+	busPath       string
+	dataPath      string
+	docsPath      string
+	workspace     string
+	cursorPath    string
+	appPath       string
+	gitMu         sync.Mutex
+	usageMu       sync.Mutex
+	usageSnap     *model.CursorUsage
+	usageAt       time.Time
+	gitPublishMu  sync.Mutex
+	gitPublishAt  time.Time
+	gitPublishRun atomic.Bool
 }
 
 // Paths locates workspace folders. Names are not assumed — callers pass them from env.
@@ -362,6 +366,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 			UpdatedAt   string             `json:"updated_at"`
 			Services    []string           `json:"services"`
 			CursorUsage *model.CursorUsage `json:"cursor_usage"`
+			GitReport   *model.GitReport   `json:"git_report"`
 		}
 		if err := json.Unmarshal(data, &raw); err != nil {
 			continue
@@ -397,6 +402,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 			Branch:      raw.Branch,
 			UpdatedAt:   updatedAt,
 			CursorUsage: raw.CursorUsage,
+			GitReport:   raw.GitReport,
 		})
 	}
 
@@ -424,6 +430,14 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 
 func (r *FileRepository) withRepoWork(members []model.Member) []model.Member {
 	r.attachRepoWork(members)
+	author, _ := r.CurrentAuthor(context.Background())
+	for i := range members {
+		if author != "" && members[i].Alias == author {
+			continue
+		}
+		members[i].Repos = overlayReportedRepos(members[i].Repos, members[i].GitReport)
+	}
+	r.maybePublishGitReport(author, members)
 	r.attachLiveUsage(members)
 	return members
 }

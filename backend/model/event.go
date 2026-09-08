@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 // Event is one append-only log line from data/progress/events/<ALIAS>/<YYYY>.jsonl.
 type Event struct {
 	Timestamp       int64    `json:"timestamp"`
@@ -33,14 +35,31 @@ type EventQuery struct {
 
 // RepoWork is live git status of one service repo for the active task.
 type RepoWork struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Repo     string `json:"repo"`
-	Kind     string `json:"kind,omitempty"`
-	State    string `json:"state"`
-	Ahead    int    `json:"ahead,omitempty"`
-	Dirty    bool   `json:"dirty,omitempty"`
-	Deployed bool   `json:"deployed,omitempty"`
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Repo           string `json:"repo"`
+	Kind           string `json:"kind,omitempty"`
+	State          string `json:"state"`
+	Ahead          int    `json:"ahead,omitempty"`
+	Dirty          bool   `json:"dirty,omitempty"`
+	Deployed       bool   `json:"deployed,omitempty"`
+	HasLocalBranch bool   `json:"-"`
+}
+
+// GitReport is local-only git metadata published in .current_task_<ALIAS>.
+// No file names, diffs, or file contents.
+type GitReport struct {
+	ReportedAt time.Time       `json:"reported_at"`
+	Repos      []GitReportRepo `json:"repos"`
+}
+
+type GitReportRepo struct {
+	ID             string `json:"id"`
+	Repo           string `json:"repo"`
+	Name           string `json:"name,omitempty"`
+	HasLocalBranch bool   `json:"has_local_branch,omitempty"`
+	Dirty          bool   `json:"dirty,omitempty"`
+	Unpushed       int    `json:"unpushed,omitempty"`
 }
 
 // StrayRepo is leftover commits on a topic branch that mention no task id.

@@ -15,6 +15,7 @@ type Member struct {
 	Branch    string
 	UpdatedAt time.Time
 	Repos     []RepoWork
+	GitReport *GitReport
 
 	CursorUsage     *CursorUsage
 	CostUSD         *float64
