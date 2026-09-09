@@ -164,6 +164,7 @@ class DeltaTests(unittest.TestCase):
     def test_spend_kind_infra_for_common_and_cursor(self):
         self.assertEqual(spend_kind(["Common"]), "infra")
         self.assertEqual(spend_kind([".cursor", "common"]), "infra")
+        self.assertEqual(spend_kind([".coordinator"]), "infra")
         self.assertEqual(spend_kind(["Core"]), "product")
         self.assertEqual(spend_kind(["Common", "Core"]), "product")
         self.assertIsNone(spend_kind([]))

@@ -8,7 +8,7 @@ import (
 
 func applyMergeEvents(members []model.Member, events []model.Event) {
 	for i := range members {
-		if members[i].Status != "in_progress" || members[i].TaskID == "" {
+		if len(members[i].Repos) == 0 {
 			continue
 		}
 		for j := range members[i].Repos {
@@ -24,10 +24,15 @@ func applyMergeEvents(members []model.Member, events []model.Event) {
 			if members[i].Repos[j].State == "local" && members[i].Repos[j].Ahead > 0 {
 				continue
 			}
-			if repoMergedEvent(members[i].Repos[j], members[i].TaskID, events) {
+			taskID := members[i].Repos[j].TaskID
+			if taskID == "" {
+				taskID = members[i].TaskID
+			}
+			if repoMergedEvent(members[i].Repos[j], taskID, events) {
 				members[i].Repos[j].State = "merged"
 			}
 		}
+		syncTaskReposFromMember(&members[i])
 	}
 }
 
@@ -48,7 +53,7 @@ func repoMergedEvent(repo model.RepoWork, taskID string, events []model.Event) b
 
 func applyDeployEvents(members []model.Member, events []model.Event) {
 	for i := range members {
-		if members[i].Status != "in_progress" || members[i].TaskID == "" {
+		if len(members[i].Repos) == 0 {
 			continue
 		}
 		for j := range members[i].Repos {
@@ -58,10 +63,15 @@ func applyDeployEvents(members []model.Member, events []model.Event) {
 			if members[i].Repos[j].State != "merged" {
 				continue
 			}
-			if repoDeployed(members[i].Repos[j], members[i].TaskID, events) {
+			taskID := members[i].Repos[j].TaskID
+			if taskID == "" {
+				taskID = members[i].TaskID
+			}
+			if repoDeployed(members[i].Repos[j], taskID, events) {
 				members[i].Repos[j].Deployed = true
 			}
 		}
+		syncTaskReposFromMember(&members[i])
 	}
 }
 
@@ -109,6 +119,21 @@ func normService(s string) string {
 	s = strings.ReplaceAll(s, "-", "_")
 	s = strings.ReplaceAll(s, " ", "_")
 	return s
+}
+
+func syncTaskReposFromMember(m *model.Member) {
+	if m == nil || len(m.Tasks) == 0 {
+		return
+	}
+	byTask := make(map[string][]model.RepoWork)
+	for _, repo := range m.Repos {
+		byTask[repo.TaskID] = append(byTask[repo.TaskID], repo)
+	}
+	for i := range m.Tasks {
+		if repos, ok := byTask[m.Tasks[i].TaskID]; ok {
+			m.Tasks[i].Repos = repos
+		}
+	}
 }
 
 func allReposDeployed(member model.Member) bool {

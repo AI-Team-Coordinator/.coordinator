@@ -363,25 +363,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 			continue
 		}
 
-		var raw struct {
-			Alias       string             `json:"alias"`
-			TaskID      string             `json:"task_id"`
-			Branch      string             `json:"branch"`
-			Status      string             `json:"status"`
-			UpdatedAt   string             `json:"updated_at"`
-			Services    []string           `json:"services"`
-			Doc         string             `json:"doc"`
-			Summary     string             `json:"summary"`
-			CursorUsage *model.CursorUsage `json:"cursor_usage"`
-			GitReport   *model.GitReport   `json:"git_report"`
-			Research    *struct {
-				Status      string             `json:"status"`
-				Summary     string             `json:"summary"`
-				StartedAt   string             `json:"started_at"`
-				SessionID   string             `json:"session_id"`
-				CursorUsage *model.CursorUsage `json:"cursor_usage"`
-			} `json:"research"`
-		}
+		var raw snapshotFile
 		if err := json.Unmarshal(data, &raw); err != nil {
 			continue
 		}
@@ -419,6 +401,20 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 			UpdatedAt:   updatedAt,
 			CursorUsage: raw.CursorUsage,
 			GitReport:   raw.GitReport,
+			Tasks:       r.parseSnapshotTasks(raw, now),
+		}
+		if len(member.Tasks) > 0 {
+			member.Status = "in_progress"
+			newest := member.Tasks[len(member.Tasks)-1]
+			if member.TaskID == "" {
+				member.TaskID = newest.TaskID
+				member.TaskTitle = newest.Title
+				member.TaskDoc = newest.Doc
+				member.TaskSummary = newest.Summary
+				member.Branch = newest.Branch
+				member.Services = newest.Services
+				member.CursorUsage = newest.CursorUsage
+			}
 		}
 		if raw.Research != nil && raw.Research.Status == "active" {
 			started := updatedAt
@@ -512,4 +508,89 @@ func (r *FileRepository) idleAuthors(authors map[string]string, roster map[strin
 		})
 	}
 	return members
+}
+
+type snapshotTask struct {
+	TaskID      string             `json:"task_id"`
+	Branch      string             `json:"branch"`
+	Services    []string           `json:"services"`
+	Doc         string             `json:"doc"`
+	Summary     string             `json:"summary"`
+	StartedAt   string             `json:"started_at"`
+	UpdatedAt   string             `json:"updated_at"`
+	CursorUsage *model.CursorUsage `json:"cursor_usage"`
+}
+
+type snapshotFile struct {
+	Alias       string             `json:"alias"`
+	TaskID      string             `json:"task_id"`
+	Branch      string             `json:"branch"`
+	Status      string             `json:"status"`
+	UpdatedAt   string             `json:"updated_at"`
+	Services    []string           `json:"services"`
+	Doc         string             `json:"doc"`
+	Summary     string             `json:"summary"`
+	CursorUsage *model.CursorUsage `json:"cursor_usage"`
+	GitReport   *model.GitReport   `json:"git_report"`
+	Tasks       []snapshotTask     `json:"tasks"`
+	Research    *struct {
+		Status      string             `json:"status"`
+		Summary     string             `json:"summary"`
+		StartedAt   string             `json:"started_at"`
+		SessionID   string             `json:"session_id"`
+		CursorUsage *model.CursorUsage `json:"cursor_usage"`
+	} `json:"research"`
+}
+
+func (r *FileRepository) parseSnapshotTasks(raw snapshotFile, now time.Time) []model.MemberTask {
+	rows := raw.Tasks
+	if len(rows) == 0 && raw.Status == "in_progress" && raw.TaskID != "" {
+		rows = []snapshotTask{{
+			TaskID:      raw.TaskID,
+			Branch:      raw.Branch,
+			Services:    raw.Services,
+			Doc:         raw.Doc,
+			Summary:     raw.Summary,
+			StartedAt:   raw.UpdatedAt,
+			UpdatedAt:   raw.UpdatedAt,
+			CursorUsage: raw.CursorUsage,
+		}}
+	}
+	out := make([]model.MemberTask, 0, len(rows))
+	for _, row := range rows {
+		if strings.TrimSpace(row.TaskID) == "" {
+			continue
+		}
+		started := parseSnapshotTime(row.StartedAt, now)
+		updated := parseSnapshotTime(row.UpdatedAt, started)
+		d := int64(now.Sub(started).Seconds())
+		if d < 0 {
+			d = 0
+		}
+		out = append(out, model.MemberTask{
+			TaskID:          row.TaskID,
+			Title:           r.taskTitle(row.TaskID),
+			Doc:             row.Doc,
+			Summary:         row.Summary,
+			Branch:          row.Branch,
+			Services:        row.Services,
+			StartedAt:       started,
+			UpdatedAt:       updated,
+			DurationSeconds: d,
+			CursorUsage:     row.CursorUsage,
+			SpendKind:       model.SpendKind(row.Services),
+		})
+	}
+	return out
+}
+
+func parseSnapshotTime(raw string, fallback time.Time) time.Time {
+	if raw == "" {
+		return fallback
+	}
+	t, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return fallback
+	}
+	return t
 }

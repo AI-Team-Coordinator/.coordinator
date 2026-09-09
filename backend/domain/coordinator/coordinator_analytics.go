@@ -9,6 +9,10 @@ import (
 )
 
 func computeStats(events []model.Event, members []model.Member) model.Stats {
+	return computeStatsSince(events, members, billingCycleStartUnix(members))
+}
+
+func computeStatsSince(events []model.Event, members []model.Member, cycleStart int64) model.Stats {
 	stats := model.Stats{}
 
 	for _, m := range members {
@@ -35,7 +39,7 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 
 	for _, ev := range events {
 		if ev.Event == "research_completed" {
-			addResearchSpend(&stats, ev, startOfToday, startOfWeek)
+			addResearchSpend(&stats, ev, startOfToday, startOfWeek, cycleStart)
 			continue
 		}
 		if ev.Event == "task_started" {
@@ -65,6 +69,7 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 		if ev.Timestamp >= startOfWeek {
 			stats.CompletedThisWeek++
 		}
+		inCycle := inPeriod(ev.Timestamp, cycleStart)
 		if ev.CostUSD != nil {
 			cost := *ev.CostUSD
 			stats.CostUSDTotal += cost
@@ -74,6 +79,9 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 			}
 			if ev.Timestamp >= startOfWeek {
 				stats.CostUSDWeek += cost
+			}
+			if inCycle {
+				stats.CostUSDCycle += cost
 			}
 		}
 		if ev.BudgetUSD != nil {
@@ -86,6 +94,9 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 			if ev.Timestamp >= startOfWeek {
 				stats.BudgetUSDWeek += budget
 			}
+			if inCycle {
+				stats.BudgetUSDCycle += budget
+			}
 			if ev.SpendKind == "infra" {
 				if ev.Timestamp >= startOfToday {
 					stats.BudgetUSDInfraToday += budget
@@ -93,12 +104,18 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 				if ev.Timestamp >= startOfWeek {
 					stats.BudgetUSDInfraWeek += budget
 				}
+				if inCycle {
+					stats.BudgetUSDInfraCycle += budget
+				}
 			} else {
 				if ev.Timestamp >= startOfToday {
 					stats.BudgetUSDProductToday += budget
 				}
 				if ev.Timestamp >= startOfWeek {
 					stats.BudgetUSDProductWeek += budget
+				}
+				if inCycle {
+					stats.BudgetUSDProductCycle += budget
 				}
 			}
 		}
@@ -109,6 +126,9 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 			}
 			if ev.Timestamp >= startOfWeek {
 				stats.OnDemandUSDWeek += od
+			}
+			if inCycle {
+				stats.OnDemandUSDCycle += od
 			}
 		}
 	}
@@ -128,7 +148,58 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 	return stats
 }
 
-func addResearchSpend(stats *model.Stats, ev model.Event, startOfToday, startOfWeek int64) {
+func inPeriod(ts, start int64) bool {
+	return start <= 0 || ts >= start
+}
+
+func billingCycleStartUnix(members []model.Member) int64 {
+	_, ts := billingCycleFromMembers(members)
+	return ts
+}
+
+func billingCycleFromMembers(members []model.Member) (string, int64) {
+	var iso string
+	var best int64
+	consider := func(raw string) {
+		ts := parseBillingCycleUnix(raw)
+		if ts == 0 {
+			return
+		}
+		if ts > best {
+			best = ts
+			iso = raw
+		}
+	}
+	for _, m := range members {
+		if m.CursorUsage != nil {
+			consider(m.CursorUsage.BillingCycleStart)
+		}
+		for _, slot := range m.Slots() {
+			if slot.CursorUsage != nil {
+				consider(slot.CursorUsage.BillingCycleStart)
+			}
+		}
+		if m.Research != nil && m.Research.CursorUsage != nil {
+			consider(m.Research.CursorUsage.BillingCycleStart)
+		}
+	}
+	return iso, best
+}
+
+func parseBillingCycleUnix(raw string) int64 {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0
+	}
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02"} {
+		if t, err := time.Parse(layout, raw); err == nil {
+			return t.Unix()
+		}
+	}
+	return 0
+}
+
+func addResearchSpend(stats *model.Stats, ev model.Event, startOfToday, startOfWeek, cycleStart int64) {
 	stats.ResearchCompleted++
 	if ev.Timestamp >= startOfToday {
 		stats.ResearchCompletedToday++
@@ -136,6 +207,7 @@ func addResearchSpend(stats *model.Stats, ev model.Event, startOfToday, startOfW
 	if ev.Timestamp >= startOfWeek {
 		stats.ResearchCompletedWeek++
 	}
+	inCycle := inPeriod(ev.Timestamp, cycleStart)
 	if ev.BudgetUSD != nil {
 		budget := *ev.BudgetUSD
 		if ev.Timestamp >= startOfToday {
@@ -143,6 +215,9 @@ func addResearchSpend(stats *model.Stats, ev model.Event, startOfToday, startOfW
 		}
 		if ev.Timestamp >= startOfWeek {
 			stats.BudgetUSDResearchWeek += budget
+		}
+		if inCycle {
+			stats.BudgetUSDResearchCycle += budget
 		}
 	}
 	if ev.CostUSD != nil {
@@ -152,6 +227,9 @@ func addResearchSpend(stats *model.Stats, ev model.Event, startOfToday, startOfW
 		}
 		if ev.Timestamp >= startOfWeek {
 			stats.CostUSDResearchWeek += cost
+		}
+		if inCycle {
+			stats.CostUSDResearchCycle += cost
 		}
 	}
 }
@@ -165,12 +243,14 @@ func addOpenResearchSpend(stats *model.Stats, members []model.Member) {
 			budget := *m.Research.BudgetUSD
 			stats.BudgetUSDResearchToday += budget
 			stats.BudgetUSDResearchWeek += budget
+			stats.BudgetUSDResearchCycle += budget
 			stats.BudgetUSDResearchOpen += budget
 		}
 		if m.Research.CostUSD != nil {
 			cost := *m.Research.CostUSD
 			stats.CostUSDResearchToday += cost
 			stats.CostUSDResearchWeek += cost
+			stats.CostUSDResearchCycle += cost
 			stats.CostUSDResearchOpen += cost
 		}
 	}
@@ -243,31 +323,35 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 	}
 
 	for _, m := range members {
-		if m.Status != "in_progress" || m.TaskID == "" {
-			continue
-		}
-		t := ensure(m.TaskID)
-		t.Status = "in_progress"
-		t.CompletedAt = 0
-		t.Alias = m.Alias
-		if m.Branch != "" {
-			t.Branch = m.Branch
-		}
-		if m.TaskTitle != "" {
-			t.Title = m.TaskTitle
-		}
-		if len(m.Services) > 0 {
-			t.Services = m.Services
-		}
-		t.SpendKind = m.SpendKind
-		t.CostUSD = m.CostUSD
-		t.BudgetUSD = m.BudgetUSD
-		t.OnDemandUSD = m.OnDemandUSD
-		t.Kind = taskKind(m.TaskID, t.Branch)
-		if t.StartedAt == 0 && !m.UpdatedAt.IsZero() {
-			t.StartedAt = m.UpdatedAt.Unix()
+		for _, slot := range m.Slots() {
+			t := ensure(slot.TaskID)
+			t.Status = "in_progress"
+			t.CompletedAt = 0
+			t.Alias = m.Alias
+			if slot.Branch != "" {
+				t.Branch = slot.Branch
+			}
+			if slot.Title != "" {
+				t.Title = slot.Title
+			}
+			if len(slot.Services) > 0 {
+				t.Services = slot.Services
+			}
+			t.SpendKind = slot.SpendKind
+			t.CostUSD = slot.CostUSD
+			t.BudgetUSD = slot.BudgetUSD
+			t.OnDemandUSD = slot.OnDemandUSD
+			t.Kind = taskKind(slot.TaskID, t.Branch)
+			if t.StartedAt == 0 && !slot.StartedAt.IsZero() {
+				t.StartedAt = slot.StartedAt.Unix()
+			}
+			if t.StartedAt == 0 && !slot.UpdatedAt.IsZero() {
+				t.StartedAt = slot.UpdatedAt.Unix()
+			}
 		}
 	}
+
+	closeOrphanTasks(acc, members, events)
 
 	nowUnix := now.Unix()
 	out := make([]model.Task, 0, len(acc))
@@ -335,37 +419,13 @@ func pageTasks(tasks []model.Task, limit, offset int) []model.Task {
 
 func addOpenTaskSpend(stats *model.Stats, members []model.Member) {
 	for _, m := range members {
-		if m.Status != "in_progress" {
+		slots := m.Slots()
+		if len(slots) == 0 && m.Status == "in_progress" {
+			addOneOpenSpend(stats, m.CostUSD, m.BudgetUSD, m.OnDemandUSD, m.SpendKind)
 			continue
 		}
-		if m.CostUSD != nil {
-			cost := *m.CostUSD
-			stats.CostUSDTotal += cost
-			stats.CostUSDToday += cost
-			stats.CostUSDWeek += cost
-			stats.CostUSDOpen += cost
-			stats.CostTasks++
-		}
-		if m.BudgetUSD != nil {
-			budget := *m.BudgetUSD
-			stats.BudgetUSDTotal += budget
-			stats.BudgetUSDToday += budget
-			stats.BudgetUSDWeek += budget
-			stats.BudgetUSDOpen += budget
-			stats.BudgetTasks++
-			if m.SpendKind == "infra" {
-				stats.BudgetUSDInfraToday += budget
-				stats.BudgetUSDInfraWeek += budget
-			} else {
-				stats.BudgetUSDProductToday += budget
-				stats.BudgetUSDProductWeek += budget
-			}
-		}
-		if m.OnDemandUSD != nil {
-			od := *m.OnDemandUSD
-			stats.OnDemandUSDToday += od
-			stats.OnDemandUSDWeek += od
-			stats.OnDemandUSDOpen += od
+		for _, slot := range slots {
+			addOneOpenSpend(stats, slot.CostUSD, slot.BudgetUSD, slot.OnDemandUSD, slot.SpendKind)
 		}
 	}
 	if stats.CostTasks > 0 {
@@ -376,6 +436,115 @@ func addOpenTaskSpend(stats *model.Stats, members []model.Member) {
 	}
 }
 
+func addOneOpenSpend(stats *model.Stats, costUSD, budgetUSD, onDemandUSD *float64, spendKind string) {
+	if costUSD != nil {
+		cost := *costUSD
+		stats.CostUSDTotal += cost
+		stats.CostUSDToday += cost
+		stats.CostUSDWeek += cost
+		stats.CostUSDCycle += cost
+		stats.CostUSDOpen += cost
+		stats.CostTasks++
+	}
+	if budgetUSD != nil {
+		budget := *budgetUSD
+		stats.BudgetUSDTotal += budget
+		stats.BudgetUSDToday += budget
+		stats.BudgetUSDWeek += budget
+		stats.BudgetUSDCycle += budget
+		stats.BudgetUSDOpen += budget
+		stats.BudgetTasks++
+		if spendKind == "infra" {
+			stats.BudgetUSDInfraToday += budget
+			stats.BudgetUSDInfraWeek += budget
+			stats.BudgetUSDInfraCycle += budget
+		} else {
+			stats.BudgetUSDProductToday += budget
+			stats.BudgetUSDProductWeek += budget
+			stats.BudgetUSDProductCycle += budget
+		}
+	}
+	if onDemandUSD != nil {
+		od := *onDemandUSD
+		stats.OnDemandUSDToday += od
+		stats.OnDemandUSDWeek += od
+		stats.OnDemandUSDCycle += od
+		stats.OnDemandUSDOpen += od
+	}
+}
+
+func closeOrphanTasks(acc map[string]*model.Task, members []model.Member, events []model.Event) {
+	live := make(map[string]struct{})
+	liveStartByAlias := make(map[string]int64)
+	for _, m := range members {
+		for _, slot := range m.Slots() {
+			if slot.TaskID == "" {
+				continue
+			}
+			live[slot.TaskID] = struct{}{}
+			ts := int64(0)
+			if !slot.StartedAt.IsZero() {
+				ts = slot.StartedAt.Unix()
+			} else if !slot.UpdatedAt.IsZero() {
+				ts = slot.UpdatedAt.Unix()
+			}
+			if ts == 0 {
+				continue
+			}
+			if prev, ok := liveStartByAlias[m.Alias]; !ok || ts < prev {
+				liveStartByAlias[m.Alias] = ts
+			}
+		}
+	}
+	nextStart := nextTaskStartByAlias(events)
+	for _, t := range acc {
+		if t.Status != "in_progress" {
+			continue
+		}
+		if _, ok := live[t.TaskID]; ok {
+			continue
+		}
+		t.Status = "completed"
+		closeAt := nextStart[t.TaskID]
+		if closeAt == 0 && t.Alias != "" {
+			if liveTs := liveStartByAlias[t.Alias]; liveTs > t.StartedAt {
+				closeAt = liveTs
+			}
+		}
+		if closeAt == 0 {
+			closeAt = t.StartedAt
+		}
+		t.CompletedAt = closeAt
+	}
+}
+
+func nextTaskStartByAlias(events []model.Event) map[string]int64 {
+	type start struct {
+		id, alias string
+		ts        int64
+	}
+	starts := make([]start, 0)
+	for _, ev := range events {
+		if ev.Event != "task_started" || ev.TaskID == "" {
+			continue
+		}
+		starts = append(starts, start{id: ev.TaskID, alias: ev.Alias, ts: ev.Timestamp})
+	}
+	out := make(map[string]int64, len(starts))
+	for i, s := range starts {
+		if s.alias == "" {
+			continue
+		}
+		for j := i + 1; j < len(starts); j++ {
+			if starts[j].alias == s.alias && starts[j].id != s.id {
+				out[s.id] = starts[j].ts
+				break
+			}
+		}
+	}
+	return out
+}
+
 func detectConflicts(members []model.Member) []model.Conflict {
 	conflicts := make([]model.Conflict, 0)
 
@@ -383,14 +552,14 @@ func detectConflicts(members []model.Member) []model.Conflict {
 	activeBranches := make(map[string][]string)
 
 	for _, m := range members {
-		if m.Status != "in_progress" {
-			continue
-		}
-		if m.TaskID != "" {
-			activeTasks[m.TaskID] = append(activeTasks[m.TaskID], m.Alias)
-		}
-		if m.Branch != "" {
-			activeBranches[m.Branch] = append(activeBranches[m.Branch], m.Alias)
+		for _, slot := range m.Slots() {
+			if slot.TaskID != "" {
+				activeTasks[slot.TaskID] = appendUniqueAlias(activeTasks[slot.TaskID], m.Alias)
+			}
+			b := strings.ToLower(strings.TrimSpace(slot.Branch))
+			if b != "" && b != "main" && b != "master" {
+				activeBranches[slot.Branch] = appendUniqueAlias(activeBranches[slot.Branch], m.Alias)
+			}
 		}
 	}
 
@@ -431,14 +600,13 @@ func detectConflicts(members []model.Member) []model.Conflict {
 	topicOwners := make(map[string][]string)
 	summaryOwners := make(map[string][]string)
 	for _, m := range members {
-		if m.Status != "in_progress" {
-			continue
-		}
-		if topic := taskTopicKey(m.TaskID); topic != "" {
-			topicOwners[topic] = appendUniqueAlias(topicOwners[topic], m.Alias)
-		}
-		if sum := normalizeTaskSummary(m.TaskSummary); sum != "" {
-			summaryOwners[sum] = appendUniqueAlias(summaryOwners[sum], m.Alias)
+		for _, slot := range m.Slots() {
+			if topic := taskTopicKey(slot.TaskID); topic != "" {
+				topicOwners[topic] = appendUniqueAlias(topicOwners[topic], m.Alias)
+			}
+			if sum := normalizeTaskSummary(slot.Summary); sum != "" {
+				summaryOwners[sum] = appendUniqueAlias(summaryOwners[sum], m.Alias)
+			}
 		}
 	}
 
@@ -465,6 +633,8 @@ func detectConflicts(members []model.Member) []model.Conflict {
 			AffectedAliases: aliases,
 		})
 	}
+
+	conflicts = append(conflicts, selfScopeConflicts(members)...)
 
 	return conflicts
 }
@@ -503,16 +673,80 @@ func aliasesShareExactTask(members []model.Member, aliases []string) bool {
 	}
 	counts := make(map[string]int)
 	for _, m := range members {
-		if m.Status != "in_progress" || m.TaskID == "" {
-			continue
-		}
 		if _, ok := want[m.Alias]; !ok {
 			continue
 		}
-		counts[m.TaskID]++
-		if counts[m.TaskID] >= 2 {
-			return true
+		for _, slot := range m.Slots() {
+			if slot.TaskID == "" {
+				continue
+			}
+			counts[slot.TaskID]++
+			if counts[slot.TaskID] >= 2 {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+func selfScopeConflicts(members []model.Member) []model.Conflict {
+	out := make([]model.Conflict, 0)
+	for _, m := range members {
+		slots := m.Slots()
+		if len(slots) < 2 {
+			continue
+		}
+		for i := 0; i < len(slots); i++ {
+			for j := i + 1; j < len(slots); j++ {
+				if overlap, label := slotScopeOverlap(slots[i].Services, slots[j].Services); overlap {
+					out = append(out, model.Conflict{
+						Severity:        "critical",
+						Title:           "Parallel Slot Overlap",
+						Description:     m.Alias + " has two in-progress tasks claiming " + label,
+						AffectedAliases: []string{m.Alias},
+					})
+				}
+			}
+		}
+	}
+	return out
+}
+
+func slotScopeOverlap(a, b []string) (bool, string) {
+	seen := make(map[string]string)
+	for _, raw := range a {
+		key, kind := scopeKey(raw)
+		if key == "" || kind == "bus" {
+			continue
+		}
+		seen[key] = kind
+	}
+	for _, raw := range b {
+		key, kind := scopeKey(raw)
+		if key == "" || kind == "bus" {
+			continue
+		}
+		if prev, ok := seen[key]; ok && (kind == "product" || prev == "product" || kind == "workspace") {
+			return true, raw
+		}
+	}
+	return false, ""
+}
+
+func scopeKey(raw string) (key, kind string) {
+	n := strings.ToLower(strings.TrimSpace(raw))
+	n = strings.TrimPrefix(n, ".")
+	n = strings.ReplaceAll(n, "-", "_")
+	n = strings.ReplaceAll(n, " ", "_")
+	if n == "" {
+		return "", ""
+	}
+	switch n {
+	case "common":
+		return n, "bus"
+	case "cursor", "coordinator":
+		return n, "workspace"
+	default:
+		return n, "product"
+	}
 }

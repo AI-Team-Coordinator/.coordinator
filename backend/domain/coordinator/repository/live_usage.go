@@ -24,7 +24,7 @@ func (r *FileRepository) attachLiveUsage(members []model.Member) {
 		if members[i].Alias != alias {
 			continue
 		}
-		if members[i].Status == "in_progress" && members[i].CursorUsage != nil {
+		if len(members[i].Slots()) > 0 {
 			need = true
 		}
 		if members[i].Research != nil {
@@ -42,20 +42,31 @@ func (r *FileRepository) attachLiveUsage(members []model.Member) {
 		if members[i].Alias != alias {
 			continue
 		}
-		if members[i].Status == "in_progress" && members[i].CursorUsage != nil {
-			delta := model.ComputeUsageDelta(members[i].CursorUsage, end)
-			if delta != nil {
-				cost := delta.CostUSD
-				budget := delta.BudgetUSD
-				ondemand := delta.OnDemandUSD
-				cursorPct := delta.CursorModelsPct
-				otherPct := delta.OtherModelsPct
-				members[i].CostUSD = &cost
-				members[i].BudgetUSD = &budget
-				members[i].OnDemandUSD = &ondemand
-				members[i].CursorModelsPct = &cursorPct
-				members[i].OtherModelsPct = &otherPct
-				members[i].SpendKind = model.SpendKind(members[i].Services)
+		slots := members[i].Slots()
+		for si := range slots {
+			if slots[si].CursorUsage == nil {
+				continue
+			}
+			delta := model.ComputeUsageDelta(slots[si].CursorUsage, end)
+			if delta == nil {
+				continue
+			}
+			cost := delta.CostUSD
+			budget := delta.BudgetUSD
+			ondemand := delta.OnDemandUSD
+			slots[si].CostUSD = &cost
+			slots[si].BudgetUSD = &budget
+			slots[si].OnDemandUSD = &ondemand
+			slots[si].SpendKind = model.SpendKind(slots[si].Services)
+		}
+		if len(slots) > 0 {
+			members[i].Tasks = slots
+			members[i].CostUSD = slots[len(slots)-1].CostUSD
+			members[i].BudgetUSD = slots[len(slots)-1].BudgetUSD
+			members[i].OnDemandUSD = slots[len(slots)-1].OnDemandUSD
+			members[i].SpendKind = slots[len(slots)-1].SpendKind
+			if slots[len(slots)-1].CursorUsage != nil {
+				members[i].CursorUsage = slots[len(slots)-1].CursorUsage
 			}
 		}
 		if members[i].Research == nil {
@@ -122,6 +133,10 @@ func (r *FileRepository) persistResearchCursorUsage(alias string, usage *model.C
 		return false
 	}
 	return true
+}
+
+func (r *FileRepository) CursorUsageSnapshot() *model.CursorUsage {
+	return r.cachedUsageSnapshot()
 }
 
 func (r *FileRepository) cachedUsageSnapshot() *model.CursorUsage {

@@ -5,35 +5,40 @@ import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
 import { formatDuration, formatUSD } from '../../shared/lib/formatters'
 import { TaskDocLink } from '../docs/TaskDocLink'
-import type { MemberState } from '../../shared/types/api'
+import type { MemberState, MemberTaskState } from '../../shared/types/api'
 
 interface MemberCardProps {
   member: MemberState
   serviceNames: Record<string, string>
+  task?: MemberTaskState
 }
 
-export function MemberCard({ member, serviceNames }: MemberCardProps) {
+export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
-  const isActive = member.status === 'in_progress'
-  const isResearch = member.research?.status === 'active'
-  const isBusy = isActive || isResearch
-  const isFix =
-    member.task_id &&
-    (member.task_id.startsWith('FIX-') || (member.branch && member.branch.startsWith('fix/')))
+  const isActive = Boolean(task) || (!task && member.status === 'in_progress')
+  const isBusy = isActive
+  const taskId = task?.task_id || member.task_id
+  const branch = task?.branch || member.branch
+  const summary = task?.task_summary || member.task_summary
+  const isFix = Boolean(taskId && (taskId.startsWith('FIX-') || (branch && branch.startsWith('fix/'))))
   const roleLabel = member.role ? t(`pulse.roles.${member.role}`, { defaultValue: member.role }) : ''
-  const claimed = member.services || []
-  const repos = member.repos || []
+  const claimed = task?.services || member.services || []
+  const repos = task?.repos || member.repos || []
   const workspaceRepos = repos.filter((repo) => repo.kind === 'workspace')
   const productRepos = repos.filter((repo) => repo.kind !== 'workspace')
   const showInfraHint = productRepos.length === 0 && (workspaceRepos.length > 0 || (isActive && claimed.length > 0))
   const claimedLabels = claimed.map((id) => serviceNames[id] || id)
-  const taskTitle = member.task_title || member.task_id || ''
+  const taskTitle = task?.task_title || task?.task_id || member.task_title || member.task_id || ''
+  const duration = task?.duration_seconds ?? member.duration_seconds
+  const budget = task?.budget_usd ?? member.budget_usd
+  const ondemand = task?.ondemand_usd ?? member.ondemand_usd
+  const spendKind = task?.spend_kind || member.spend_kind
 
   const copyBranch = () => {
-    if (member.branch) {
-      navigator.clipboard.writeText(member.branch)
+    if (branch) {
+      navigator.clipboard.writeText(branch)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     }
@@ -53,16 +58,12 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
             <h3 className="font-semibold text-slate-900 dark:text-white text-sm leading-snug truncate" title={taskTitle}>
               {taskTitle}
             </h3>
-          ) : isResearch && member.research?.summary ? (
-            <h3 className="font-semibold text-slate-900 dark:text-white text-sm leading-snug line-clamp-2" title={member.research.summary}>
-              {member.research.summary}
-            </h3>
           ) : (
             <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{member.name}</h3>
           )}
-          {isActive && member.task_summary ? (
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug line-clamp-2" title={member.task_summary}>
-              {member.task_summary}
+          {isActive && summary ? (
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug line-clamp-2" title={summary}>
+              {summary}
             </p>
           ) : null}
         </div>
@@ -71,17 +72,11 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
             <Badge variant="success" className="font-bold text-[10px]">
               ● {t('pulse.inProgress')}
             </Badge>
-          ) : null}
-          {isResearch ? (
-            <Badge variant="default" className="font-bold text-[10px]">
-              ● {t('pulse.research')}
-            </Badge>
-          ) : null}
-          {!isBusy ? (
+          ) : (
             <Badge variant="neutral" className="font-bold text-[10px]">
               ○ {t('pulse.idle')}
             </Badge>
-          ) : null}
+          )}
         </div>
       </div>
 
@@ -155,26 +150,26 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500 dark:text-slate-400">{t('pulse.duration')}:</span>
             <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-              {formatDuration(member.duration_seconds)}
+              {formatDuration(duration)}
             </span>
           </div>
 
-          {(typeof member.budget_usd === 'number' || (member.ondemand_usd ?? 0) > 0) && (
+          {(typeof budget === 'number' || (ondemand ?? 0) > 0) && (
             <div className="space-y-1.5">
-              {typeof member.budget_usd === 'number' && (
+              {typeof budget === 'number' && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-500 dark:text-slate-400">{t('pulse.planShare')}</span>
                   <span className="font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
-                    {formatUSD(member.budget_usd)}
-                    {member.spend_kind === 'infra' ? ` · ${t('metrics.infraSpend')}` : ''}
+                    {formatUSD(budget)}
+                    {spendKind === 'infra' ? ` · ${t('metrics.infraSpend')}` : ''}
                   </span>
                 </div>
               )}
-              {(member.ondemand_usd ?? 0) > 0 && (
+              {(ondemand ?? 0) > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-500 dark:text-slate-400">{t('pulse.meter')}</span>
                   <span className="font-mono text-amber-600 dark:text-amber-400">
-                    {formatUSD(member.ondemand_usd)}
+                    {formatUSD(ondemand)}
                   </span>
                 </div>
               )}
@@ -188,9 +183,9 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
             </div>
             <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-950 px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 group">
               <span className="font-mono text-xs text-indigo-700 dark:text-indigo-300 truncate select-all">
-                {member.branch || 'unknown'}
+                {branch || 'unknown'}
               </span>
-              {member.branch && (
+              {branch && (
                 <button
                   onClick={copyBranch}
                   title="Copy branch name"
@@ -209,47 +204,13 @@ export function MemberCard({ member, serviceNames }: MemberCardProps) {
                 {isFix ? t('pulse.fix') : t('pulse.feature')}
               </Badge>
               <TaskDocLink
-                taskId={member.task_id}
+                taskId={taskId}
                 className="text-xs text-slate-800 dark:text-slate-200"
               >
-                {member.task_id}
+                {taskId}
               </TaskDocLink>
             </div>
           </div>
-        </div>
-      ) : null}
-
-      {isResearch ? (
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
-            {t('pulse.research')}
-          </div>
-          {isActive && member.research?.summary ? (
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-snug">{member.research.summary}</p>
-          ) : null}
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500 dark:text-slate-400">{t('pulse.duration')}:</span>
-            <span className="font-mono text-indigo-600 dark:text-indigo-300 font-semibold">
-              {formatDuration(member.research?.duration_seconds)}
-            </span>
-          </div>
-          {typeof member.research?.budget_usd === 'number' && (
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500 dark:text-slate-400">{t('pulse.planShare')}</span>
-              <span className="font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
-                {formatUSD(member.research?.budget_usd)}
-              </span>
-            </div>
-          )}
-          {(member.research?.ondemand_usd ?? 0) > 0 && (
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500 dark:text-slate-400">{t('pulse.meter')}</span>
-              <span className="font-mono text-amber-600 dark:text-amber-400">
-                {formatUSD(member.research?.ondemand_usd)}
-              </span>
-            </div>
-          )}
-          <p className="text-[11px] text-slate-400 dark:text-slate-500">{t('pulse.researchNoBranch')}</p>
         </div>
       ) : null}
 

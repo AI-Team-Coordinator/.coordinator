@@ -19,10 +19,21 @@ func (r *FileRepository) attachRepoWork(members []model.Member) {
 	}
 	workspace := r.WorkspaceDir()
 	for i := range members {
-		if members[i].Status != "in_progress" || members[i].Branch == "" {
+		slots := members[i].Slots()
+		if len(slots) == 0 {
 			continue
 		}
-		members[i].Repos = inspectTaskRepos(workspace, profile.Services, members[i].Services, members[i].Branch, members[i].TaskID)
+		all := make([]model.RepoWork, 0)
+		for si := range slots {
+			repos := inspectTaskRepos(workspace, profile.Services, slots[si].Services, slots[si].Branch, slots[si].TaskID)
+			for ri := range repos {
+				repos[ri].TaskID = slots[si].TaskID
+			}
+			slots[si].Repos = repos
+			all = append(all, repos...)
+		}
+		members[i].Tasks = slots
+		members[i].Repos = all
 	}
 }
 
@@ -75,8 +86,11 @@ func (r *FileRepository) GetStrayWork(_ context.Context, members []model.Member)
 func claimedBranches(members []model.Member) map[string]struct{} {
 	out := make(map[string]struct{})
 	for _, m := range members {
-		if m.Status == "in_progress" && strings.TrimSpace(m.Branch) != "" {
-			out[m.Branch] = struct{}{}
+		for _, slot := range m.Slots() {
+			b := strings.TrimSpace(slot.Branch)
+			if b != "" {
+				out[b] = struct{}{}
+			}
 		}
 	}
 	return out

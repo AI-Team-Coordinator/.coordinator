@@ -390,7 +390,16 @@ func (s *Service) GetStats(ctx context.Context) (*dto.StatsEnvelope, error) {
 	if err != nil {
 		return nil, err
 	}
-	stats := computeStats(events, members)
+	cycleISO, cycleUnix := "", int64(0)
+	if snap := s.repo.CursorUsageSnapshot(); snap != nil {
+		cycleISO = snap.BillingCycleStart
+		cycleUnix = parseBillingCycleUnix(snap.BillingCycleStart)
+	}
+	if cycleUnix == 0 {
+		cycleISO, cycleUnix = billingCycleFromMembers(members)
+	}
+	stats := computeStatsSince(events, members, cycleUnix)
+	stats.BillingCycleStart = cycleISO
 	return &dto.StatsEnvelope{
 		Stats: dto.StatsResponse{
 			TotalCompleted:         stats.TotalCompleted,
@@ -402,32 +411,40 @@ func (s *Service) GetStats(ctx context.Context) (*dto.StatsEnvelope, error) {
 			CompletedThisWeek:      stats.CompletedThisWeek,
 			CostUSDToday:           stats.CostUSDToday,
 			CostUSDWeek:            stats.CostUSDWeek,
+			CostUSDCycle:           stats.CostUSDCycle,
 			CostUSDTotal:           stats.CostUSDTotal,
 			CostUSDAvg:             stats.CostUSDAvg,
 			CostTasks:              stats.CostTasks,
 			BudgetUSDToday:         stats.BudgetUSDToday,
 			BudgetUSDWeek:          stats.BudgetUSDWeek,
+			BudgetUSDCycle:         stats.BudgetUSDCycle,
 			BudgetUSDTotal:         stats.BudgetUSDTotal,
 			BudgetUSDAvg:           stats.BudgetUSDAvg,
 			BudgetTasks:            stats.BudgetTasks,
 			BudgetUSDProductToday:  stats.BudgetUSDProductToday,
 			BudgetUSDProductWeek:   stats.BudgetUSDProductWeek,
+			BudgetUSDProductCycle:  stats.BudgetUSDProductCycle,
 			BudgetUSDInfraToday:    stats.BudgetUSDInfraToday,
 			BudgetUSDInfraWeek:     stats.BudgetUSDInfraWeek,
+			BudgetUSDInfraCycle:    stats.BudgetUSDInfraCycle,
 			OnDemandUSDToday:       stats.OnDemandUSDToday,
 			OnDemandUSDWeek:        stats.OnDemandUSDWeek,
+			OnDemandUSDCycle:       stats.OnDemandUSDCycle,
 			BudgetUSDOpen:          stats.BudgetUSDOpen,
 			CostUSDOpen:            stats.CostUSDOpen,
 			OnDemandUSDOpen:        stats.OnDemandUSDOpen,
 			BudgetUSDResearchToday: stats.BudgetUSDResearchToday,
 			BudgetUSDResearchWeek:  stats.BudgetUSDResearchWeek,
+			BudgetUSDResearchCycle: stats.BudgetUSDResearchCycle,
 			BudgetUSDResearchOpen:  stats.BudgetUSDResearchOpen,
 			CostUSDResearchToday:   stats.CostUSDResearchToday,
 			CostUSDResearchWeek:    stats.CostUSDResearchWeek,
+			CostUSDResearchCycle:   stats.CostUSDResearchCycle,
 			CostUSDResearchOpen:    stats.CostUSDResearchOpen,
 			ResearchCompleted:      stats.ResearchCompleted,
 			ResearchCompletedToday: stats.ResearchCompletedToday,
 			ResearchCompletedWeek:  stats.ResearchCompletedWeek,
+			BillingCycleStart:      stats.BillingCycleStart,
 		},
 	}, nil
 }
@@ -579,6 +596,9 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 			OtherModelsPct:  m.OtherModelsPct,
 			SpendKind:       m.SpendKind,
 		}
+		if len(m.Tasks) > 0 {
+			item.Tasks = mapMemberTasks(m.Tasks)
+		}
 		if m.Status == "in_progress" {
 			d := int64(now.Sub(m.UpdatedAt).Seconds())
 			if d < 0 {
@@ -611,6 +631,32 @@ func (s *Service) overlayRepoFacts(ctx context.Context, members []model.Member) 
 	if err == nil {
 		applyDeployEvents(members, deploys)
 	}
+}
+
+func mapMemberTasks(tasks []model.MemberTask) []dto.MemberTaskResponse {
+	out := make([]dto.MemberTaskResponse, 0, len(tasks))
+	for _, task := range tasks {
+		services := task.Services
+		if services == nil {
+			services = []string{}
+		}
+		out = append(out, dto.MemberTaskResponse{
+			TaskID:          task.TaskID,
+			TaskTitle:       task.Title,
+			TaskDoc:         task.Doc,
+			TaskSummary:     task.Summary,
+			Branch:          task.Branch,
+			Services:        services,
+			StartedAt:       task.StartedAt,
+			DurationSeconds: task.DurationSeconds,
+			Repos:           mapRepos(task.Repos),
+			CostUSD:         task.CostUSD,
+			BudgetUSD:       task.BudgetUSD,
+			OnDemandUSD:     task.OnDemandUSD,
+			SpendKind:       task.SpendKind,
+		})
+	}
+	return out
 }
 
 func mapRepos(repos []model.RepoWork) []dto.RepoWorkResponse {

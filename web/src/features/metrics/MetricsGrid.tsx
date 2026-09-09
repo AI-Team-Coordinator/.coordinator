@@ -1,31 +1,33 @@
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { InfoTooltip } from '../../shared/ui/InfoTooltip'
-import { formatUSD, formatCycleTime } from '../../shared/lib/formatters'
+import { formatUSD, formatCycleTime, formatDate } from '../../shared/lib/formatters'
+import { cursorSpendFromStats } from './cursorSpend'
 import type { Stats } from '../../shared/types/api'
 
 interface MetricsGridProps {
   stats: Stats | null
   onStatusClick?: (status: 'in_progress' | 'completed') => void
+  onSpendClick?: () => void
+  hideSpend?: boolean
 }
 
-export function MetricsGrid({ stats, onStatusClick }: MetricsGridProps) {
-  const { t } = useTranslation()
-  const hasBudget = Boolean(
-    stats && (stats.budget_tasks > 0 || (stats.budget_usd_research_today ?? 0) > 0 || (stats.research_completed ?? 0) > 0)
-  )
-  const hasMeter = Boolean(
-    stats && (stats.cost_tasks > 0 || (stats.cost_usd_research_today ?? 0) > 0)
-  )
-  const budgetOpen = stats?.budget_usd_open ?? 0
-  const costOpen = (stats?.cost_usd_open ?? 0) + (stats?.cost_usd_research_open ?? 0)
-  const taskToday = stats?.budget_usd_today ?? 0
-  const researchToday = stats?.budget_usd_research_today ?? 0
-  const attributed = taskToday + researchToday
-  const researchPct = attributed > 0 ? Math.round((researchToday / attributed) * 100) : null
+export function MetricsGrid({ stats, onStatusClick, onSpendClick, hideSpend }: MetricsGridProps) {
+  const { t, i18n } = useTranslation()
+  const spend = cursorSpendFromStats(stats)
+  const cycleLabel = spend.billingCycleStart
+    ? t('metrics.cycleSince', { date: formatDate(spend.billingCycleStart, i18n.language) })
+    : t('metrics.thisCycle')
+  const spendCardClass = onSpendClick
+    ? 'cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700'
+    : ''
 
   return (
-    <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+    <section
+      className={`grid grid-cols-2 gap-4 ${
+        hideSpend ? 'md:grid-cols-4' : 'md:grid-cols-3 xl:grid-cols-6'
+      }`}
+    >
       <Card
         className={`p-4 bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800/80 ${
           onStatusClick ? 'cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700' : ''
@@ -94,67 +96,43 @@ export function MetricsGrid({ stats, onStatusClick }: MetricsGridProps) {
         </div>
       </Card>
 
-      <Card className="p-4 bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800/80 overflow-visible">
+      {!hideSpend && (
+        <>
+          <Card
+            className={`p-4 bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800/80 overflow-visible ${spendCardClass}`}
+        onClick={onSpendClick}
+        role={onSpendClick ? 'button' : undefined}
+      >
         <div className="flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           <span>{t('metrics.cursorBudget')}</span>
           <InfoTooltip text={t('metrics.cursorBudgetTooltip')} />
         </div>
         <div className="mt-2 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white">
-          {hasBudget ? formatUSD(attributed) : '—'}
+          {spend.hasPlan ? formatUSD(spend.planCycle) : '—'}
         </div>
-        <div className="mt-1.5 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-          {hasBudget ? (
-            <>
-              <div>
-                {t('metrics.productSpend')} {formatUSD(stats?.budget_usd_product_week ?? 0)}
-              </div>
-              <div>
-                {t('metrics.infraSpend')} {formatUSD(stats?.budget_usd_infra_week ?? 0)}
-              </div>
-              {budgetOpen > 0 && (
-                <div>
-                  {t('metrics.includesOpen', { amount: formatUSD(budgetOpen) })}
-                </div>
-              )}
-              {researchToday > 0 || taskToday > 0 ? (
-                <div>
-                  {t('metrics.taskSpend')} {formatUSD(taskToday)} · {t('metrics.researchSpend')}{' '}
-                  {formatUSD(researchToday)}
-                  {researchPct != null ? ` · ${t('metrics.researchShare', { pct: researchPct })}` : ''}
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <div>{t('metrics.cursorBudgetHint')}</div>
-          )}
+        <div className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+          {spend.hasPlan ? cycleLabel : t('metrics.cursorBudgetHint')}
         </div>
       </Card>
 
-      <Card className="p-4 bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800/80 overflow-visible">
+      <Card
+        className={`p-4 bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800/80 overflow-visible ${spendCardClass}`}
+        onClick={onSpendClick}
+        role={onSpendClick ? 'button' : undefined}
+      >
         <div className="flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           <span>{t('metrics.cursorSpend')}</span>
           <InfoTooltip text={t('metrics.cursorSpendTooltip')} />
         </div>
         <div className="mt-2 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white">
-          {hasMeter ? formatUSD((stats?.cost_usd_today ?? 0) + (stats?.cost_usd_research_today ?? 0)) : '—'}
+          {spend.hasOnDemand ? formatUSD(spend.ondemandCycle) : '—'}
         </div>
-        <div className="mt-1.5 space-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-          {hasMeter ? (
-            <>
-              <div>
-                {formatUSD((stats?.cost_usd_week ?? 0) + (stats?.cost_usd_research_week ?? 0))} {t('metrics.thisWeek')}
-              </div>
-              {costOpen > 0 && (
-                <div>
-                  {t('metrics.includesOpen', { amount: formatUSD(costOpen) })}
-                </div>
-              )}
-            </>
-          ) : (
-            <div>{t('metrics.cursorSpendHint')}</div>
-          )}
+        <div className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+          {spend.hasOnDemand ? cycleLabel : t('metrics.cursorSpendHint')}
         </div>
       </Card>
+        </>
+      )}
     </section>
   )
 }

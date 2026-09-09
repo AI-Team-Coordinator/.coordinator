@@ -230,7 +230,7 @@ def compute_delta(start: dict[str, Any] | None, end: dict[str, Any] | None) -> d
     return out
 
 
-INFRA_SERVICE_KEYS = frozenset({"common", "cursor"})
+INFRA_SERVICE_KEYS = frozenset({"common", "cursor", "coordinator"})
 
 
 def normalize_service_key(label: str) -> str:

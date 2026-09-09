@@ -6,6 +6,7 @@ import { MetricsGrid } from '../features/metrics/MetricsGrid'
 import { TeamPulseSection } from '../features/pulse/TeamPulseSection'
 import { ActivityTimeline, type EventsFilter } from '../features/timeline/ActivityTimeline'
 import { TaskTable, type TasksFilter } from '../features/stats/TaskTable'
+import { SpendBreakdown } from '../features/stats/SpendBreakdown'
 import { ServiceMap } from '../features/project/ServiceMap'
 import { TeamRosterSection } from '../features/team/TeamRosterSection'
 import { SectionNav } from '../features/nav/SectionNav'
@@ -253,12 +254,19 @@ export function App() {
 
     const ticker = setInterval(() => {
       setMembers((prev) =>
-        prev.map((m) => {
-          if (m.status === 'in_progress') {
-            return { ...m, duration_seconds: (m.duration_seconds || 0) + 1 }
-          }
-          return m
-        })
+        prev.map((m) => ({
+          ...m,
+          duration_seconds:
+            m.status === 'in_progress' ? (m.duration_seconds || 0) + 1 : m.duration_seconds,
+          tasks: m.tasks?.map((task) => ({
+            ...task,
+            duration_seconds: (task.duration_seconds || 0) + 1,
+          })),
+          research:
+            m.research?.status === 'active'
+              ? { ...m.research, duration_seconds: (m.research.duration_seconds || 0) + 1 }
+              : m.research,
+        }))
       )
       setTasks((prev) =>
         prev.map((task) => {
@@ -298,6 +306,7 @@ export function App() {
               <MetricsGrid
                 stats={stats}
                 onStatusClick={(status) => onTasksFilter({ ...tasksFilter, status })}
+                onSpendClick={() => changeSection('stats')}
               />
               <TeamPulseSection members={members} stray={stray} serviceNames={serviceNames} />
               <TaskTable
@@ -333,9 +342,11 @@ export function App() {
           {section === 'stats' && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('sections.stats')}</h2>
+              <SpendBreakdown stats={stats} />
               <MetricsGrid
                 stats={stats}
                 onStatusClick={(status) => onTasksFilter({ ...tasksFilter, status })}
+                hideSpend
               />
               <TaskTable
                 tasks={tasks}

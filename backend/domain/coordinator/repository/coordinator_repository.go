@@ -17,6 +17,7 @@ type CoordinatorRepository interface {
 	SaveProject(ctx context.Context, profile *model.ProjectProfile) error
 	WorkspaceDir() string
 	GetMembers(ctx context.Context) ([]model.Member, error)
+	CursorUsageSnapshot() *model.CursorUsage
 	CompleteTask(ctx context.Context, alias, taskID string) error
 	GetStrayWork(ctx context.Context, members []model.Member) ([]model.StrayRepo, error)
 	CurrentAuthor(ctx context.Context) (string, error)

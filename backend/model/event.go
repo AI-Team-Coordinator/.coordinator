@@ -46,6 +46,7 @@ type RepoWork struct {
 	Dirty          bool   `json:"dirty,omitempty"`
 	Deployed       bool   `json:"deployed,omitempty"`
 	HasLocalBranch bool   `json:"-"`
+	TaskID         string `json:"task_id,omitempty"`
 }
 
 // GitReport is local-only git metadata published in .current_task_<ALIAS>.

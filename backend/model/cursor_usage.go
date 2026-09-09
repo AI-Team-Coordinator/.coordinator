@@ -64,7 +64,7 @@ func isInfraService(label string) bool {
 	key = strings.TrimPrefix(key, ".")
 	key = strings.ReplaceAll(key, "-", "_")
 	key = strings.ReplaceAll(key, " ", "_")
-	return key == "common" || key == "cursor"
+	return key == "common" || key == "cursor" || key == "coordinator"
 }
 
 // ComputeUsageDelta is the same formula as coordinator/utils/cursor_usage.py.

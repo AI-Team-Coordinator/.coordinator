@@ -28,6 +28,52 @@ type Member struct {
 	SpendKind       string
 
 	Research *Research
+	Tasks    []MemberTask
+}
+
+// MemberTask is one in-progress slot on a developer's snapshot.
+type MemberTask struct {
+	TaskID          string
+	Title           string
+	Doc             string
+	Summary         string
+	Branch          string
+	Services        []string
+	StartedAt       time.Time
+	UpdatedAt       time.Time
+	DurationSeconds int64
+	Repos           []RepoWork
+	CursorUsage     *CursorUsage
+	CostUSD         *float64
+	BudgetUSD       *float64
+	OnDemandUSD     *float64
+	SpendKind       string
+}
+
+// Slots returns open tasks. Legacy snapshots with only root fields yield one slot.
+func (m Member) Slots() []MemberTask {
+	if len(m.Tasks) > 0 {
+		return m.Tasks
+	}
+	if m.Status == "in_progress" && m.TaskID != "" {
+		return []MemberTask{{
+			TaskID:      m.TaskID,
+			Title:       m.TaskTitle,
+			Doc:         m.TaskDoc,
+			Summary:     m.TaskSummary,
+			Branch:      m.Branch,
+			Services:    m.Services,
+			UpdatedAt:   m.UpdatedAt,
+			StartedAt:   m.UpdatedAt,
+			Repos:       m.Repos,
+			CursorUsage: m.CursorUsage,
+			CostUSD:     m.CostUSD,
+			BudgetUSD:   m.BudgetUSD,
+			OnDemandUSD: m.OnDemandUSD,
+			SpendKind:   m.SpendKind,
+		}}
+	}
+	return nil
 }
 
 // Research is an off-task Cursor chat running in parallel with (or without) a task.

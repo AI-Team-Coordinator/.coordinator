@@ -25,6 +25,23 @@ export interface MemberState {
   other_models_pct?: number
   spend_kind?: 'infra' | 'product' | 'research' | string
   research?: ResearchState
+  tasks?: MemberTaskState[]
+}
+
+export interface MemberTaskState {
+  task_id: string
+  task_title?: string
+  task_doc?: string
+  task_summary?: string
+  branch?: string
+  services?: string[]
+  started_at?: string
+  duration_seconds?: number
+  repos?: RepoWork[]
+  cost_usd?: number
+  budget_usd?: number
+  ondemand_usd?: number
+  spend_kind?: string
 }
 
 export interface ResearchState {
@@ -81,29 +98,37 @@ export interface Stats {
   completed_this_week: number
   cost_usd_today: number
   cost_usd_week: number
+  cost_usd_cycle: number
   cost_usd_total: number
   cost_usd_avg: number
   cost_tasks: number
   budget_usd_today: number
   budget_usd_week: number
+  budget_usd_cycle: number
   budget_usd_total: number
   budget_usd_avg: number
   budget_tasks: number
   budget_usd_product_today: number
   budget_usd_product_week: number
+  budget_usd_product_cycle: number
   budget_usd_infra_today: number
   budget_usd_infra_week: number
+  budget_usd_infra_cycle: number
   ondemand_usd_today: number
   ondemand_usd_week: number
+  ondemand_usd_cycle: number
   budget_usd_open: number
   cost_usd_open: number
   ondemand_usd_open: number
   budget_usd_research_today: number
   budget_usd_research_week: number
+  budget_usd_research_cycle: number
   budget_usd_research_open: number
   cost_usd_research_today: number
   cost_usd_research_week: number
+  cost_usd_research_cycle: number
   cost_usd_research_open: number
+  billing_cycle_start?: string
 }
 
 export interface TaskItem {

@@ -11,6 +11,7 @@ export function InfoTooltip({ text, className }: InfoTooltipProps) {
     <button
       type="button"
       aria-label={text}
+      onClick={(e) => e.stopPropagation()}
       className={cn(
         'relative inline-flex items-center justify-center rounded-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 group/tip shrink-0',
         className
