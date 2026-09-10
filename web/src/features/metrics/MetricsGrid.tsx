@@ -78,7 +78,7 @@ export function MetricsGrid({ stats, onStatusClick, onSpendClick, hideSpend }: M
       </Card>
 
       <Card className="p-4 bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800/80">
-        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
           {t('metrics.featuresFixesResearch')}
         </div>
         <div className="mt-2 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white flex items-baseline gap-2">

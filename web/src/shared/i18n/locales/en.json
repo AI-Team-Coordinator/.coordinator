@@ -24,7 +24,7 @@
     "completedToday": "Completed Today",
     "thisWeek": "this week",
     "featuresAndFixes": "Features / Fixes",
-    "featuresFixesResearch": "Features / fixes / research",
+    "featuresFixesResearch": "Feat. / fixes / research",
     "researchThisWeek": "research this week: {{count}}",
     "cursorSpend": "On-demand",
     "cursorSpendHint": "exact extra past included pools",
