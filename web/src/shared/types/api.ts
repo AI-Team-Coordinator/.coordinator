@@ -42,6 +42,12 @@ export interface MemberTaskState {
   budget_usd?: number
   ondemand_usd?: number
   spend_kind?: string
+  chats?: ChatTab[]
+}
+
+export interface ChatTab {
+  title?: string
+  session_id?: string
 }
 
 export interface ResearchState {
@@ -52,6 +58,7 @@ export interface ResearchState {
   cost_usd?: number
   budget_usd?: number
   ondemand_usd?: number
+  chat?: ChatTab
 }
 
 export interface RepoWork {

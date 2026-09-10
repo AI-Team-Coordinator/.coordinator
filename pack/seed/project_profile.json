@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "project": {
+    "id": "",
+    "name": "",
+    "tagline": {
+      "en": "",
+      "ru": ""
+    }
+  },
+  "github": {
+    "host": "github.com",
+    "org": "",
+    "ssh_host": ""
+  },
+  "groups": [],
+  "services": [],
+  "edges": []
+}

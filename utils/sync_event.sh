@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Helper script to instantly update local coordinator state and asynchronously push to Common.
+# Helper script to instantly update local coordinator state and asynchronously
+# push snapshots to origin/coordinator-state (not Common main).
 # Usage: ./sync_event.sh <ALIAS> <EVENT_TYPE> [TASK_ID] [BRANCH_NAME] [Service1,Service2] [doc=...] [summary=...]
 # Example: ./sync_event.sh EK task_started 20260907-1756 feature/auth Core,InboxPanelWeb
 # Example: ./sync_event.sh EK task_started FIX-... fix/avatar Website summary="Restore dark header avatar"
@@ -56,7 +57,7 @@ TIMESTAMP=$(date +%s)
 ISO_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 write_current_task() {
-    python3 "$COORD_DIR/task_snapshot.py" start "$CURRENT_TASK_FILE" "$ALIAS" "$ISO_DATE" "$TASK_ID" "$BRANCH_NAME" "$SERVICES_CSV" "$COORD_DIR" "$COMMON_ROOT" "$DOC_PATH" "$SUMMARY"
+    python3 "$COORD_DIR/task_snapshot.py" start "$CURRENT_TASK_FILE" "$ALIAS" "$ISO_DATE" "$TASK_ID" "$BRANCH_NAME" "$SERVICES_CSV" "$COORD_DIR" "$COMMON_ROOT" "$DOC_PATH" "$SUMMARY" "$SESSION_ID"
 }
 
 # Nested .research on the snapshot — does not replace in_progress / idle task fields.
@@ -231,11 +232,7 @@ if [ -n "$EVENT_JSON" ]; then
     echo "$EVENT_JSON" >> "$EVENTS_FILE"
 fi
 
-# 2. Asynchronously commit, rebase, and push in background (does not block IDE/agent)
+# 2. Push snapshots to origin/coordinator-state (Common main stays clean)
 (
-    cd "$COMMON_ROOT"
-    git add "$CURRENT_TASK_FILE" "$EVENTS_FILE"
-    git commit -m "chore(progress): $ALIAS $EVENT_TYPE ${TASK_ID:-""}" || true
-    git pull --rebase origin main || true
-    git push origin main || true
+    "$COORD_DIR/coordinator_state.sh" push "chore(progress): $ALIAS $EVENT_TYPE ${TASK_ID:-}"
 ) </dev/null >> "$SYNC_LOG" 2>&1 &

@@ -615,6 +615,7 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 				CostUSD:         m.Research.CostUSD,
 				BudgetUSD:       m.Research.BudgetUSD,
 				OnDemandUSD:     m.Research.OnDemandUSD,
+				Chat:            mapChat(m.Research.Chat),
 			}
 		}
 		out = append(out, item)
@@ -654,9 +655,28 @@ func mapMemberTasks(tasks []model.MemberTask) []dto.MemberTaskResponse {
 			BudgetUSD:       task.BudgetUSD,
 			OnDemandUSD:     task.OnDemandUSD,
 			SpendKind:       task.SpendKind,
+			Chats:           mapChats(task.Chats),
 		})
 	}
 	return out
+}
+
+func mapChats(chats []model.ChatTab) []dto.ChatTabResponse {
+	if len(chats) == 0 {
+		return nil
+	}
+	out := make([]dto.ChatTabResponse, 0, len(chats))
+	for _, chat := range chats {
+		out = append(out, dto.ChatTabResponse{Title: chat.Title, SessionID: chat.SessionID})
+	}
+	return out
+}
+
+func mapChat(chat *model.ChatTab) *dto.ChatTabResponse {
+	if chat == nil {
+		return nil
+	}
+	return &dto.ChatTabResponse{Title: chat.Title, SessionID: chat.SessionID}
 }
 
 func mapRepos(repos []model.RepoWork) []dto.RepoWorkResponse {

@@ -41,16 +41,23 @@ type MemberTaskResponse struct {
 	BudgetUSD       *float64           `json:"budget_usd,omitempty"`
 	OnDemandUSD     *float64           `json:"ondemand_usd,omitempty"`
 	SpendKind       string             `json:"spend_kind,omitempty"`
+	Chats           []ChatTabResponse  `json:"chats,omitempty"`
+}
+
+type ChatTabResponse struct {
+	Title     string `json:"title"`
+	SessionID string `json:"session_id,omitempty"`
 }
 
 type ResearchResponse struct {
-	Status          string    `json:"status"`
-	Summary         string    `json:"summary,omitempty"`
-	StartedAt       time.Time `json:"started_at,omitempty"`
-	DurationSeconds int64     `json:"duration_seconds,omitempty"`
-	CostUSD         *float64  `json:"cost_usd,omitempty"`
-	BudgetUSD       *float64  `json:"budget_usd,omitempty"`
-	OnDemandUSD     *float64  `json:"ondemand_usd,omitempty"`
+	Status          string           `json:"status"`
+	Summary         string           `json:"summary,omitempty"`
+	StartedAt       time.Time        `json:"started_at,omitempty"`
+	DurationSeconds int64            `json:"duration_seconds,omitempty"`
+	CostUSD         *float64         `json:"cost_usd,omitempty"`
+	BudgetUSD       *float64         `json:"budget_usd,omitempty"`
+	OnDemandUSD     *float64         `json:"ondemand_usd,omitempty"`
+	Chat            *ChatTabResponse `json:"chat,omitempty"`
 }
 
 type RepoWorkResponse struct {

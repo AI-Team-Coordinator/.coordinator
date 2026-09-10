@@ -463,6 +463,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 
 func (r *FileRepository) withRepoWork(members []model.Member) []model.Member {
 	r.maybeCloseStaleResearch(members)
+	r.attachChatTabs(members)
 	r.attachRepoWork(members)
 	author, _ := r.CurrentAuthor(context.Background())
 	for i := range members {
@@ -519,6 +520,8 @@ type snapshotTask struct {
 	StartedAt   string             `json:"started_at"`
 	UpdatedAt   string             `json:"updated_at"`
 	CursorUsage *model.CursorUsage `json:"cursor_usage"`
+	SessionID   string             `json:"session_id"`
+	SessionIDs  []string           `json:"session_ids"`
 }
 
 type snapshotFile struct {
@@ -579,6 +582,7 @@ func (r *FileRepository) parseSnapshotTasks(raw snapshotFile, now time.Time) []m
 			DurationSeconds: d,
 			CursorUsage:     row.CursorUsage,
 			SpendKind:       model.SpendKind(row.Services),
+			SessionIDs:      collectSessionIDs(row.SessionID, row.SessionIDs),
 		})
 	}
 	return out

@@ -104,6 +104,9 @@
     "dirty": "uncommitted",
     "infra": "Infrastructure",
     "infraHint": "Common + .cursor — docs and coordinator",
+    "cursorTab": "Cursor chat",
+    "cursorTabs": "Cursor chats",
+    "unnamedChat": "Unnamed chat",
     "repoState": {
       "local": "local",
       "pushed": "pushed",

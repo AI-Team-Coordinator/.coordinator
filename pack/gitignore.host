@@ -1,0 +1,8 @@
+# Coordinator tooling (separate git; update with git pull inside .coordinator)
+.coordinator/
+
+# Local identity and caches of the coordination bus
+coordinator-data/.current_author
+coordinator-data/.cache/
+coordinator-data/logs/
+coordinator-data/progress/.sync.log

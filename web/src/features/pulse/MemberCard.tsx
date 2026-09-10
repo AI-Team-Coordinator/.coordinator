@@ -5,6 +5,7 @@ import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
 import { formatDuration, formatUSD } from '../../shared/lib/formatters'
 import { TaskDocLink } from '../docs/TaskDocLink'
+import { ChatTabs } from './ChatTabs'
 import type { MemberState, MemberTaskState } from '../../shared/types/api'
 
 interface MemberCardProps {
@@ -90,6 +91,12 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
           {roleLabel ? ` · ${roleLabel}` : ''}
         </div>
       </div>
+
+      {isActive ? (
+        <div className="mt-3">
+          <ChatTabs chats={task?.chats} />
+        </div>
+      ) : null}
 
       {repos.length > 0 ? (
         <div className="mt-3 space-y-1.5">

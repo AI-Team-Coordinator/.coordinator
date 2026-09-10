@@ -7,6 +7,24 @@ import (
 	"coordinator/model"
 )
 
+func TestComputeStatsActiveNowCountsSlots(t *testing.T) {
+	stats := computeStats(nil, []model.Member{
+		{
+			Alias:  "EK",
+			Status: "in_progress",
+			Tasks: []model.MemberTask{
+				{TaskID: "FIX-1"},
+				{TaskID: "20260910-0732-EK-STATUS"},
+			},
+			Research: &model.Research{Status: "active"},
+		},
+		{Alias: "AS", Status: "idle"},
+	})
+	if stats.ActiveNow != 3 {
+		t.Fatalf("active=%d want 2 tasks + research", stats.ActiveNow)
+	}
+}
+
 func TestComputeStatsResearchSplit(t *testing.T) {
 	now := time.Now().Unix()
 	stats := computeStats([]model.Event{

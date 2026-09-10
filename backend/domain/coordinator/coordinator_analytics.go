@@ -12,14 +12,24 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 	return computeStatsSince(events, members, billingCycleStartUnix(members))
 }
 
-func computeStatsSince(events []model.Event, members []model.Member, cycleStart int64) model.Stats {
-	stats := model.Stats{}
-
+func countActiveNow(members []model.Member) int {
+	n := 0
 	for _, m := range members {
-		if m.Status == "in_progress" || (m.Research != nil && m.Research.Status == "active") {
-			stats.ActiveNow++
+		slots := m.Slots()
+		n += len(slots)
+		if len(slots) == 0 && m.Status == "in_progress" {
+			n++
+		}
+		if m.Research != nil && m.Research.Status == "active" {
+			n++
 		}
 	}
+	return n
+}
+
+func computeStatsSince(events []model.Event, members []model.Member, cycleStart int64) model.Stats {
+	stats := model.Stats{}
+	stats.ActiveNow = countActiveNow(members)
 
 	sort.Slice(events, func(i, j int) bool {
 		return events[i].Timestamp < events[j].Timestamp

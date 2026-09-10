@@ -28,8 +28,11 @@ def main() -> None:
             doc_path,
             summary,
         ) = sys.argv[:12]
+        session_id = sys.argv[12] if len(sys.argv) > 12 else ""
         sys.path.insert(0, coord_dir)
-        upsert_started(path, alias, iso, task_id, branch, services_csv, common_root, doc_path, summary)
+        upsert_started(
+            path, alias, iso, task_id, branch, services_csv, common_root, doc_path, summary, session_id
+        )
         return
     if action == "complete":
         _, _, path, events_file, alias, task_id, ts, iso, coord_dir = sys.argv[:9]
@@ -68,6 +71,27 @@ def find_task_doc(root: str, tid: str) -> str:
         if os.path.isfile(candidate):
             return os.path.relpath(candidate, root).replace("\\", "/")
     return ""
+
+
+def merge_session_ids(existing: dict, new_sid: str) -> list[str]:
+    ids: list[str] = []
+    seen: set[str] = set()
+
+    def add(raw) -> None:
+        sid = str(raw or "").strip()
+        if not sid or sid in seen:
+            return
+        seen.add(sid)
+        ids.append(sid)
+
+    raw = existing.get("session_ids") if isinstance(existing, dict) else None
+    if isinstance(raw, list):
+        for item in raw:
+            add(item)
+    if isinstance(existing, dict):
+        add(existing.get("session_id"))
+    add(new_sid)
+    return ids
 
 
 def clip(text: str, n: int = 280) -> str:
@@ -182,6 +206,7 @@ def upsert_started(
     common_root: str,
     doc_path: str,
     summary: str,
+    session_id: str = "",
 ) -> None:
     coord_dir = os.path.dirname(os.path.abspath(__file__))
     snap = load_snap(path)
@@ -209,17 +234,24 @@ def upsert_started(
         slot["summary"] = text
     if usage:
         slot["cursor_usage"] = usage
-
+    sid = (session_id or "").strip()
     replaced = False
     for i, existing in enumerate(slots):
         if existing.get("task_id") == task_id:
             slot["started_at"] = existing.get("started_at") or iso
             if not slot.get("cursor_usage") and isinstance(existing.get("cursor_usage"), dict):
                 slot["cursor_usage"] = existing["cursor_usage"]
+            ids = merge_session_ids(existing, sid)
+            if ids:
+                slot["session_ids"] = ids
+                slot["session_id"] = ids[0]
             slots[i] = slot
             replaced = True
             break
     if not replaced:
+        if sid:
+            slot["session_id"] = sid
+            slot["session_ids"] = [sid]
         slots.append(slot)
 
     out = {"alias": alias, "tasks": slots}

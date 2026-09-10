@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -53,13 +54,9 @@ func (r *FileRepository) maybePublishGitReport(author string, members []model.Me
 }
 
 func (r *FileRepository) publishGitReport(alias string, report *model.GitReport) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
 	abs := filepath.Join(r.progressDir(), ".current_task_"+alias)
-	rel, err := filepath.Rel(r.busPath, abs)
-	if err != nil {
-		rel = filepath.ToSlash(filepath.Join("data", "progress", ".current_task_"+alias))
-	}
-	rel = filepath.ToSlash(rel)
 
 	r.gitMu.Lock()
 	defer r.gitMu.Unlock()
@@ -74,55 +71,13 @@ func (r *FileRepository) publishGitReport(alias string, report *model.GitReport)
 	if strings.TrimSpace(branch) != "main" {
 		return fmt.Errorf("git_report skipped: Common is on %s", strings.TrimSpace(branch))
 	}
-	if err := r.ensureOnlySnapshotDirty(ctx, rel); err != nil {
-		return err
-	}
 	if err := writeGitReport(abs, report); err != nil {
 		return err
 	}
-	if _, err := r.gitOutput(ctx, 15*time.Second, "add", "--", rel); err != nil {
-		return gitErr("git_report add", err)
-	}
-	if _, err := r.gitOutput(ctx, 20*time.Second, "commit", "-m", fmt.Sprintf("chore(progress): %s git_report", alias), "--", rel); err != nil {
-		if !gitNothingToCommit(err) {
-			return gitErr("git_report commit", err)
-		}
-		return nil
-	}
-	if _, err := r.gitOutput(ctx, 60*time.Second, "pull", "--rebase", "origin", "main"); err != nil {
-		_, _ = r.gitOutput(context.Background(), 15*time.Second, "rebase", "--abort")
-		return gitErr("git_report rebase", err)
-	}
-	if _, err := r.gitOutput(ctx, 60*time.Second, "push", "origin", "main"); err != nil {
-		return gitErr("git_report push", err)
+	if err := r.execCoordinatorState(ctx, "push", fmt.Sprintf("chore(progress): %s git_report", alias)); err != nil {
+		return err
 	}
 	infra.LogInfo("git_report pushed for %s", alias)
-	return nil
-}
-
-func (r *FileRepository) ensureOnlySnapshotDirty(ctx context.Context, rel string) error {
-	out, err := r.gitOutput(ctx, 10*time.Second, "status", "--porcelain")
-	if err != nil {
-		return gitErr("git_report status", err)
-	}
-	for _, line := range strings.Split(out, "\n") {
-		line = strings.TrimRight(line, "\r")
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		path := line
-		if len(path) >= 3 {
-			path = strings.TrimSpace(path[2:])
-		}
-		path = strings.Trim(path, "\"")
-		if i := strings.LastIndex(path, " -> "); i >= 0 {
-			path = path[i+4:]
-		}
-		path = filepath.ToSlash(path)
-		if path != rel {
-			return fmt.Errorf("git_report skipped: Common has other local changes (%s)", path)
-		}
-	}
 	return nil
 }
 
@@ -156,10 +111,17 @@ func writeGitReport(path string, report *model.GitReport) error {
 	return os.WriteFile(path, out, 0o644)
 }
 
-func gitNothingToCommit(err error) bool {
-	if err == nil {
-		return false
+func (r *FileRepository) execCoordinatorState(ctx context.Context, args ...string) error {
+	script := r.appScript("coordinator_state.sh")
+	if script == "" || !fileExists(script) {
+		return fmt.Errorf("coordinator_state.sh not found")
 	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "nothing to commit") || strings.Contains(msg, "no changes added")
+	cmd := exec.CommandContext(ctx, script, args...)
+	cmd.Dir = r.appDir()
+	cmd.Env = append(os.Environ(), "COORDINATOR_ROOT="+r.appDir(), "GIT_TERMINAL_PROMPT=0")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("coordinator_state %s: %w (%s)", strings.Join(args, " "), err, strings.TrimSpace(string(out)))
+	}
+	return nil
 }

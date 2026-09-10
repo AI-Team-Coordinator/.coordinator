@@ -1,9 +1,9 @@
 # AI Team Coordinator
 
-> **Air Traffic Control for AI-Assisted Software Development**  
-> Zero-Trust, Git-Native team coordination when your codebase grows faster than human attention.
+[Читать на русском языке](./ABOUT_RU.md)
 
-[Читать на русском (ABOUT_RU.md)](./docs/ABOUT_RU.md)
+Author: **Evgeny KOSIVTSOV** (`EK`)  
+Created: 2026-09-10 12:07
 
 ---
 
@@ -103,49 +103,17 @@ Adopting the Coordinator does not require an organizational overhaul or weeks of
 
 ---
 
-## Quick Start & Installation
+## Next Steps: Getting Started
 
 Setting up the Coordinator is completely automated through the AI coding environment itself — no complex manual terminal configuration required.
 
-### Install in Cursor (Recommended)
+To install the Coordinator in your project:
 
-Open Cursor in your project folder (or a fresh test project) and send this prompt in the chat:
+👉 **[Read the Installation Playbook (INSTALL.md)](./INSTALL.md)**
+
+Your engineering team can start right now by opening Cursor in their project and running:
 
 ```text
 Install the Coordinator.
 Playbook: https://github.com/AI-Team-Coordinator/.coordinator/blob/main/docs/INSTALL.md
 ```
-
-The agent will explain how it works, inspect your project to propose the cleanest layout, verify required tools, and set up the local dashboard: [http://localhost:5175](http://localhost:5175).
-
-👉 **[Read the Full Installation Playbook (docs/INSTALL.md)](./docs/INSTALL.md)**
-
----
-
-## Development & Local Architecture
-
-For developers working directly on the Coordinator codebase:
-
-### Architecture
-- **Backend:** Go daemon (`127.0.0.1:4321`) managing JSONL event bus, SQLite cache, and Git synchronization.
-- **Frontend:** React + Vite SPA (`http://localhost:5175`) with real-time Team Pulse and timeline.
-- **IDE Layer:** Cursor lifecycle hooks (`beforeFileEdit`, `sessionStart`, `afterAgentResponse`) and rule engines.
-
-### Running Locally
-```bash
-cp .env.example .env   # configure workspace paths
-./utils/run.sh         # starts API (port 4321) + Vite HMR (port 5175)
-# after Go edits:
-./utils/backend.sh restart
-```
-
-### Environment Variables
-
-| Variable | Meaning | Example |
-|---|---|---|
-| `WORKSPACE_ROOT` | Clone root containing all repos | `..` |
-| `DATA_DIR` | Settings, progress, event bus (`jsonl`), SQLite cache | `../coordinator-data` |
-| `DOCS_DIR` | Task specifications and documentation registry | `../docs` |
-| `BUS_DIR` | Git coordination bus repository | `..` |
-| `CURSOR_DIR` | Cursor IDE rules and hooks | `../.cursor` |
-| `PORT` | Local API port (default: `4321`) | `4321` |

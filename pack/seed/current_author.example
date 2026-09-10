@@ -1,0 +1,4 @@
+# Copy to `.current_author` in coordinator-data (that file is gitignored).
+# First non-empty line that is not a comment is the alias from settings/team.json.
+
+AK

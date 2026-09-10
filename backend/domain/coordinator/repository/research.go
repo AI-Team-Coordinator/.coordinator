@@ -22,6 +22,7 @@ type composerSessionRec struct {
 	Alias       string `json:"alias"`
 	LastAgentAt int64  `json:"last_agent_at"`
 	LastText    string `json:"last_text"`
+	Title       string `json:"title"`
 }
 
 func (r *FileRepository) maybeCloseStaleResearch(members []model.Member) {

@@ -97,10 +97,11 @@ func (a *App) pullCommonOnce() {
 	updated, err := a.repo.PullCommonOrigin(context.Background())
 	if err != nil {
 		infra.LogWarn("common pull origin/main: %v", err)
-		return
-	}
-	if updated {
+	} else if updated {
 		infra.LogInfo("common pulled origin/main")
+	}
+	if err := a.repo.PullCoordinatorState(context.Background()); err != nil {
+		infra.LogWarn("coordinator-state pull: %v", err)
 	}
 }
 

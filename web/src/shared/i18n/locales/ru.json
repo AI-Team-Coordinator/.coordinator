@@ -104,6 +104,9 @@
     "dirty": "есть правки",
     "infra": "Инфраструктура",
     "infraHint": "Common + .cursor — документация и координатор",
+    "cursorTab": "Чат Cursor",
+    "cursorTabs": "Чаты Cursor",
+    "unnamedChat": "Чат без названия",
     "repoState": {
       "local": "локально",
       "pushed": "запушено",

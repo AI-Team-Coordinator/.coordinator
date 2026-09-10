@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
 import { formatDuration, formatUSD } from '../../shared/lib/formatters'
+import { ChatTabs } from './ChatTabs'
 import type { MemberState } from '../../shared/types/api'
 
 interface ResearchCardProps {
@@ -39,6 +40,12 @@ export function ResearchCard({ member }: ResearchCardProps) {
           {roleLabel ? ` · ${roleLabel}` : ''}
         </div>
       </div>
+
+      {member.research?.chat ? (
+        <div className="mt-3">
+          <ChatTabs chats={[member.research.chat]} />
+        </div>
+      ) : null}
 
       <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
         <div className="flex items-center justify-between text-xs">

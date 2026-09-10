@@ -48,6 +48,14 @@ type MemberTask struct {
 	BudgetUSD       *float64
 	OnDemandUSD     *float64
 	SpendKind       string
+	SessionIDs      []string
+	Chats           []ChatTab
+}
+
+// ChatTab is a Cursor Composer chat bound to a task or research.
+type ChatTab struct {
+	Title     string
+	SessionID string
 }
 
 // Slots returns open tasks. Legacy snapshots with only root fields yield one slot.
@@ -82,6 +90,7 @@ type Research struct {
 	Summary         string
 	StartedAt       time.Time
 	SessionID       string
+	Chat            *ChatTab
 	CursorUsage     *CursorUsage
 	CostUSD         *float64
 	BudgetUSD       *float64

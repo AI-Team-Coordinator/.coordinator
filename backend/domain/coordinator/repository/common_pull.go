@@ -56,6 +56,14 @@ func (r *FileRepository) PullCommonOrigin(ctx context.Context) (bool, error) {
 	return strings.TrimSpace(before) != strings.TrimSpace(after), nil
 }
 
+// PullCoordinatorState copies origin/coordinator-state into Common/data/progress
+// without switching Common off main.
+func (r *FileRepository) PullCoordinatorState(ctx context.Context) error {
+	r.gitMu.Lock()
+	defer r.gitMu.Unlock()
+	return r.execCoordinatorState(ctx, "pull")
+}
+
 func isNonFastForward(err error) bool {
 	if err == nil {
 		return false

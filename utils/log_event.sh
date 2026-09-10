@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Append one coordinator event to Common/data/progress/events/<ALIAS>/<YYYY>.jsonl and push Common.
+# Append one coordinator event to Common/data/progress/events/<ALIAS>/<YYYY>.jsonl
+# and push the orphan branch origin/coordinator-state.
 # Usage: log_event.sh <event> [key=value ...]
 # Example: log_event.sh deploy_finished service=core status=finished
 #
@@ -121,9 +122,5 @@ with open(path, "a") as f:
 PY
 
 (
-    cd "$COMMON_ROOT"
-    git add "$EVENTS_FILE"
-    git commit -m "chore(progress): $ALIAS $EVENT_TYPE ${SERVICE:-$TASK_ID}" || true
-    git pull --rebase origin main || true
-    git push origin main || true
+    "$(dirname "$0")/coordinator_state.sh" push "chore(progress): $ALIAS $EVENT_TYPE ${SERVICE:-$TASK_ID}"
 ) </dev/null >> "$SYNC_LOG" 2>&1 &
