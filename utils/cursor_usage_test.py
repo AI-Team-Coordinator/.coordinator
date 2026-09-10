@@ -161,6 +161,46 @@ class DeltaTests(unittest.TestCase):
         self.assertEqual(delta["ondemand_usd"], 2.5)
         self.assertEqual(delta["cost_usd"], 2.5)
 
+    def test_team_plan_pcts_without_price(self):
+        start = {
+            "plan": "team",
+            "billing_cycle_start": "c",
+            "included_cents": 0,
+            "ondemand_cents": 0,
+            "cursor_models_pct": 10.0,
+            "other_models_pct": 5.0,
+        }
+        end = {
+            "plan": "team",
+            "billing_cycle_start": "c",
+            "included_cents": 0,
+            "ondemand_cents": 0,
+            "cursor_models_pct": 14.0,
+            "other_models_pct": 15.0,
+        }
+        delta = compute_delta(start, end)
+        self.assertEqual(delta["budget_usd"], 0.0)
+        self.assertNotIn("plan_price_usd", delta)
+        self.assertEqual(delta["cursor_models_pct"], 4.0)
+        self.assertEqual(delta["other_models_pct"], 10.0)
+        self.assertEqual(delta["usage_plan"], "team")
+
+    def test_normalize_team_has_no_price(self):
+        snap = normalize_payload(
+            {
+                "billingCycleStart": "2026-09-01T00:00:00.000Z",
+                "membershipType": "team",
+                "planUsage": {
+                    "autoPercentUsed": 14.0,
+                    "apiPercentUsed": 15.0,
+                },
+            }
+        )
+        self.assertEqual(snap["plan"], "team")
+        self.assertNotIn("plan_price_usd", snap)
+        self.assertEqual(snap["cursor_models_pct"], 14.0)
+        self.assertEqual(snap["other_models_pct"], 15.0)
+
     def test_spend_kind_infra_for_common_and_cursor(self):
         self.assertEqual(spend_kind(["Common"]), "infra")
         self.assertEqual(spend_kind([".cursor", "common"]), "infra")

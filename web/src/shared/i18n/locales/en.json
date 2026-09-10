@@ -30,6 +30,9 @@
     "cursorSpendHint": "exact extra past included pools",
     "cursorBudget": "Share of plan",
     "cursorBudgetHint": "100%+100% = seat price",
+    "cursorBudgetHintNoPrice": "no seat price — pool percents",
+    "cursorPools": "Pools",
+    "cursorPoolsTooltip": "Share of Cursor Models and Other Models this cycle. Seat price is unknown, so there is no dollar share.",
     "onDemand": "on-demand",
     "productSpend": "product",
     "infraSpend": "infra",
@@ -48,7 +51,9 @@
     "thisCycle": "current subscription billing cycle",
     "cycleSince": "current billing cycle, since {{date}}",
     "hint": "100% Cursor Models plus 100% Other Models equals the seat price ($20 / $60 / $200). On-demand is exact extra past included pools.",
+    "hintNoPrice": "Seat price is unknown (Team and similar plans). Spend is Cursor Models and Other Models percents. On-demand is exact extra past included pools.",
     "plan": "Share of plan",
+    "pools": "Pools",
     "ondemand": "On-demand",
     "row": "Item",
     "product": "Product",
@@ -59,6 +64,13 @@
     "research": "Research",
     "open": "In progress",
     "today": "Today"
+  },
+  "usage": {
+    "cursorPool": "Cursor Models",
+    "otherPool": "Other Models",
+    "deltaPct": "+{{pct}}%",
+    "cursorShort": "Cursor +{{pct}}%",
+    "otherShort": "Other +{{pct}}%"
   },
   "tasks": {
     "title": "Tasks",

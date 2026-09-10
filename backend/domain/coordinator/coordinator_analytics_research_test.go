@@ -55,3 +55,25 @@ func TestComputeStatsResearchSplit(t *testing.T) {
 		t.Fatalf("active=%d", stats.ActiveNow)
 	}
 }
+
+func TestComputeStatsPoolPctsWithoutPlanPrice(t *testing.T) {
+	now := time.Now().Unix()
+	stats := computeStats([]model.Event{
+		{Event: "task_completed", TaskID: "A", Timestamp: now, CursorModelsPct: f64(4), OtherModelsPct: f64(10), SpendKind: "product"},
+		{Event: "research_completed", Timestamp: now, CursorModelsPct: f64(1.5), OtherModelsPct: f64(2)},
+	}, []model.Member{
+		{Status: "in_progress", SpendKind: "infra", CursorModelsPct: f64(0.5), OtherModelsPct: f64(1)},
+	})
+	if stats.CursorModelsPctCycle != 4.5 || stats.OtherModelsPctCycle != 11 {
+		t.Fatalf("task cycle cursor=%v other=%v", stats.CursorModelsPctCycle, stats.OtherModelsPctCycle)
+	}
+	if stats.CursorModelsPctProductCycle != 4 || stats.CursorModelsPctInfraCycle != 0.5 {
+		t.Fatalf("product=%v infra=%v", stats.CursorModelsPctProductCycle, stats.CursorModelsPctInfraCycle)
+	}
+	if stats.CursorModelsPctResearchCycle != 1.5 || stats.OtherModelsPctResearchCycle != 2 {
+		t.Fatalf("research cursor=%v other=%v", stats.CursorModelsPctResearchCycle, stats.OtherModelsPctResearchCycle)
+	}
+	if stats.BudgetUSDCycle != 0 {
+		t.Fatalf("budget=%v", stats.BudgetUSDCycle)
+	}
+}

@@ -15,6 +15,8 @@ type Task struct {
 	CostUSD         *float64
 	BudgetUSD       *float64
 	OnDemandUSD     *float64
+	CursorModelsPct *float64
+	OtherModelsPct  *float64
 	SpendKind       string
 }
 

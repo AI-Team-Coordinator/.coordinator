@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Badge } from '../../shared/ui/Badge'
-import { formatDate, formatTime, formatUSD } from '../../shared/lib/formatters'
+import { formatDate, formatTime } from '../../shared/lib/formatters'
+import { UsageSpend } from '../../shared/ui/UsageSpend'
 import { TaskDocLink } from '../docs/TaskDocLink'
 import type { EventItem } from '../../shared/types/api'
 
@@ -15,10 +16,6 @@ export function TimelineItem({ event }: TimelineItemProps) {
   const isMerged = event.event === 'repo_merged'
   const isResearch = event.event.startsWith('research_')
   const eventLabel = t(`timeline.events.${event.event}`, { defaultValue: event.event })
-  const hasBudget = typeof event.budget_usd === 'number' && event.budget_usd > 0
-  const hasOnDemand = typeof event.ondemand_usd === 'number' && event.ondemand_usd > 0
-  const hasCursorPct = event.cursor_models_pct !== undefined && event.cursor_models_pct > 0
-  const hasOtherPct = event.other_models_pct !== undefined && event.other_models_pct > 0
 
   return (
     <div className="py-3 flex items-center justify-between gap-4 text-xs">
@@ -58,31 +55,14 @@ export function TimelineItem({ event }: TimelineItemProps) {
             ({event.branch})
           </span>
         )}
-        {hasBudget && (
-          <span className="text-emerald-700 dark:text-emerald-400 font-mono shrink-0">
-            {t('timeline.planShare', { amount: formatUSD(event.budget_usd) })}
-          </span>
-        )}
-        {hasOnDemand && (
-          <span className="text-amber-600 dark:text-amber-400 font-mono shrink-0">
-            {t('timeline.onDemand', { amount: formatUSD(event.ondemand_usd) })}
-          </span>
-        )}
-        {event.spend_kind === 'infra' && (
-          <span className="text-slate-500 dark:text-slate-400 font-mono shrink-0">
-            {t('timeline.infra')}
-          </span>
-        )}
-        {hasCursorPct && (
-          <span className="text-slate-400 dark:text-slate-500 font-mono hidden lg:inline shrink-0">
-            {t('timeline.cursorModels', { pct: event.cursor_models_pct?.toFixed(1) })}
-          </span>
-        )}
-        {hasOtherPct && (
-          <span className="text-slate-400 dark:text-slate-500 font-mono hidden xl:inline shrink-0">
-            {t('timeline.otherModels', { pct: event.other_models_pct?.toFixed(1) })}
-          </span>
-        )}
+        <UsageSpend
+          variant="inline"
+          budgetUsd={event.budget_usd}
+          ondemandUsd={event.ondemand_usd}
+          cursorModelsPct={event.cursor_models_pct}
+          otherModelsPct={event.other_models_pct}
+          spendKind={event.spend_kind}
+        />
       </div>
 
       <div className="text-slate-400 dark:text-slate-500 whitespace-nowrap text-right font-mono text-[11px]">

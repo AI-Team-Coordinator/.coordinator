@@ -141,6 +141,7 @@ func computeStatsSince(events []model.Event, members []model.Member, cycleStart 
 				stats.OnDemandUSDCycle += od
 			}
 		}
+		addTaskPoolPcts(&stats, ev, startOfToday, cycleStart)
 	}
 
 	if completedCount > 0 && totalCycleTimeSeconds > 0 {
@@ -242,6 +243,7 @@ func addResearchSpend(stats *model.Stats, ev model.Event, startOfToday, startOfW
 			stats.CostUSDResearchCycle += cost
 		}
 	}
+	addResearchPoolPcts(stats, ev.CursorModelsPct, ev.OtherModelsPct, ev.Timestamp >= startOfToday, inCycle, false)
 }
 
 func addOpenResearchSpend(stats *model.Stats, members []model.Member) {
@@ -263,6 +265,7 @@ func addOpenResearchSpend(stats *model.Stats, members []model.Member) {
 			stats.CostUSDResearchCycle += cost
 			stats.CostUSDResearchOpen += cost
 		}
+		addResearchPoolPcts(stats, m.Research.CursorModelsPct, m.Research.OtherModelsPct, true, true, true)
 	}
 }
 
@@ -310,6 +313,8 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 				t.CostUSD = nil
 				t.BudgetUSD = nil
 				t.OnDemandUSD = nil
+				t.CursorModelsPct = nil
+				t.OtherModelsPct = nil
 				t.SpendKind = ""
 				t.Services = nil
 			}
@@ -325,6 +330,8 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 			t.CostUSD = ev.CostUSD
 			t.BudgetUSD = ev.BudgetUSD
 			t.OnDemandUSD = ev.OnDemandUSD
+			t.CursorModelsPct = ev.CursorModelsPct
+			t.OtherModelsPct = ev.OtherModelsPct
 			t.SpendKind = ev.SpendKind
 			if t.StartedAt == 0 {
 				t.StartedAt = ev.Timestamp
@@ -351,6 +358,8 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 			t.CostUSD = slot.CostUSD
 			t.BudgetUSD = slot.BudgetUSD
 			t.OnDemandUSD = slot.OnDemandUSD
+			t.CursorModelsPct = slot.CursorModelsPct
+			t.OtherModelsPct = slot.OtherModelsPct
 			t.Kind = taskKind(slot.TaskID, t.Branch)
 			if t.StartedAt == 0 && !slot.StartedAt.IsZero() {
 				t.StartedAt = slot.StartedAt.Unix()
@@ -431,11 +440,11 @@ func addOpenTaskSpend(stats *model.Stats, members []model.Member) {
 	for _, m := range members {
 		slots := m.Slots()
 		if len(slots) == 0 && m.Status == "in_progress" {
-			addOneOpenSpend(stats, m.CostUSD, m.BudgetUSD, m.OnDemandUSD, m.SpendKind)
+			addOneOpenSpend(stats, m.CostUSD, m.BudgetUSD, m.OnDemandUSD, m.CursorModelsPct, m.OtherModelsPct, m.SpendKind)
 			continue
 		}
 		for _, slot := range slots {
-			addOneOpenSpend(stats, slot.CostUSD, slot.BudgetUSD, slot.OnDemandUSD, slot.SpendKind)
+			addOneOpenSpend(stats, slot.CostUSD, slot.BudgetUSD, slot.OnDemandUSD, slot.CursorModelsPct, slot.OtherModelsPct, slot.SpendKind)
 		}
 	}
 	if stats.CostTasks > 0 {
@@ -446,7 +455,7 @@ func addOpenTaskSpend(stats *model.Stats, members []model.Member) {
 	}
 }
 
-func addOneOpenSpend(stats *model.Stats, costUSD, budgetUSD, onDemandUSD *float64, spendKind string) {
+func addOneOpenSpend(stats *model.Stats, costUSD, budgetUSD, onDemandUSD, cursorPct, otherPct *float64, spendKind string) {
 	if costUSD != nil {
 		cost := *costUSD
 		stats.CostUSDTotal += cost
@@ -481,6 +490,95 @@ func addOneOpenSpend(stats *model.Stats, costUSD, budgetUSD, onDemandUSD *float6
 		stats.OnDemandUSDCycle += od
 		stats.OnDemandUSDOpen += od
 	}
+	addOpenPoolPcts(stats, cursorPct, otherPct, spendKind)
+}
+
+func addTaskPoolPcts(stats *model.Stats, ev model.Event, startOfToday, cycleStart int64) {
+	inCycle := inPeriod(ev.Timestamp, cycleStart)
+	addPeriodPct(ev.CursorModelsPct, ev.Timestamp >= startOfToday, inCycle, &stats.CursorModelsPctToday, &stats.CursorModelsPctCycle)
+	addPeriodPct(ev.OtherModelsPct, ev.Timestamp >= startOfToday, inCycle, &stats.OtherModelsPctToday, &stats.OtherModelsPctCycle)
+	if !inCycle {
+		return
+	}
+	if ev.SpendKind == "infra" {
+		addPct(ev.CursorModelsPct, &stats.CursorModelsPctInfraCycle)
+		addPct(ev.OtherModelsPct, &stats.OtherModelsPctInfraCycle)
+		return
+	}
+	addPct(ev.CursorModelsPct, &stats.CursorModelsPctProductCycle)
+	addPct(ev.OtherModelsPct, &stats.OtherModelsPctProductCycle)
+}
+
+func addResearchPoolPcts(stats *model.Stats, cursor, other *float64, today, cycle, open bool) {
+	if cursor != nil {
+		n := *cursor
+		if today {
+			stats.CursorModelsPctResearchToday += n
+		}
+		if cycle {
+			stats.CursorModelsPctResearchCycle += n
+		}
+		if open {
+			stats.CursorModelsPctResearchOpen += n
+		}
+	}
+	if other != nil {
+		n := *other
+		if today {
+			stats.OtherModelsPctResearchToday += n
+		}
+		if cycle {
+			stats.OtherModelsPctResearchCycle += n
+		}
+		if open {
+			stats.OtherModelsPctResearchOpen += n
+		}
+	}
+}
+
+func addOpenPoolPcts(stats *model.Stats, cursor, other *float64, spendKind string) {
+	if cursor != nil {
+		n := *cursor
+		stats.CursorModelsPctToday += n
+		stats.CursorModelsPctCycle += n
+		stats.CursorModelsPctOpen += n
+		if spendKind == "infra" {
+			stats.CursorModelsPctInfraCycle += n
+		} else {
+			stats.CursorModelsPctProductCycle += n
+		}
+	}
+	if other != nil {
+		n := *other
+		stats.OtherModelsPctToday += n
+		stats.OtherModelsPctCycle += n
+		stats.OtherModelsPctOpen += n
+		if spendKind == "infra" {
+			stats.OtherModelsPctInfraCycle += n
+		} else {
+			stats.OtherModelsPctProductCycle += n
+		}
+	}
+}
+
+func addPeriodPct(v *float64, today, cycle bool, dstToday, dstCycle *float64) {
+	if v == nil {
+		return
+	}
+	n := *v
+	if today {
+		*dstToday += n
+	}
+	if cycle {
+		*dstCycle += n
+	}
+}
+
+func addPct(v *float64, dst *float64) {
+	if v == nil {
+		return
+	}
+	*dst += *v
 }
 
 func closeOrphanTasks(acc map[string]*model.Task, members []model.Member, events []model.Event) {

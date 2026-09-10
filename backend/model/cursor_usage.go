@@ -105,11 +105,15 @@ func ComputeUsageDelta(start, end *CursorUsage) *UsageDelta {
 		OtherModelsPct:  round4(otherDelta),
 		UsagePlan:       plan,
 	}
-	if ok {
+	if ok && price > 0 {
 		p := price
 		out.PlanPriceUSD = &p
 	}
 	return out
+}
+
+func (d *UsageDelta) HasPlanPrice() bool {
+	return d != nil && d.PlanPriceUSD != nil && *d.PlanPriceUSD > 0
 }
 
 func priceFrom(snap *CursorUsage) (float64, bool) {

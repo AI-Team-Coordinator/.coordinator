@@ -31,6 +31,24 @@ func TestComputeUsageDeltaOverflow(t *testing.T) {
 	}
 }
 
+func TestComputeUsageDeltaTeamHasPctsNoPrice(t *testing.T) {
+	start := &CursorUsage{Plan: "team", BillingCycleStart: "c", CursorModelsPct: 10, OtherModelsPct: 5}
+	end := &CursorUsage{Plan: "team", BillingCycleStart: "c", CursorModelsPct: 14, OtherModelsPct: 15}
+	delta := ComputeUsageDelta(start, end)
+	if delta == nil {
+		t.Fatal("nil")
+	}
+	if delta.BudgetUSD != 0 || delta.HasPlanPrice() {
+		t.Fatalf("budget=%v price=%v", delta.BudgetUSD, delta.PlanPriceUSD)
+	}
+	if delta.CursorModelsPct != 4 || delta.OtherModelsPct != 10 {
+		t.Fatalf("pcts cursor=%v other=%v", delta.CursorModelsPct, delta.OtherModelsPct)
+	}
+	if delta.UsagePlan != "team" {
+		t.Fatalf("plan=%s", delta.UsagePlan)
+	}
+}
+
 func TestSpendKind(t *testing.T) {
 	if SpendKind([]string{"Common"}) != "infra" {
 		t.Fatal("common")

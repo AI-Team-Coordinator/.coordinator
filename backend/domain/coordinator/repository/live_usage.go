@@ -51,20 +51,18 @@ func (r *FileRepository) attachLiveUsage(members []model.Member) {
 			if delta == nil {
 				continue
 			}
-			cost := delta.CostUSD
-			budget := delta.BudgetUSD
-			ondemand := delta.OnDemandUSD
-			slots[si].CostUSD = &cost
-			slots[si].BudgetUSD = &budget
-			slots[si].OnDemandUSD = &ondemand
+			applyUsageDelta(&slots[si].CostUSD, &slots[si].BudgetUSD, &slots[si].OnDemandUSD, &slots[si].CursorModelsPct, &slots[si].OtherModelsPct, delta)
 			slots[si].SpendKind = model.SpendKind(slots[si].Services)
 		}
 		if len(slots) > 0 {
 			members[i].Tasks = slots
-			members[i].CostUSD = slots[len(slots)-1].CostUSD
-			members[i].BudgetUSD = slots[len(slots)-1].BudgetUSD
-			members[i].OnDemandUSD = slots[len(slots)-1].OnDemandUSD
-			members[i].SpendKind = slots[len(slots)-1].SpendKind
+			last := slots[len(slots)-1]
+			members[i].CostUSD = last.CostUSD
+			members[i].BudgetUSD = last.BudgetUSD
+			members[i].OnDemandUSD = last.OnDemandUSD
+			members[i].CursorModelsPct = last.CursorModelsPct
+			members[i].OtherModelsPct = last.OtherModelsPct
+			members[i].SpendKind = last.SpendKind
 			if slots[len(slots)-1].CursorUsage != nil {
 				members[i].CursorUsage = slots[len(slots)-1].CursorUsage
 			}
@@ -85,13 +83,28 @@ func (r *FileRepository) attachLiveUsage(members []model.Member) {
 		if delta == nil {
 			continue
 		}
-		cost := delta.CostUSD
-		budget := delta.BudgetUSD
-		ondemand := delta.OnDemandUSD
-		members[i].Research.CostUSD = &cost
-		members[i].Research.BudgetUSD = &budget
-		members[i].Research.OnDemandUSD = &ondemand
+		applyUsageDelta(&members[i].Research.CostUSD, &members[i].Research.BudgetUSD, &members[i].Research.OnDemandUSD, &members[i].Research.CursorModelsPct, &members[i].Research.OtherModelsPct, delta)
 	}
+}
+
+func applyUsageDelta(cost, budget, ondemand, cursorPct, otherPct **float64, delta *model.UsageDelta) {
+	if delta == nil {
+		return
+	}
+	c := delta.CostUSD
+	o := delta.OnDemandUSD
+	cp := delta.CursorModelsPct
+	op := delta.OtherModelsPct
+	*cost = &c
+	*ondemand = &o
+	*cursorPct = &cp
+	*otherPct = &op
+	if delta.HasPlanPrice() {
+		b := delta.BudgetUSD
+		*budget = &b
+		return
+	}
+	*budget = nil
 }
 
 func (r *FileRepository) persistResearchCursorUsage(alias string, usage *model.CursorUsage) bool {

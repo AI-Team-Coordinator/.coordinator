@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
-import { formatDuration, formatUSD } from '../../shared/lib/formatters'
+import { formatDuration } from '../../shared/lib/formatters'
+import { hasUsageSpend, UsageSpend } from '../../shared/ui/UsageSpend'
 import { ChatTabs } from './ChatTabs'
 import type { MemberState } from '../../shared/types/api'
 
@@ -54,22 +55,19 @@ export function ResearchCard({ member }: ResearchCardProps) {
             {formatDuration(member.research?.duration_seconds)}
           </span>
         </div>
-        {typeof member.research?.budget_usd === 'number' && (
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500 dark:text-slate-400">{t('pulse.planShare')}</span>
-            <span className="font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
-              {formatUSD(member.research?.budget_usd)}
-            </span>
-          </div>
-        )}
-        {(member.research?.ondemand_usd ?? 0) > 0 && (
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500 dark:text-slate-400">{t('pulse.meter')}</span>
-            <span className="font-mono text-amber-600 dark:text-amber-400">
-              {formatUSD(member.research?.ondemand_usd)}
-            </span>
-          </div>
-        )}
+        {hasUsageSpend({
+          budgetUsd: member.research?.budget_usd,
+          ondemandUsd: member.research?.ondemand_usd,
+          cursorModelsPct: member.research?.cursor_models_pct,
+          otherModelsPct: member.research?.other_models_pct,
+        }) ? (
+          <UsageSpend
+            budgetUsd={member.research?.budget_usd}
+            ondemandUsd={member.research?.ondemand_usd}
+            cursorModelsPct={member.research?.cursor_models_pct}
+            otherModelsPct={member.research?.other_models_pct}
+          />
+        ) : null}
         <p className="text-[11px] text-slate-400 dark:text-slate-500">{t('pulse.researchNoBranch')}</p>
       </div>
     </Card>

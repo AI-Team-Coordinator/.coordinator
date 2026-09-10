@@ -4,6 +4,7 @@ import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
 import { Button } from '../../shared/ui/Button'
 import { formatDate, formatDuration, formatTime, formatUSD } from '../../shared/lib/formatters'
+import { UsageSpend } from '../../shared/ui/UsageSpend'
 import { TaskDocLink } from '../docs/TaskDocLink'
 import type { MemberState, TaskItem } from '../../shared/types/api'
 
@@ -184,8 +185,13 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
                     <td className="py-3 pr-3 font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
                       {formatDuration(task.duration_seconds)}
                     </td>
-                    <td className="py-3 pr-3 text-right font-mono text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                      {task.budget_usd != null ? formatUSD(task.budget_usd) : '—'}
+                    <td className="py-3 pr-3 text-right whitespace-nowrap">
+                      <UsageSpend
+                        variant="cell"
+                        budgetUsd={task.budget_usd}
+                        cursorModelsPct={task.cursor_models_pct}
+                        otherModelsPct={task.other_models_pct}
+                      />
                     </td>
                     <td className="py-3 text-right font-mono text-amber-600 dark:text-amber-400 whitespace-nowrap">
                       {task.ondemand_usd != null && task.ondemand_usd > 0

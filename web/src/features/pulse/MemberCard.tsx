@@ -3,7 +3,8 @@ import { Copy, Check, GitBranch } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
-import { formatDuration, formatUSD } from '../../shared/lib/formatters'
+import { formatDuration } from '../../shared/lib/formatters'
+import { hasUsageSpend, UsageSpend } from '../../shared/ui/UsageSpend'
 import { TaskDocLink } from '../docs/TaskDocLink'
 import { ChatTabs } from './ChatTabs'
 import type { MemberState, MemberTaskState } from '../../shared/types/api'
@@ -35,6 +36,8 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
   const duration = task?.duration_seconds ?? member.duration_seconds
   const budget = task?.budget_usd ?? member.budget_usd
   const ondemand = task?.ondemand_usd ?? member.ondemand_usd
+  const cursorModelsPct = task?.cursor_models_pct ?? member.cursor_models_pct
+  const otherModelsPct = task?.other_models_pct ?? member.other_models_pct
   const spendKind = task?.spend_kind || member.spend_kind
 
   const copyBranch = () => {
@@ -161,26 +164,19 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
             </span>
           </div>
 
-          {(typeof budget === 'number' || (ondemand ?? 0) > 0) && (
-            <div className="space-y-1.5">
-              {typeof budget === 'number' && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500 dark:text-slate-400">{t('pulse.planShare')}</span>
-                  <span className="font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
-                    {formatUSD(budget)}
-                    {spendKind === 'infra' ? ` · ${t('metrics.infraSpend')}` : ''}
-                  </span>
-                </div>
-              )}
-              {(ondemand ?? 0) > 0 && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500 dark:text-slate-400">{t('pulse.meter')}</span>
-                  <span className="font-mono text-amber-600 dark:text-amber-400">
-                    {formatUSD(ondemand)}
-                  </span>
-                </div>
-              )}
-            </div>
+          {hasUsageSpend({
+            budgetUsd: budget,
+            ondemandUsd: ondemand,
+            cursorModelsPct,
+            otherModelsPct,
+          }) && (
+            <UsageSpend
+              budgetUsd={budget}
+              ondemandUsd={ondemand}
+              cursorModelsPct={cursorModelsPct}
+              otherModelsPct={otherModelsPct}
+              spendKind={spendKind}
+            />
           )}
 
           <div>

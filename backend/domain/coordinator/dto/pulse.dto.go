@@ -40,6 +40,8 @@ type MemberTaskResponse struct {
 	CostUSD         *float64           `json:"cost_usd,omitempty"`
 	BudgetUSD       *float64           `json:"budget_usd,omitempty"`
 	OnDemandUSD     *float64           `json:"ondemand_usd,omitempty"`
+	CursorModelsPct *float64           `json:"cursor_models_pct,omitempty"`
+	OtherModelsPct  *float64           `json:"other_models_pct,omitempty"`
 	SpendKind       string             `json:"spend_kind,omitempty"`
 	Chats           []ChatTabResponse  `json:"chats,omitempty"`
 }
@@ -57,6 +59,8 @@ type ResearchResponse struct {
 	CostUSD         *float64         `json:"cost_usd,omitempty"`
 	BudgetUSD       *float64         `json:"budget_usd,omitempty"`
 	OnDemandUSD     *float64         `json:"ondemand_usd,omitempty"`
+	CursorModelsPct *float64         `json:"cursor_models_pct,omitempty"`
+	OtherModelsPct  *float64         `json:"other_models_pct,omitempty"`
 	Chat            *ChatTabResponse `json:"chat,omitempty"`
 }
 

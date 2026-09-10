@@ -47,6 +47,8 @@ type MemberTask struct {
 	CostUSD         *float64
 	BudgetUSD       *float64
 	OnDemandUSD     *float64
+	CursorModelsPct *float64
+	OtherModelsPct  *float64
 	SpendKind       string
 	SessionIDs      []string
 	Chats           []ChatTab
@@ -65,20 +67,22 @@ func (m Member) Slots() []MemberTask {
 	}
 	if m.Status == "in_progress" && m.TaskID != "" {
 		return []MemberTask{{
-			TaskID:      m.TaskID,
-			Title:       m.TaskTitle,
-			Doc:         m.TaskDoc,
-			Summary:     m.TaskSummary,
-			Branch:      m.Branch,
-			Services:    m.Services,
-			UpdatedAt:   m.UpdatedAt,
-			StartedAt:   m.UpdatedAt,
-			Repos:       m.Repos,
-			CursorUsage: m.CursorUsage,
-			CostUSD:     m.CostUSD,
-			BudgetUSD:   m.BudgetUSD,
-			OnDemandUSD: m.OnDemandUSD,
-			SpendKind:   m.SpendKind,
+			TaskID:          m.TaskID,
+			Title:           m.TaskTitle,
+			Doc:             m.TaskDoc,
+			Summary:         m.TaskSummary,
+			Branch:          m.Branch,
+			Services:        m.Services,
+			UpdatedAt:       m.UpdatedAt,
+			StartedAt:       m.UpdatedAt,
+			Repos:           m.Repos,
+			CursorUsage:     m.CursorUsage,
+			CostUSD:         m.CostUSD,
+			BudgetUSD:       m.BudgetUSD,
+			OnDemandUSD:     m.OnDemandUSD,
+			CursorModelsPct: m.CursorModelsPct,
+			OtherModelsPct:  m.OtherModelsPct,
+			SpendKind:       m.SpendKind,
 		}}
 	}
 	return nil
@@ -95,5 +99,7 @@ type Research struct {
 	CostUSD         *float64
 	BudgetUSD       *float64
 	OnDemandUSD     *float64
+	CursorModelsPct *float64
+	OtherModelsPct  *float64
 	DurationSeconds int64
 }

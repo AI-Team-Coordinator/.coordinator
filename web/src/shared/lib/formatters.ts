@@ -56,3 +56,8 @@ export function formatUSD(amount?: number | null): string {
     maximumFractionDigits: 2,
   }).format(amount)
 }
+
+export function formatPoolPct(value?: number | null): string {
+  if (value === undefined || value === null || Number.isNaN(value)) return '0.0'
+  return value.toFixed(1)
+}

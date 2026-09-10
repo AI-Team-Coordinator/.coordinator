@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { InfoTooltip } from '../../shared/ui/InfoTooltip'
 import { formatUSD, formatCycleTime, formatDate } from '../../shared/lib/formatters'
+import { UsageHeadline } from '../../shared/ui/UsageSpend'
 import { cursorSpendFromStats } from './cursorSpend'
 import type { Stats } from '../../shared/types/api'
 
@@ -104,14 +105,18 @@ export function MetricsGrid({ stats, onStatusClick, onSpendClick, hideSpend }: M
         role={onSpendClick ? 'button' : undefined}
       >
         <div className="flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-          <span>{t('metrics.cursorBudget')}</span>
-          <InfoTooltip text={t('metrics.cursorBudgetTooltip')} />
+          <span>{spend.hasPlanPrice ? t('metrics.cursorBudget') : t('metrics.cursorPools')}</span>
+          <InfoTooltip text={spend.hasPlanPrice ? t('metrics.cursorBudgetTooltip') : t('metrics.cursorPoolsTooltip')} />
         </div>
-        <div className="mt-2 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white">
-          {spend.hasPlan ? formatUSD(spend.planCycle) : '—'}
-        </div>
+        {spend.hasPlanPrice ? (
+          <div className="mt-2">
+            <UsageHeadline usd={spend.planCycle} cursor={spend.cursorCycle} other={spend.otherCycle} hasPrice />
+          </div>
+        ) : (
+          <UsageHeadline usd={0} cursor={spend.cursorCycle} other={spend.otherCycle} hasPrice={false} />
+        )}
         <div className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-          {spend.hasPlan ? cycleLabel : t('metrics.cursorBudgetHint')}
+          {spend.hasPlanPrice || spend.hasPools ? cycleLabel : t('metrics.cursorBudgetHintNoPrice')}
         </div>
       </Card>
 

@@ -30,6 +30,9 @@
     "cursorSpendHint": "точная доплата сверх пулов",
     "cursorBudget": "Доля подписки",
     "cursorBudgetHint": "100%+100% = цена места",
+    "cursorBudgetHintNoPrice": "цены места нет — проценты пулов",
+    "cursorPools": "Пулы",
+    "cursorPoolsTooltip": "Доля Cursor Models и Other Models за цикл. Цены места нет — долларовую долю не считаем.",
     "onDemand": "on-demand",
     "productSpend": "продукт",
     "infraSpend": "инфра",
@@ -48,7 +51,9 @@
     "thisCycle": "текущий биллинг-цикл подписки",
     "cycleSince": "текущий биллинг-цикл, с {{date}}",
     "hint": "100% Cursor Models плюс 100% Other Models — цена места ($20 / $60 / $200). On-demand — точная доплата сверх included-пулов.",
+    "hintNoPrice": "Цена места неизвестна (Team и похожие планы). Расход — проценты Cursor Models и Other Models. On-demand — точная доплата сверх included-пулов.",
     "plan": "Доля подписки",
+    "pools": "Пулы",
     "ondemand": "On-demand",
     "row": "Статья",
     "product": "Продукт",
@@ -59,6 +64,13 @@
     "research": "Ресёрч",
     "open": "В работе",
     "today": "Сегодня"
+  },
+  "usage": {
+    "cursorPool": "Cursor Models",
+    "otherPool": "Other Models",
+    "deltaPct": "+{{pct}}%",
+    "cursorShort": "Cursor +{{pct}}%",
+    "otherShort": "Other +{{pct}}%"
   },
   "tasks": {
     "title": "Задачи",

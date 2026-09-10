@@ -41,6 +41,8 @@ export interface MemberTaskState {
   cost_usd?: number
   budget_usd?: number
   ondemand_usd?: number
+  cursor_models_pct?: number
+  other_models_pct?: number
   spend_kind?: string
   chats?: ChatTab[]
 }
@@ -58,6 +60,8 @@ export interface ResearchState {
   cost_usd?: number
   budget_usd?: number
   ondemand_usd?: number
+  cursor_models_pct?: number
+  other_models_pct?: number
   chat?: ChatTab
 }
 
@@ -136,6 +140,23 @@ export interface Stats {
   cost_usd_research_cycle: number
   cost_usd_research_open: number
   billing_cycle_start?: string
+  plan_price_usd?: number
+  cursor_models_pct_today: number
+  other_models_pct_today: number
+  cursor_models_pct_cycle: number
+  other_models_pct_cycle: number
+  cursor_models_pct_open: number
+  other_models_pct_open: number
+  cursor_models_pct_product_cycle: number
+  other_models_pct_product_cycle: number
+  cursor_models_pct_infra_cycle: number
+  other_models_pct_infra_cycle: number
+  cursor_models_pct_research_today: number
+  other_models_pct_research_today: number
+  cursor_models_pct_research_cycle: number
+  other_models_pct_research_cycle: number
+  cursor_models_pct_research_open: number
+  other_models_pct_research_open: number
 }
 
 export interface TaskItem {
@@ -152,6 +173,8 @@ export interface TaskItem {
   cost_usd?: number
   budget_usd?: number
   ondemand_usd?: number
+  cursor_models_pct?: number
+  other_models_pct?: number
   spend_kind?: 'infra' | 'product' | string
 }
 
