@@ -23,6 +23,11 @@ When multiple developers (or a single developer working across multiple AI chat 
 
 **AI Team Coordinator** solves this fundamental bottleneck. It acts as an active **Air Traffic Controller** for software development, preventing collisions and keeping the team’s work aligned in real time.
 
+### Why Cursor: Built on the Global Category Leader
+**Cursor is today's undisputed global leader in AI-native software development** and the gold standard for hundreds of thousands of engineers, startups, and tech enterprises worldwide. Its unprecedented adoption and code-generation speeds are precisely what exposed the coordination bottleneck: writing code is now instant, but aligning parallel streams with traditional tools is impossible.
+
+The Coordinator does not compete with Cursor or propose "yet another IDE" — it sits natively on top of the world leader, solving its primary blind spot: multi-stream team alignment and proactive collision prevention.
+
 ---
 
 ## The 4 Hidden Costs AI Coders Create for Your Business
@@ -73,8 +78,10 @@ The Coordinator provides a real-time visual dashboard (**Pulse**) running locall
 - **Intentions over file lists:** Clear human-readable task summaries, not cryptic commit hashes.
 - **Exploratory research vs. delivery:** Clear separation between active development tasks and early research sessions.
 
-### Spec-Driven Institutional Memory
-Instead of relying on vague conversational prompts that cause AI models to hallucinate, the Coordinator anchors every task to a concise, versioned specification in the project. 
+### Spec-Driven Institutional Memory (Automated via Cursor)
+Instead of relying on vague conversational prompts that cause AI models to hallucinate and expand scope uncontrollably, the Coordinator anchors every task to a concise, versioned specification in the project's documentation registry (`docs/`).
+
+**Developers don't need to write docs by hand:** once the Coordinator rules are installed into `.cursor/rules/`, Cursor automatically structures the task passport, names the branch, lists the claimed services, and commits the intent before modifying a single line of code.
 
 The business permanently retains the "why" behind every change. When new developers or new AI agents touch that code six months later, the full historical context is instantly accessible.
 

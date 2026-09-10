@@ -33,7 +33,7 @@ If `.coordinator/` already exists and is not a leftover empty dir: stop. This is
 
 ## Block 1 — ideology
 
-Read `ONBOARDING.md`, retell block 1 briefly. Do not paste tables whole.
+Read `ONBOARDING.md`, retell block 1 briefly (including why task docs registry matters and that Cursor generates specs automatically without manual bureaucracy). Do not paste tables whole.
 
 > Ready to continue?
 

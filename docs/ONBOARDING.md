@@ -39,6 +39,14 @@ Words worth knowing:
 | **Pulse** | The live board of work (one person or a team) |
 | **Research** | Reconnaissance without code edits; it is not a task |
 | **Bus** | A folder in the product git: people, status, documents |
+| **Docs registry** | Project task specifications (`docs/`); institutional memory and scope boundaries |
+
+### Why task docs matter (and why you won't write them by hand)
+
+If your project or team never had a formal documentation registry before, this is the backbone of the system:
+- **Why docs are mandatory:** Without written specifications, AI agents hallucinate, lose focus across chat restarts, and silently overwrite adjacent contracts. A task doc anchors the exact boundary of what the agent is allowed to touch.
+- **Automated by Cursor instructions:** You never have to manually fill out templates. Once the Coordinator rules are installed into `.cursor/rules/`, Cursor automatically transforms your natural conversation into a versioned task specification in `docs/`, registers the branch and claimed services, and checks with the Coordinator before touching code.
+- **Value for solo & team:** For solo developers, it prevents disappearing context and broken `main`. For teams, it is the exact source of truth that allows the Coordinator to prevent collisions before code is written.
 
 The Coordinator does not write features and does not deploy production. It keeps parallel work aligned so a **team** can grow the codebase without losing the plot — starting with the person who installed it.
 
