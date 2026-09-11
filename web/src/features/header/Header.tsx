@@ -2,6 +2,7 @@ import { Radio } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ThemeToggle } from '../../shared/ui/ThemeToggle'
 import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher'
+import { Button } from '../../shared/ui/Button'
 import { ProjectBanner } from '../project/ProjectBanner'
 import { CurrentUser } from './CurrentUser'
 import type { ProjectProfile } from '../../shared/types/api'
@@ -13,10 +14,12 @@ interface HeaderProps {
     alias?: string
     name?: string
     role?: string
+    access?: string
   }
+  onReplaySetup?: () => void
 }
 
-export function Header({ connected, profile, currentUser }: HeaderProps) {
+export function Header({ connected, profile, currentUser, onReplaySetup }: HeaderProps) {
   const { t } = useTranslation()
 
   return (
@@ -24,7 +27,12 @@ export function Header({ connected, profile, currentUser }: HeaderProps) {
       <div className="flex items-center gap-4 min-w-0">
         <ProjectBanner profile={profile} />
         <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-slate-800 shrink-0" />
-        <CurrentUser alias={currentUser.alias} name={currentUser.name} role={currentUser.role} />
+        <CurrentUser
+          alias={currentUser.alias}
+          name={currentUser.name}
+          role={currentUser.role}
+          access={currentUser.access}
+        />
       </div>
 
       <div className="flex items-center space-x-2 ml-auto">
@@ -40,6 +48,11 @@ export function Header({ connected, profile, currentUser }: HeaderProps) {
           <Radio className="w-3.5 h-3.5 text-slate-400" />
         </div>
 
+        {onReplaySetup && (
+          <Button type="button" variant="outline" size="sm" onClick={onReplaySetup}>
+            {t('setup.testLaunch')}
+          </Button>
+        )}
         <LanguageSwitcher />
         <ThemeToggle />
       </div>

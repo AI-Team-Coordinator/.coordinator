@@ -11,8 +11,12 @@ import { ServiceMap } from '../features/project/ServiceMap'
 import { TeamRosterSection } from '../features/team/TeamRosterSection'
 import { SectionNav } from '../features/nav/SectionNav'
 import { parseSection, type SectionId } from '../features/nav/sections'
-import type { Conflict, EventItem, MemberState, ProjectProfile, Stats, StrayRepo, SyncStatus, TaskItem } from '../shared/types/api'
+import { SetupScreen } from '../features/setup/SetupScreen'
+import { NextStepCard } from '../features/setup/NextStepCard'
+import { CoordinatorLogo } from '../shared/ui/Logo'
+import type { Conflict, EventItem, MemberState, ProjectProfile, SetupState, Stats, StrayRepo, SyncStatus, TaskItem } from '../shared/types/api'
 import { api } from '../shared/api/client'
+import i18n from '../shared/i18n/config'
 
 export function App() {
   const { t } = useTranslation()
@@ -36,6 +40,9 @@ export function App() {
   const [connected, setConnected] = useState(false)
   const [loading, setLoading] = useState(true)
   const [formDirty, setFormDirty] = useState(false)
+  const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null)
+  const [setupPrefill, setSetupPrefill] = useState<SetupState | null>(null)
+  const [setupReplay, setSetupReplay] = useState(false)
 
   const serviceNames = useMemo(() => {
     const map: Record<string, string> = {}
@@ -52,6 +59,7 @@ export function App() {
       alias,
       name: member?.name,
       role: member?.role,
+      access: member?.access,
     }
   }, [syncStatus?.alias, members])
 
@@ -165,6 +173,8 @@ export function App() {
     setFormDirty(dirty)
   }, [])
 
+  const quietBoard = (profile?.services?.length || 0) === 0 && !profile?.github?.org
+
   useEffect(() => {
     const onHash = () => setSection(parseSection(window.location.hash))
     window.addEventListener('hashchange', onHash)
@@ -172,6 +182,20 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    fetch(api.setup)
+      .then((r) => (r.ok ? r.json() : { needed: false }))
+      .then((data: SetupState) => {
+        setSetupPrefill(data)
+        setSetupNeeded(Boolean(data.needed))
+        if (data.language) {
+          void i18n.changeLanguage(data.language)
+        }
+      })
+      .catch(() => setSetupNeeded(false))
+  }, [])
+
+  useEffect(() => {
+    if (setupNeeded !== false) return
     let bootId: string | null = null
     let reloading = false
     let lastBootCheck = 0
@@ -283,7 +307,38 @@ export function App() {
       clearInterval(statsInterval)
       clearInterval(ticker)
     }
-  }, [])
+  }, [setupNeeded])
+
+  if (setupNeeded === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <CoordinatorLogo size={48} />
+      </div>
+    )
+  }
+
+  if (setupNeeded && setupPrefill) {
+    return (
+      <SetupScreen
+        initial={setupPrefill}
+        onDone={(next) => {
+          setSetupPrefill(next)
+          setSetupNeeded(false)
+        }}
+      />
+    )
+  }
+
+  if (setupReplay && setupPrefill) {
+    return (
+      <SetupScreen
+        initial={setupPrefill}
+        replay
+        onCancel={() => setSetupReplay(false)}
+        onDone={() => setSetupReplay(false)}
+      />
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -298,34 +353,57 @@ export function App() {
 
       <div className="flex-1 min-w-0 pb-24 md:pb-0">
         <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8 space-y-6">
-          <Header connected={connected} profile={profile} currentUser={currentUser} />
+          <Header
+            connected={connected}
+            profile={profile}
+            currentUser={currentUser}
+            onReplaySetup={
+              setupPrefill
+                ? () => {
+                    fetch(api.setup)
+                      .then((r) => (r.ok ? r.json() : setupPrefill))
+                      .then((data: SetupState) => {
+                        setSetupPrefill(data)
+                        setSetupReplay(true)
+                      })
+                      .catch(() => setSetupReplay(true))
+                  }
+                : undefined
+            }
+          />
 
           {section === 'overview' && (
             <div className="space-y-8">
               <ConflictRadar conflicts={conflicts} />
-              <MetricsGrid
-                stats={stats}
-                onStatusClick={(status) => onTasksFilter({ ...tasksFilter, status })}
-                onSpendClick={() => changeSection('stats')}
-              />
+              {quietBoard ? <NextStepCard /> : (
+                <MetricsGrid
+                  stats={stats}
+                  onStatusClick={(status) => onTasksFilter({ ...tasksFilter, status })}
+                  onSpendClick={() => changeSection('stats')}
+                />
+              )}
               <TeamPulseSection members={members} stray={stray} serviceNames={serviceNames} />
-              <TaskTable
-                tasks={tasks}
-                total={tasksTotal}
-                members={members}
-                filter={tasksFilter}
-                onFilterChange={onTasksFilter}
-                onLoadMore={onTasksLoadMore}
-              />
-              <ActivityTimeline
-                events={events}
-                total={eventsTotal}
-                members={members}
-                services={profile?.services || []}
-                filter={eventsFilter}
-                onFilterChange={onEventsFilter}
-                onLoadMore={onEventsLoadMore}
-              />
+              {(!quietBoard || tasksTotal > 0) && (
+                <TaskTable
+                  tasks={tasks}
+                  total={tasksTotal}
+                  members={members}
+                  filter={tasksFilter}
+                  onFilterChange={onTasksFilter}
+                  onLoadMore={onTasksLoadMore}
+                />
+              )}
+              {(!quietBoard || eventsTotal > 0) && (
+                <ActivityTimeline
+                  events={events}
+                  total={eventsTotal}
+                  members={members}
+                  services={profile?.services || []}
+                  filter={eventsFilter}
+                  onFilterChange={onEventsFilter}
+                  onLoadMore={onEventsLoadMore}
+                />
+              )}
             </div>
           )}
 

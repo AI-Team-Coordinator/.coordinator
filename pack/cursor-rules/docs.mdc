@@ -1,0 +1,45 @@
+---
+description: Task docs live in DOCS_DIR — author, naming, header
+alwaysApply: true
+---
+
+# Documentation
+
+Task specifications live in **`DOCS_DIR`** (from `.coordinator/.env`; default `docs/` in the bus git). Do not invent a second docs tree inside a product service.
+
+New docs are written in `docs_language` from `DATA_DIR/settings/locale.json` (`coordinator/locale.mdc`). File names stay `UPPER_SNAKE_CASE`. Header field names (`Author`, `Created`) stay English.
+
+## Where to put files
+
+1. One service → `DOCS_DIR/<Service>/`.
+2. Several services → `DOCS_DIR/` root.
+
+## Author
+
+Do **not** guess the current person’s alias (not from git email, not from the Cursor account).
+
+1. Read `DATA_DIR/.current_author` — first non-empty line that is not `#`.
+2. Find that `alias` in `DATA_DIR/settings/team.json` (`name`).
+3. If the file is missing, empty, or the alias is not on the team — **ask**. Offer to copy `DATA_DIR/.current_author.example` → `DATA_DIR/.current_author` (install seed). Do not invent an alias.
+4. Do not commit `.current_author` (gitignore).
+
+## Naming
+
+New `.md` files (except `README.md`): **`YYYYMMDD-HHMM-<ALIAS>-<MEANINGFUL_NAME>.md`**
+
+- stamp — local **creation** time: `date '+%Y%m%d-%H%M'`;
+- `<ALIAS>` — from `.current_author` / `team.json`;
+- name — `UPPER_SNAKE_CASE` for the topic, not `PROPOSAL_…`.
+
+A new feature usually gets a **new** file with a new stamp. Older files on a similar topic are context.
+
+## Header of a new document
+
+Immediately after the `# …` title:
+
+```markdown
+Author: **Full Name** (`ALIAS`)
+Created: 2026-09-11 19:30
+```
+
+Name is the `name` field from `team.json`, same `alias` as in the filename. `Created` matches the `YYYYMMDD-HHMM` stamp (local time).

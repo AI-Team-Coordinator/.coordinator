@@ -38,6 +38,10 @@ func normalizeAndValidateTeam(members []model.TeamPerson, serviceIDs map[string]
 		if role != "" && !rolePattern.MatchString(role) {
 			return nil, &ValidationError{Msg: fmt.Sprintf("member %s: invalid role", alias)}
 		}
+		access := strings.ToLower(strings.TrimSpace(raw.Access))
+		if access != "" && access != "admin" && access != "member" {
+			return nil, &ValidationError{Msg: fmt.Sprintf("member %s: access must be admin or member", alias)}
+		}
 		if _, dup := seen[alias]; dup {
 			return nil, &ValidationError{Msg: fmt.Sprintf("duplicate alias %s", alias)}
 		}
@@ -61,12 +65,37 @@ func normalizeAndValidateTeam(members []model.TeamPerson, serviceIDs map[string]
 		}
 
 		out = append(out, model.TeamPerson{
-			Alias: alias,
-			Name:  name,
-			Role:  role,
-			Focus: focus,
+			Alias:  alias,
+			Name:   name,
+			Role:   role,
+			Access: access,
+			Focus:  focus,
 		})
 	}
 
 	return out, nil
+}
+
+func teamAccessByAlias(members []model.TeamPerson) map[string]string {
+	out := make(map[string]string, len(members))
+	for _, person := range members {
+		if person.Alias == "" || person.Access == "" {
+			continue
+		}
+		out[person.Alias] = person.Access
+	}
+	return out
+}
+
+func preserveTeamAccess(members []model.TeamPerson, previous map[string]string) []model.TeamPerson {
+	if len(previous) == 0 {
+		return members
+	}
+	for i := range members {
+		if members[i].Access != "" {
+			continue
+		}
+		members[i].Access = previous[members[i].Alias]
+	}
+	return members
 }

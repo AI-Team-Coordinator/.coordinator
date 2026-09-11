@@ -7,6 +7,7 @@ export interface MemberState {
   alias: string
   name: string
   role?: string
+  access?: 'admin' | 'member' | string
   focus?: string[]
   services?: string[]
   status: 'in_progress' | 'idle'
@@ -257,7 +258,22 @@ export interface TeamPerson {
   alias: string
   name: string
   role?: string
+  access?: 'admin' | 'member' | string
   focus?: string[]
+}
+
+export interface SetupState {
+  needed: boolean
+  coordinator_name?: string
+  project_name: string
+  alias?: string
+  name?: string
+  role?: string
+  language: string
+  layout: 'in-repo' | 'workspace-parent' | 'existing' | string
+  docs_dir: string
+  data_dir: string
+  local: boolean
 }
 
 export interface SyncStatus {

@@ -1,0 +1,198 @@
+---
+description: Coordinator protocol — slots, branches, merge; voice is coordinator/voice.mdc
+alwaysApply: true
+---
+
+# AI Team Coordinator
+
+The **Coordinator** is the third person in the chat (human, agent, Coordinator). He watches tasks, slots, statuses and collisions; he advises and can stop work. How to speak — `coordinator/voice.mdc` (name the **task**, not “N files in a repo”). Language of speech — `coordinator/locale.mdc`.
+
+This file is the **protocol**: branch discipline, slots, merge. After a slot ships — `coordinator/after-ship.mdc`. User-facing process lines always go through the Coordinator’s voice, rendered in `chat_language`.
+
+Paths (`BUS_DIR`, `DATA_DIR`, `DOCS_DIR`) — `coordinator/workspace.mdc`.
+
+---
+
+## CRITICAL BASE RULES
+
+1. **The bus stays on `main`.**
+   Documentation, coordination events, and progress updates commit on `main` of `BUS_DIR`. Never open a feature branch whose only job is the bus.
+   If `BUS_DIR` **is** the product git (in-repo install), product **code** still uses feature branches; files under `DATA_DIR` and `DOCS_DIR` are bus files (hooks allow them).
+   **`.coordinator`** is always `main` (local dashboard, not a product service). Do not open feature branches there.
+   After a **Go** change in `.coordinator`, restart only the API: `./utils/backend.sh restart` (detached, survives the chat). After a **web** change, do not rebuild — Vite HMR on `:5175` picks it up. Show the dashboard at [Coordinator](http://localhost:5175) (`coordinator/show.mdc`). Do not propose product deploy for `.cursor`, `.coordinator`, or bus-only changes. A **human-requested** push of those to `origin/main` is the ship (`after-ship.mdc`) — Pulse closes, no deploy.
+   **Logging is not exempt.** Edits to `.coordinator` / `.cursor` / the bus still call `task_started` on `main` (Pulse + timeline). The exemption is feature branches and product deploy — not «no event because it is not a product service».
+2. **Unified Branch Names Across Services:**
+   Feature work must use the exact same branch name in all affected product repositories.
+3. **Source of Truth for Branch Names:**
+   The canonical branch name is defined in the task document header in `DOCS_DIR` (e.g. `Branch: ...`).
+4. **Developer State Tracked in Git:**
+   Open slots for each developer are recorded in `DATA_DIR/progress/.current_task_<ALIAS>` (alias from `DATA_DIR/.current_author`).
+   - This file is **COMMITTED TO GIT** and pushed with the bus (`main`).
+   - Each developer has a dedicated state file, ensuring **zero merge conflicts** in Git.
+   - `tasks[]` holds every `in_progress` slot. Root `task_id` / `branch` / `services` mirror the **latest** started slot (legacy readers).
+   - Each slot MUST include intent: `doc` (path under `DOCS_DIR`, if it exists) and/or `summary` (one or two sentences — required for a hotfix with no doc).
+   - Any team member (or their AI agent) must read **all** `.current_task_*` files (after pulling the bus) and treat every slot’s `doc` / `summary` as the source for semantic collision checks. Do not copy this state into `.cursor`.
+   - Parallel slots: rule `coordinator/parallel.mdc`. Research lives in nested `research` and is not a slot.
+
+---
+
+## 0. SESSION SCOPE & TRIPLE CHECK (Multi-Chat Isolation)
+
+In any Cursor chat session, work is strictly scoped to **ONE task** and **that task’s** feature branch.
+The workspace may hold **several** of the author’s `in_progress` slots at once (see `coordinator/parallel.mdc`). Tabs must not edit the same product repo.
+
+To prevent silent cross-contamination between chat sessions:
+1. **Chat Session Binding:** When a task is started, resumed, or discussed in a chat session, that chat session becomes logically bound to that `<TASK_ID>` and `<BRANCH_NAME>`.
+2. **Triple Check Before Editing Service Code:**
+   You must ensure complete harmony across three layers:
+   - **Layer 1 (Chat Session):** The task this chat is actively discussing.
+   - **Layer 2 (Workspace State):** that `task_id` exists in `.current_task_<ALIAS>.tasks[]` (or legacy root fields).
+   - **Layer 3 (Git on Disk):** `git branch --show-current` in the **repo this slot claims** matches **this slot’s** branch.
+3. **If Session and Workspace State Conflict:**
+   If this chat was discussing Task A, but A is not an open slot (another tab completed it, or the snapshot was rewritten):
+   - **STOP IMMEDIATELY**.
+   - Do NOT execute any edits (`Write`, `StrReplace`, `Delete`).
+   - Alert the user (Coordinator voice, `chat_language`):
+     > Coordinator stopped edits: this chat is about task “…” (`<TASK_A>`, branch `<BRANCH_A>`), but that task is gone from Pulse. Re-open it or switch to a live task?
+
+---
+
+## 1. PRE-FLIGHT CHECK (Mandatory Before Editing Service Code)
+
+Before writing, generating, or modifying code in any **product** repository, you **MUST**:
+
+1. Determine the developer alias from `DATA_DIR/.current_author`.
+2. Read `DATA_DIR/progress/.current_task_<ALIAS>` and find **this chat’s** slot (`task_id`).
+3. Check the branch on **that slot**.
+4. Verify the current active branch in the target service repo (`git branch --show-current`).
+5. **If the branch does not match this slot’s branch** (or the repo is claimed by a *different* open slot):
+   - **STOP IMMEDIATELY**.
+   - Do NOT edit code on the wrong branch (especially not on `main` unless this slot’s branch is `main`).
+   - Warn the user and switch to this slot’s branch first.
+
+---
+
+## 1.1 Clean-main gate (before ANY new task or extra service)
+
+A product repository is **ready to start work** only when all of the following are true:
+
+1. Current branch is `main` (or `master`).
+2. Working tree is clean (`git status --porcelain` empty): no leftover feature/fix edits without a commit.
+3. `main` is up to date: `git fetch origin main && git pull --ff-only origin main`.
+4. You are not sitting on another task’s feature/fix branch.
+
+**The bus, `.cursor`, and `.coordinator` are exempt** (always `main`; they are the coordination bus, IDE rules, and local dashboard — not feature delivery). In-repo: the exemption is **paths** under `DATA_DIR` / `DOCS_DIR` / `.cursor` / `.coordinator`, not the whole product tree.
+
+**Do not start a feature or fix until every repository that will be touched passes this gate.** If even one fails, stop and ask — never branch off a dirty or outdated tree.
+
+### Unclosed previous work
+
+An existing `in_progress` slot does **not** by itself block a new task. Run `coordinator/parallel.mdc` first. Blocked when:
+
+- The new slot’s **product** services overlap an open slot (own or teammate), or `.cursor` / `.coordinator` overlap **your** other slot.
+- A **new** product repo (not already owned by another of your slots) is not clean-main: feature/fix branch, dirty tree, local commit not on `origin/main`, or merged locally but not pushed / not offered for deploy.
+
+This includes “the code is ready” on those *new* repos but: no commit, or commit without merge+push, or push without deploy decision.
+
+**If the parallel check fails or a new repo fails the gate, ASK. Do not switch branches or run `task_started` until the user chooses.** Speak as the Coordinator: name the **unfinished task** (title / summary), not the dirty files. Render in `chat_language`:
+
+> Coordinator reports: unfinished task “…” is still open. How do we proceed?
+
+Offer the same four choices (in `chat_language`):
+
+1. **Finish that one** — commit, merge, push `main`, deploy (or skip); Pulse closes (`after-ship.mdc`); then start the new task.
+2. **Continue that one** — do not start the new task.
+3. **Park it** — commit on its branch, leave the slot `in_progress`; do not delete the branch. Start the new slot only if `coordinator/parallel.mdc` still allows it and every *new* repo is clean `main`.
+4. **Discard uncommitted work** — only if the human explicitly confirms. Never drop commits unless they ask.
+
+---
+
+## 2. Starting or Resuming a Task
+
+When the user asks to start, resume, or switch to a task (e.g., "Start task [ID]", "Work on [DOC_NAME]"):
+
+1. **Identify Author:** Read `<ALIAS>` from `DATA_DIR/.current_author`.
+2. **Read Task Document:** Find the specification in `DOCS_DIR` and extract `Branch: ...` and `Services: ...` from its header.
+3. **Unclosed work:** Apply **§1.1** and `coordinator/parallel.mdc`. Do not continue until the user chooses if the new slot is blocked.
+4. **Sync the bus:** On `main` in `BUS_DIR`, run `git pull --rebase origin main`.
+5. **Collisions:** Follow `coordinator/parallel.mdc` against **every** open slot (own `tasks[]` and every other alias). **Stop** if product services overlap or the meaning clashes.
+6. **Clean-main on new product services:** For each repo in `Services:` that this slot will own (skip the bus / `.cursor` / `.coordinator`, skip repos already owned by another of **your** slots), run the §1.1 gate. If any repo fails, stop and ask.
+7. **State & Event Log:** If *this* tab is converting from research to a task, `research_completed` first (same `session_id`). Do **not** close a research bound to another tab. Then:
+   ```bash
+   ./.coordinator/utils/sync_event.sh <ALIAS> task_started <TASK_ID> <BRANCH_NAME> <Service1,Service2> doc=docs/<FILE>.md session_id=<id>
+   ```
+   Prefer `doc=` when the task file exists; `sync_event.sh` also auto-finds `DOCS_DIR/**/<TASK_ID>.md`. For a documented task you may omit `summary`. Pass `session_id=` from the `sessionStart` hook so the slot remembers this Cursor tab (`coordinator/voice.mdc`). Repeat `task_started` for the same task with a **new** `session_id` to append another tab. The script **appends** a slot and does not stop research.
+8. **Switch Service Repositories:** Only after the gate: in each listed **product** service, `git checkout -b <BRANCH_NAME>` (or checkout the existing branch if resuming). Do not checkout a repo owned by another of your slots.
+
+---
+
+## 2.1 Quick Bugfix / Hotfix Workflow (Zero-Doc Fast Track)
+
+When the user asks to quickly fix a bug, regression, or apply an urgent hotfix:
+**DO NOT require writing a proposal document in `DOCS_DIR`.** Proceed instantly via this fast track:
+
+1. **Identify Author:** Read `<ALIAS>` from `DATA_DIR/.current_author`.
+2. **Unclosed work + clean-main:** Apply **§1.1** and `coordinator/parallel.mdc` to every **new** repo this fix will touch. Ask if the new slot overlaps an open one. Do not branch until those new repos are on up-to-date `main`.
+3. **Auto-Generate Identifiers:**
+   - Timestamp: `YYYYMMDD-HHMM` (local time)
+   - Short Slug: brief kebab-case topic
+   - Task ID: `FIX-<YYYYMMDD-HHMM>-<ALIAS>-<UPPER_SNAKE_SLUG>`
+   - Branch Name: `fix/<short-slug>`
+4. **Activate Coordinator State:** Always pass a short `summary=` of what is being fixed (no task doc). Apply `coordinator/parallel.mdc` before `task_started`. Close research only if *this* tab is converting from research to the fix.
+   ```bash
+   ./.coordinator/utils/sync_event.sh <ALIAS> task_started <TASK_ID> <BRANCH_NAME> <Service> summary="<one line: what we are fixing>" session_id=<id>
+   ```
+5. **Create & Switch Branch in Target Service:**
+   ```bash
+   git checkout main && git pull --ff-only origin main && git checkout -b <BRANCH_NAME>
+   ```
+6. **Proceed Immediately with the Fix.**
+7. **Completion:** Safe merge in Section 4. Commit message: `fix(<service>): <brief description> (<TASK_ID>)`.
+
+---
+
+## 2.2 Adding a service mid-task
+
+If during work it becomes clear that **another** service must change (not listed in this slot’s `Services:` yet):
+
+1. **Do not edit that repo yet.**
+2. If another **open slot** (yours or a teammate’s) already claims that product repo — stop (`coordinator/parallel.mdc`).
+3. Run the **§1.1 clean-main gate** on it. If it is on another branch, dirty, or behind origin — stop and ask.
+4. Only if it is ready: from up-to-date `main`, checkout the **same** `<BRANCH_NAME>` as **this** slot.
+5. **Update the task record:**
+   - Task document header: add the repo to `Services:`.
+   - This slot in `DATA_DIR/progress/.current_task_<ALIAS>`: add it to `"services": [...]`.
+   - Commit those updates on the bus `main` (allowed).
+6. Then edit the new service on `<BRANCH_NAME>` only.
+
+---
+
+## 3. Semantic Collision Check (before editing product code)
+
+Before generating or modifying **product** code (anything the branch hook would guard):
+
+1. Perform the **Pre-flight check** so this chat, **this slot**, and the git branch of the repo you are editing still match.
+2. Run `git pull --rebase origin main` in `BUS_DIR` so teammate snapshots are current.
+3. Read **all** `DATA_DIR/progress/.current_task_*` files.
+4. For every *other* open slot:
+   - If `doc` is set, read that file (path relative to `DOCS_DIR` or the bus root, as stored).
+   - Else read `summary`. Also use `task_id`, `branch`, and `services`.
+5. **Stop and warn** when you detect a clash from `coordinator/parallel.mdc`.
+   Message shape (Coordinator voice, `chat_language`):
+   > Coordinator found a conflict: [<ALIAS>] has task “…” open (`<TASK_ID>`, branch `<BRANCH>`, services `<…>`). That overlaps what we are about to change. Continue anyway?
+
+Overlap only on the bus is always noise. Overlap on `.cursor` / `.coordinator` is noise **between people**; it is a clash for two slots of the **same** alias.
+
+---
+
+## 4. Completing a Task (Safe Merge into Main Workflow)
+
+When the user asks to finish, complete, deliver, **push and deploy**, or **push** this slot’s bus repos:
+
+1. **Commit Local Work to Feature Branch** in all modified product repositories.
+2. **Safe Sync with `origin/main`:** still on `<BRANCH_NAME>`, `git fetch origin main` then `git merge origin/main`. Resolve conflicts on the feature branch. Push `<BRANCH_NAME>`.
+3. **Clean Merge into `main`:** checkout `main`, `git pull --ff-only origin main`, `git merge --no-ff <BRANCH_NAME>`, push `main`. Repeat for **every product repo in this slot’s** `Services:` (not other parallel slots).
+4. **Deploy** product services in this slot if this project deploys them. Do not close Pulse yet. If the human has not asked to deploy, offer it:
+   > Coordinator: task “…” is on `main` for `<services>`. Deploy?
+   Skip this step when the slot is only `.cursor` / `.coordinator` / the bus — no product deploy.
+5. **Pulse after ship** — `coordinator/after-ship.mdc`. Close after a successful product deploy (or skip after `main`), **or** after a human-requested push of the bus repos to `origin/main`. `task_completed` for **this** `task_id` only. Do not ask “close the slot?”. Then classify this tab’s next ask.

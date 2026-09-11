@@ -108,6 +108,37 @@ func (c *Controller) GetProject(w http.ResponseWriter, r *http.Request) {
 	infra.ReturnJSON(w, http.StatusOK, out)
 }
 
+func (c *Controller) GetSetup(w http.ResponseWriter, r *http.Request) {
+	out, err := c.service.GetSetup(r.Context())
+	if err != nil {
+		infra.LogError("GetSetup failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to load setup", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) PostSetup(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var req dto.CompleteSetupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		infra.ReturnError(w, "E400", "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	out, err := c.service.CompleteSetup(r.Context(), req)
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("PostSetup failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to save setup", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
 func (c *Controller) PostCreateService(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var req dto.CreateServiceRequest

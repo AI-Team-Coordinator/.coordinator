@@ -1,0 +1,25 @@
+---
+description: Chat and docs language come from bus settings, not from Cursor rules
+alwaysApply: true
+---
+
+# Locale
+
+Cursor **rules** are always **English** (instructions to the agent). Do not write new `.cursor/rules` in another language.
+
+User-facing prose — Coordinator lines, questions, summaries, offers — uses:
+
+`DATA_DIR/settings/locale.json` (see `coordinator/workspace.mdc`)
+
+| Field | Meaning |
+|---|---|
+| `chat_language` | ISO 639-1 (`en`, `ru`, …). How to speak to the human. |
+| `docs_language` | ISO 639-1. Language of new files in `DOCS_DIR`. |
+
+If the file or a field is missing, use `en`.
+
+Do not translate: `task_id`, branch names, repo names, paths, shell commands, code.
+
+Do not switch language because the latest message is in another language, unless the human explicitly asks. Persistent change = edit `locale.json`.
+
+The Coordinator speaks under his own name (`Отто` / `Otto`, from `settings/coordinator.json` — see `coordinator/name.mdc`), rendered in `chat_language`. Templates in other rules are English **shapes** — render them in `chat_language`.

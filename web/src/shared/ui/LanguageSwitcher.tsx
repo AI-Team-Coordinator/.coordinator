@@ -6,16 +6,16 @@ export function LanguageSwitcher() {
   const { i18n } = useTranslation()
 
   const currentLang = i18n.language && i18n.language.startsWith('ru') ? 'ru' : 'en'
+  const nextLang = currentLang === 'en' ? 'ru' : 'en'
 
   const toggleLanguage = () => {
-    const nextLang = currentLang === 'en' ? 'ru' : 'en'
     i18n.changeLanguage(nextLang)
   }
 
   return (
     <button
       onClick={toggleLanguage}
-      title={currentLang === 'en' ? 'Переключить на Русский' : 'Switch to English'}
+      title={nextLang === 'ru' ? 'Переключить на русский' : 'Switch to English'}
       className={cn(
         'flex items-center space-x-1 px-2.5 py-1.5 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-colors',
         'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60',
@@ -23,7 +23,7 @@ export function LanguageSwitcher() {
       )}
     >
       <Languages className="w-3.5 h-3.5" />
-      <span>{currentLang.toUpperCase()}</span>
+      <span>{nextLang.toUpperCase()}</span>
     </button>
   )
 }

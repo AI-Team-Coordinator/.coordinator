@@ -4,7 +4,7 @@
     "liveSync": "Live Sync",
     "connecting": "Connecting...",
     "gathering": "Gathering workspace data…",
-    "noAuthor": "No Common/data/.current_author"
+    "noAuthor": "This machine has no current person yet"
   },
   "sections": {
     "overview": "Overview",
@@ -135,6 +135,7 @@
     "serviceCount": "{{count}} services",
     "mapTitle": "Services",
     "mapSubtitle": "{{edges}} connections between services",
+    "emptyBoard": "No services yet — start a task in Cursor, or add people later.",
     "github": {
       "title": "GitHub organization",
       "unbound": "No organization is bound in project_profile.json yet.",
@@ -234,5 +235,25 @@
   "lang": {
     "en": "English",
     "ru": "Русский"
+  },
+  "setup": {
+    "helloLine1": "Hello, colleague!",
+    "helloLine2": "My name is {{name}}, and I'll help you and your team keep tasks coordinated.",
+    "coordinatorFallback": "Otto",
+    "projectName": "Project name",
+    "yourName": "Your name",
+    "alias": "Short alias",
+    "docsDir": "Task docs folder",
+    "docsDirHint": "Relative to the project root. Markdown for tasks, for example docs",
+    "dataDir": "Coordinator data folder",
+    "dataDirHint": "Team, statuses, local files. For example coordinator-data",
+    "start": "Start",
+    "saving": "Saving…",
+    "saveFailed": "Could not save setup",
+    "nextTitle": "Next step",
+    "nextBody": "Open Cursor and start a task — or add a person on the Team page when you are ready.",
+    "accessAdmin": "admin",
+    "testLaunch": "Setup screen",
+    "back": "Back"
   }
 }

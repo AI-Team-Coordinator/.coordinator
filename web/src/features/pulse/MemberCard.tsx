@@ -26,6 +26,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
   const summary = task?.task_summary || member.task_summary
   const isFix = Boolean(taskId && (taskId.startsWith('FIX-') || (branch && branch.startsWith('fix/'))))
   const roleLabel = member.role ? t(`pulse.roles.${member.role}`, { defaultValue: member.role }) : ''
+  const accessLabel = member.access === 'admin' ? t('setup.accessAdmin') : ''
   const claimed = task?.services || member.services || []
   const repos = task?.repos || member.repos || []
   const workspaceRepos = repos.filter((repo) => repo.kind === 'workspace')
@@ -92,6 +93,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
           {member.name}
           {' · '}@{member.alias}
           {roleLabel ? ` · ${roleLabel}` : ''}
+          {accessLabel ? ` · ${accessLabel}` : ''}
         </div>
       </div>
 

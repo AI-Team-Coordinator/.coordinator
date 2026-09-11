@@ -12,4 +12,5 @@ export const api = {
   docs: '/api/v1/docs',
   stream: '/api/v1/stream',
   sync: '/api/v1/sync',
+  setup: '/api/v1/setup',
 } as const

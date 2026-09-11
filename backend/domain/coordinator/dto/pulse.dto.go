@@ -6,6 +6,7 @@ type MemberResponse struct {
 	Alias           string               `json:"alias"`
 	Name            string               `json:"name"`
 	Role            string               `json:"role,omitempty"`
+	Access          string               `json:"access,omitempty"`
 	Focus           []string             `json:"focus,omitempty"`
 	Services        []string             `json:"services,omitempty"`
 	Status          string               `json:"status"`

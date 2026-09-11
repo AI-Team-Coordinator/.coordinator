@@ -5,7 +5,7 @@ Created: 2026-09-10 11:38
 
 This file is **English**. Speak to the human in **their** language (first message / UI locale). Do not paste this markdown into the chat. Retell each block in short sentences.
 
-After blocks 1–2, stop per `INSTALL.md`. Block 3 is not theory: **inspect the project first** (procedure in `INSTALL.md`), then explain the two layouts and your recommendation.
+After blocks 1–2, stop per `INSTALL.md`. Block 3 is not theory: **inspect the project first** (procedure in `INSTALL.md`), then explain the two layouts and your recommendation. Block 4: inspect the host `.cursor` the same way — existing rules stay; the Coordinator adds a folder next to them.
 
 ---
 
@@ -87,3 +87,19 @@ Two working layouts:
 2. **One level up** — the Cursor root is not git: `.coordinator` sits beside the product folder (several repos in one window). Use this when the git root is not the Cursor window, or you will have more than one repo.
 
 The agent must not move folders or create a parent until the human picks a layout. The recommendation comes from what is actually on disk, not from AlinaAssist habit.
+
+---
+
+## Block 4. Existing Cursor rules
+
+The Coordinator is not a replacement for the project’s Cursor setup. If `.cursor/rules` already exists, those files stay. The install adds **`rules/coordinator/`** (voice, protocol, parallel work) and **merges** hooks so the agent can hear the Coordinator.
+
+What this is not:
+
+- wiping `hooks.json` or other alwaysApply rules;
+- copying another team’s `safety.mdc`, prod-DB, or deploy skills into this project;
+- a second, different install guide for humans — the person confirms in chat; the agent follows `INSTALL.md`.
+
+If another alwaysApply rule already locks branches or “one chat = one task” in a way that fights the Coordinator, stop and say so. Do not stack two protocols.
+
+Without Coordinator rules and hooks, the dashboard is only a local website. With them next to the host rules, the third participant can speak in this project.

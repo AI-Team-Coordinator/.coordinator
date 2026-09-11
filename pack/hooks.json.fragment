@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": ".cursor/hooks/coordinator-check-branch.sh",
+        "matcher": "Write|StrReplace|Delete"
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": ".cursor/hooks/coordinator-log-merge.py",
+        "matcher": "git (merge|push)"
+      }
+    ],
+    "sessionStart": [
+      {
+        "command": "python3 .cursor/hooks/coordinator-research.py sessionStart"
+      }
+    ],
+    "afterAgentResponse": [
+      {
+        "command": "python3 .cursor/hooks/coordinator-research.py afterAgentResponse"
+      }
+    ],
+    "sessionEnd": [
+      {
+        "command": "python3 .cursor/hooks/coordinator-research.py sessionEnd"
+      }
+    ]
+  }
+}

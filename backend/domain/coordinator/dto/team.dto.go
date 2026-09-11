@@ -1,10 +1,11 @@
 package dto
 
 type TeamPersonResponse struct {
-	Alias string   `json:"alias"`
-	Name  string   `json:"name"`
-	Role  string   `json:"role,omitempty"`
-	Focus []string `json:"focus,omitempty"`
+	Alias  string   `json:"alias"`
+	Name   string   `json:"name"`
+	Role   string   `json:"role,omitempty"`
+	Access string   `json:"access,omitempty"`
+	Focus  []string `json:"focus,omitempty"`
 }
 
 type TeamResponse struct {
@@ -14,10 +15,11 @@ type TeamResponse struct {
 }
 
 type TeamPersonRequest struct {
-	Alias string   `json:"alias"`
-	Name  string   `json:"name"`
-	Role  string   `json:"role"`
-	Focus []string `json:"focus"`
+	Alias  string   `json:"alias"`
+	Name   string   `json:"name"`
+	Role   string   `json:"role"`
+	Access string   `json:"access"`
+	Focus  []string `json:"focus"`
 }
 
 type SaveTeamRequest struct {

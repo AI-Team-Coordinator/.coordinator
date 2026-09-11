@@ -66,13 +66,20 @@ func (s *Service) SaveTeam(ctx context.Context, req dto.SaveTeamRequest) (*dto.T
 		}
 	}
 
+	previous, err := s.repo.GetTeam(ctx)
+	if err != nil {
+		return nil, err
+	}
+	previousAccess := teamAccessByAlias(previous)
+
 	raw := make([]model.TeamPerson, 0, len(req.Members))
 	for _, person := range req.Members {
 		raw = append(raw, model.TeamPerson{
-			Alias: person.Alias,
-			Name:  person.Name,
-			Role:  person.Role,
-			Focus: person.Focus,
+			Alias:  person.Alias,
+			Name:   person.Name,
+			Role:   person.Role,
+			Access: person.Access,
+			Focus:  person.Focus,
 		})
 	}
 
@@ -80,6 +87,7 @@ func (s *Service) SaveTeam(ctx context.Context, req dto.SaveTeamRequest) (*dto.T
 	if err != nil {
 		return nil, err
 	}
+	members = preserveTeamAccess(members, previousAccess)
 	if err := s.repo.SaveTeam(ctx, members); err != nil {
 		return nil, err
 	}
@@ -241,10 +249,11 @@ func (s *Service) GetTeam(ctx context.Context) (*dto.TeamResponse, error) {
 			focus = []string{}
 		}
 		members = append(members, dto.TeamPersonResponse{
-			Alias: person.Alias,
-			Name:  person.Name,
-			Role:  person.Role,
-			Focus: focus,
+			Alias:  person.Alias,
+			Name:   person.Name,
+			Role:   person.Role,
+			Access: person.Access,
+			Focus:  focus,
 		})
 	}
 	return &dto.TeamResponse{Members: members}, nil
@@ -602,6 +611,7 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 			Alias:           m.Alias,
 			Name:            m.Name,
 			Role:            m.Role,
+			Access:          m.Access,
 			Focus:           focus,
 			Services:        services,
 			Status:          m.Status,

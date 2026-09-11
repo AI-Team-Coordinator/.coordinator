@@ -1,0 +1,31 @@
+---
+description: Coordinator paths — bus, docs, and data from .coordinator/.env
+alwaysApply: true
+---
+
+# Coordinator workspace paths
+
+Do not assume a folder named `Common`, a GitHub org, or a list of product services. Read **`.coordinator/.env`** (paths there are relative to the `.coordinator` folder unless absolute):
+
+| Variable | Meaning |
+|---|---|
+| `WORKSPACE_ROOT` | Cursor window root |
+| `BUS_DIR` | Git that holds the coordination bus |
+| `DATA_DIR` | Settings, progress snapshots, event log (`settings/`, `progress/`) |
+| `DOCS_DIR` | Task specifications |
+| `CURSOR_DIR` | Host `.cursor` (rules and hooks) |
+
+Defaults when `.env` is missing (in-repo beta): `DATA_DIR=coordinator-data`, `DOCS_DIR=docs`, `BUS_DIR` = the product git at the window root.
+
+## Two layouts
+
+1. **In-repo** — `.coordinator` sits inside the product git. `BUS_DIR` is that same git. Feature branches apply to product code. Files under `DATA_DIR` and `DOCS_DIR` are bus files (hooks allow them without a product feature branch).
+2. **Workspace-parent** — Cursor root is not git: `.coordinator` and `.cursor` sit beside a child product git. Bus and docs live **inside that product git**.
+
+`.cursor` and `.coordinator` stay on `main` when they are their own git. Do not open feature branches there.
+
+## Git commands
+
+Commit in the repository that owns the files, not from a random parent folder.
+
+After a **product** service lands on `origin/main`, offer deploy only if this project actually deploys that service. Never offer product deploy for `.cursor`, `.coordinator`, or bus-only changes (`DATA_DIR` / `DOCS_DIR`). Human-requested push of those to `origin/main` is the ship — `coordinator/after-ship.mdc`.

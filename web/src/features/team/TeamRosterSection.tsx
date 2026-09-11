@@ -14,6 +14,7 @@ type DraftMember = {
   alias: string
   name: string
   role: string
+  access: string
   focus: string[]
 }
 
@@ -58,7 +59,7 @@ export function TeamRosterSection({ services, onChanged, onDirtyChange }: TeamRo
   const addMember = () => {
     setDraft((prev) => [
       ...prev,
-      { key: `new-${Date.now()}`, alias: '', name: '', role: '', focus: [] },
+      { key: `new-${Date.now()}`, alias: '', name: '', role: '', access: 'member', focus: [] },
     ])
     setMessage(null)
   }
@@ -96,6 +97,7 @@ export function TeamRosterSection({ services, onChanged, onDirtyChange }: TeamRo
             alias: m.alias.trim().toUpperCase(),
             name: m.name.trim(),
             role: m.role,
+            access: m.access,
             focus: m.focus,
           })),
         }),
@@ -244,6 +246,7 @@ function toDraft(person: TeamPerson): DraftMember {
     alias: person.alias,
     name: person.name,
     role: person.role || '',
+    access: person.access || '',
     focus: person.focus || [],
   }
 }

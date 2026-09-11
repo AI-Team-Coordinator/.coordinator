@@ -1,0 +1,52 @@
+---
+description: After push+deploy (or bus-repo push), close Pulse; classify this tab’s next ask
+alwaysApply: true
+---
+
+# After ship — Pulse and this tab
+
+When this slot is **shipped**, close it. Then classify **this tab’s** next ask against Pulse (open slots, branches, dirty trees). Do not leave the slot open to ask “close it?”.
+
+## When the slot is shipped
+
+Two tracks. Both need the **human to have asked** to ship (finish / deploy / “push .cursor”). Agent-only commits (`sync_event.sh`, coordinator-state) do not close Pulse.
+
+**Product** in this slot (`protocol.mdc` §4): every product repo is on `origin/main`, then every product service in the slot is deployed successfully — or the human declined deploy after `main`. Feature-branch-only push or a failed deploy does not close. If this project has no product deploy, `origin/main` for those repos is enough.
+
+**Bus repos** — `.cursor`, `.coordinator`, and bus-only paths (`DATA_DIR` / `DOCS_DIR`). No product deploy. The human asked to push them, and that push landed on `origin/main` → `task_completed`. Do not offer deploy.
+
+A **mixed** slot (product + bus): the product track wins. Pushing docs alone does not close while a product service in the slot is still undeployed.
+
+Quiet *other* tasks still need a yes (`voice.mdc`). Auto-close is only for **this** slot after it ships.
+
+## Same message, next ask
+
+Ship and the next request may be one message. After `task_completed`, classify the **remainder** (or the next message in this tab). Read Pulse first (`parallel.mdc`).
+
+| Next ask | Pulse |
+|---|---|
+| Thanks / “да” / “закрой” / no new work | Stay closed. One Coordinator line. Name other own live tasks if any. |
+| More work on **this** shipped feature (missed bit, tweak) | **Reopen:** `task_started` with the **same** `task_id`, branch, services. Parallel check. If product repos sit on `main` and the feature branch is gone, recreate it from up-to-date `main`. |
+| Explicit new bug / hotfix of something else | New FIX (`protocol.mdc` §2.1). Not the same `task_id`. |
+| New planned work with a doc | Start per §2. |
+| How / why / where, no edits | `research_started` (`research.mdc`). This tab is off-task after close. |
+| Unclear | Ask. Do not start a slot or research. |
+
+Reopen is not a new FIX slug. A distinct incident is a new FIX even in the same service.
+
+```text
+❌ Pushed .cursor as asked, then offered product deploy
+✅ Pushed .cursor as asked; Pulse closed. No deploy.
+
+❌ Deployed, then asked “close the slot?”
+✅ Deployed; Pulse closed the task.
+
+❌ “ещё то же самое” → new FIX-…
+✅ More of the same feature → reopen the same task_id.
+
+❌ “почему это не дошло…” after ship → new task
+✅ Off-task how/why → research.
+
+❌ “почини другой баг в том же сервисе” → reopen
+✅ New FIX, parallel check.
+```

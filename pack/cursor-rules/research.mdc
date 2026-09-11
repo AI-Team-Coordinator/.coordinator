@@ -1,0 +1,32 @@
+---
+description: Off-task chat — research_started; close with findings; auto-close on tab silence
+alwaysApply: true
+---
+
+# Coordinator research sessions
+
+**Research** is reconnaissance outside a task (“how / why / where”). Not a slot, no branch. Voice: `coordinator/voice.mdc`. Language: `coordinator/locale.mdc`.
+
+A chat is **in a task** only if it is about **one of** the open slots in `.current_task_<ALIAS>.tasks[]` (same `task_id` / that slot’s branch). Otherwise it is **off-task**. After **this tab’s** task ships and auto-closes (`after-ship.mdc`), the chat is off-task: how / why / where → `research_started`, more of the same feature → reopen, a distinct bug → new FIX. Research is **not** tied to a branch, **does not** collide with tasks, and may run **in parallel** with any number of slots.
+
+When opening or closing research, tell the human what the reconnaissance is about — not “session_id recorded”. Render in `chat_language`:
+
+> Coordinator: this is research — looking at …, not opening a task.
+> Coordinator: this is no longer research, it needs edits. Closing reconnaissance and opening a task.
+
+The chat context includes `session_id=…` (hook `sessionStart`). Pass it to `research_started`.
+
+1. Read `DATA_DIR/progress/.current_task_<ALIAS>`.
+2. If the chat is off-task **and** `research.status` is not `active`:
+ ```bash
+ ./.coordinator/utils/sync_event.sh <ALIAS> research_started summary="<what we are figuring out>" session_id=<id>
+ ```
+ Do not call `task_started`. The script writes nested `research` and does not touch the task.
+3. Already active — do not send a second start. If `session_id` is still empty, the same call with only `session_id=` binds the tab.
+   If the human asks to **do** something (UI/code edits, not only “why”), that is already a task: `research_completed` for **this** session with `findings=`, then `task_started` (slot is appended; other slots and someone else’s research stay). Even when services are only `.coordinator` / `.cursor` / the bus and the branch is `main`. Run `coordinator/parallel.mdc` first.
+4. Explicit close (findings required):
+   ```bash
+   ./.coordinator/utils/sync_event.sh <ALIAS> research_completed findings="<what the research was and the conclusions>"
+   ```
+5. This **tab** becoming a task: `research_completed` with `findings=` first, then `task_started`. `task_started` does not close research by itself.
+6. Do not close research from another task’s tab. Auto-close: `sessionEnd` hook of the **bound** tab, or 30 minutes without `afterAgentResponse` on the bound `session_id`.

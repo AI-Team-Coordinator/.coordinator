@@ -1,0 +1,36 @@
+---
+description: Parallel-slot brain — whether another in_progress slot may start
+alwaysApply: true
+---
+
+# Parallel task slots
+
+One chat = one task. One person = **several** `in_progress` slots if the scopes do not fight. Research **never** takes part in this check and does not block `task_started`.
+
+Slot source: `DATA_DIR/progress/.current_task_*` — `tasks[]`. If there is no array, root `task_id` / `branch` / `services` with `status: in_progress` is one slot.
+
+Before any `task_started` (including hotfixes and work only in `.coordinator` / `.cursor` / the bus):
+
+1. `git pull --rebase origin main` in `BUS_DIR`.
+2. Read **all** `.current_task_*`. Collect open slots: yours and others’.
+3. New scope: `Services:` from the document (or the hotfix list) + `summary`/`doc` + branch.
+4. **Ignore research.** Do not call `research_completed` unless this *is* the tab that is leaving research and becoming a task.
+5. Scope collision → **stop**, do not start:
+
+   | Overlap | Your other slot | Someone else’s slot |
+   |---|---|---|
+   | Product repo (not the bus / `.cursor` / `.coordinator`) | refuse | refuse |
+   | Bus (`BUS_DIR` / `DATA_DIR` / `DOCS_DIR`) | ignore | ignore |
+   | `.cursor` or `.coordinator` | refuse | not a collision |
+
+6. Semantic collision (yours or someone else’s) → **stop and ask**: same `task_id`; same product branch (not `main`/`master`); same FIX slug after the alias; almost the same `summary`; same module/behavior in an overlapping product service.
+7. Clean-main (`coordinator/protocol.mdc` §1.1) only for **new** product repos of this slot. Do not require `main` of a repo another of your slots already holds.
+8. This tab binds to the new `task_id`. The neighboring tab stays on its own. You may edit only **this** slot’s repos, on **its** branch.
+
+`task_started` **appends** a slot to `tasks[]`; it does not wipe the others. `task_completed <TASK_ID>` drops one slot; `idle` only when `tasks` is empty.
+
+If the check fails — do not call `task_started` and do not check out branches “just in case”.
+
+Tell the human in Coordinator voice (`coordinator/voice.mdc`, `chat_language`): name the **task** that holds the service, not a folder name. If the start is allowed, still name the author’s *other* live tasks when that helps; name a teammate’s task only if it relates.
+
+> Coordinator found a conflict: task “…” already holds the API. Not starting a new one that needs the API.

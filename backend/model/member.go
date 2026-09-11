@@ -7,6 +7,7 @@ type Member struct {
 	Alias       string
 	Name        string
 	Role        string
+	Access      string
 	Focus       []string
 	Services    []string
 	Status      string

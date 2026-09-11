@@ -4,7 +4,7 @@
     "liveSync": "Живой поток",
     "connecting": "Подключение...",
     "gathering": "Собираем данные воркспейса…",
-    "noAuthor": "Нет Common/data/.current_author"
+    "noAuthor": "На этой машине ещё не выбран человек"
   },
   "sections": {
     "overview": "Обзор",
@@ -135,6 +135,7 @@
     "serviceCount": "сервисов: {{count}}",
     "mapTitle": "Сервисы",
     "mapSubtitle": "связей между сервисами: {{edges}}",
+    "emptyBoard": "Сервисов пока нет — откройте Cursor и начните задачу, людей можно добавить позже.",
     "github": {
       "title": "Организация GitHub",
       "unbound": "Организация ещё не записана в project_profile.json.",
@@ -234,5 +235,25 @@
   "lang": {
     "en": "English",
     "ru": "Русский"
+  },
+  "setup": {
+    "helloLine1": "Приветствую, коллега!",
+    "helloLine2": "Меня зовут {{name}}, я буду помогать тебе и твоей команде с координацией задач.",
+    "coordinatorFallback": "Отто",
+    "projectName": "Название проекта",
+    "yourName": "Как вас зовут",
+    "alias": "Короткий алиас",
+    "docsDir": "Папка документации",
+    "docsDirHint": "Относительно корня проекта. Markdown задач, например docs",
+    "dataDir": "Папка данных Координатора",
+    "dataDirHint": "Команда, статусы, локальные файлы. Например coordinator-data",
+    "start": "Старт",
+    "saving": "Сохраняем…",
+    "saveFailed": "Не получилось сохранить",
+    "nextTitle": "Что дальше",
+    "nextBody": "Откройте Cursor и начните задачу — или добавьте человека на странице Команда, когда будете готовы.",
+    "accessAdmin": "админ",
+    "testLaunch": "Экран установки",
+    "back": "Назад"
   }
 }

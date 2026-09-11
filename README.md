@@ -123,9 +123,9 @@ Install the Coordinator.
 Playbook: https://github.com/AI-Team-Coordinator/.coordinator/blob/main/docs/INSTALL.md
 ```
 
-The agent will explain how it works, inspect your project to propose the cleanest layout, verify required tools, and set up the local dashboard: [http://localhost:5175](http://localhost:5175).
+The agent will explain how it works, inspect your project and existing Cursor rules, propose the cleanest layout, verify required tools, and set up the local dashboard: [http://localhost:5175](http://localhost:5175).
 
-👉 **[Read the Full Installation Playbook (docs/INSTALL.md)](./docs/INSTALL.md)**
+`docs/INSTALL.md` is the **agent playbook** (not a human terminal checklist). People paste the prompt above; the agent follows that file.
 
 ---
 

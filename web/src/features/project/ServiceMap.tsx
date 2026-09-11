@@ -27,10 +27,18 @@ export function ServiceMap({ profile, onCreated }: ServiceMapProps) {
     return null
   }
 
+  const bound = Boolean(profile.github?.org)
+
   return (
     <section className="space-y-4">
-      <GitHubOrgCard github={profile.github} live={profile.github_live} />
-      <CreateUnitForm profile={profile} onCreated={onCreated || (() => {})} />
+      {bound ? (
+        <>
+          <GitHubOrgCard github={profile.github} live={profile.github_live} />
+          <CreateUnitForm profile={profile} onCreated={onCreated || (() => {})} />
+        </>
+      ) : grouped.length === 0 ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('project.emptyBoard')}</p>
+      ) : null}
       {grouped.length > 0 && (
         <>
           <div>

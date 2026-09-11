@@ -4,9 +4,10 @@ interface CurrentUserProps {
   alias?: string
   name?: string
   role?: string
+  access?: string
 }
 
-export function CurrentUser({ alias, name, role }: CurrentUserProps) {
+export function CurrentUser({ alias, name, role, access }: CurrentUserProps) {
   const { t } = useTranslation()
   if (!alias) {
     return (
@@ -15,6 +16,7 @@ export function CurrentUser({ alias, name, role }: CurrentUserProps) {
   }
 
   const roleLabel = role ? t(`pulse.roles.${role}`, { defaultValue: role }) : ''
+  const accessLabel = access === 'admin' ? t('setup.accessAdmin') : ''
 
   return (
     <div className="flex items-center gap-2 min-w-0">
@@ -28,6 +30,7 @@ export function CurrentUser({ alias, name, role }: CurrentUserProps) {
         <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
           @{alias}
           {roleLabel ? ` · ${roleLabel}` : ''}
+          {accessLabel ? ` · ${accessLabel}` : ''}
         </div>
       </div>
     </div>

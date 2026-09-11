@@ -40,6 +40,10 @@ type ServiceEdge struct {
 	Kind string `json:"kind"`
 }
 
+type ProjectSetup struct {
+	Completed bool `json:"completed,omitempty"`
+}
+
 type ProjectProfile struct {
 	Version  int            `json:"version"`
 	Project  ProjectMeta    `json:"project"`
@@ -47,4 +51,5 @@ type ProjectProfile struct {
 	Groups   []ServiceGroup `json:"groups"`
 	Services []ServiceNode  `json:"services"`
 	Edges    []ServiceEdge  `json:"edges"`
+	Setup    ProjectSetup   `json:"setup,omitempty"`
 }
