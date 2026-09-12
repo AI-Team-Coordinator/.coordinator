@@ -10,7 +10,7 @@ export COORDINATOR_ROOT="$DIR"
 # shellcheck source=paths.sh
 . "$(cd "$(dirname "$0")" && pwd)/paths.sh"
 
-WEB_DIR="$DIR/web"
+FRONTEND_DIR="$DIR/frontend"
 CACHE="$DIR/.cache"
 PIDFILE="$CACHE/frontend.pid"
 LOG="$CACHE/frontend.log"
@@ -67,13 +67,13 @@ cmd_start() {
         echo "⚡ Vite already on http://127.0.0.1:$VITE_PORT"
         return 0
     fi
-    if [ ! -d "$WEB_DIR/node_modules" ]; then
+    if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
         echo "📦 Installing frontend dependencies..."
-        (cd "$WEB_DIR" && npm install)
+        (cd "$FRONTEND_DIR" && npm install)
     fi
     mkdir -p "$CACHE"
     echo "⚡ Starting Vite on http://127.0.0.1:$VITE_PORT (detached)..."
-    python3 "$DAEMONIZE" "$PIDFILE" "$LOG" "$WEB_DIR" -- npm run dev
+    python3 "$DAEMONIZE" "$PIDFILE" "$LOG" "$FRONTEND_DIR" -- npm run dev
     local i
     for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
         if vite_up; then

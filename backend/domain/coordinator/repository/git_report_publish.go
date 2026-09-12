@@ -54,9 +54,13 @@ func (r *FileRepository) maybePublishGitReport(author string, members []model.Me
 }
 
 func (r *FileRepository) publishGitReport(alias string, report *model.GitReport) error {
+	abs := filepath.Join(r.progressDir(), ".current_task_"+alias)
+	if r.Collaboration() == model.CollaborationSolo {
+		return writeGitReport(abs, report)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
-	abs := filepath.Join(r.progressDir(), ".current_task_"+alias)
 
 	r.gitMu.Lock()
 	defer r.gitMu.Unlock()

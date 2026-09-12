@@ -172,7 +172,7 @@ Workspace/                    ← корень Cursor, сам не git
     cursor-rules/             ← generic-правила без AlinaAssist
     cursor-hooks/             ← check-branch, research, merge-log
     hooks.json.fragment       ← что влить в hooks.json хоста
-  backend/  web/  utils/      ← как сейчас
+  backend/  frontend/  utils/      ← как сейчас
   .env.example
 ```
 
@@ -249,7 +249,7 @@ Workspace/                    ← корень Cursor, сам не git
 - **git**
 - **Cursor** (хуки и правила)
 - **Go 1.22+** (сейчас модуль `go 1.25`) — сборка API
-- **Node 20+** и npm — `web/` (Vite)
+- **Node 20+** и npm — `frontend/` (Vite)
 - **Python 3** — хуки research / snapshot
 
 Опционально: **GitHub CLI** — только если позже создаём репы или org. Для пустого теста не нужен.

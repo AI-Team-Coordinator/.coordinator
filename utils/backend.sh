@@ -12,7 +12,7 @@ export COORDINATOR_ROOT="$DIR"
 
 PORT="${PORT:-4321}"
 BACKEND_DIR="$DIR/backend"
-WEB_DIR="$DIR/web"
+FRONTEND_DIR="$DIR/frontend"
 BIN="$BACKEND_DIR/coordinator-server"
 CACHE="$DIR/.cache"
 PIDFILE="$CACHE/backend.pid"
@@ -75,7 +75,7 @@ cmd_start() {
     mkdir -p "$CACHE"
     echo "📂 data $DATA_DIR"
     echo "🌐 Starting API on http://127.0.0.1:$PORT (detached)..."
-    python3 "$DAEMONIZE" "$PIDFILE" "$LOG" "$BACKEND_DIR" -- "$BIN" -port "$PORT" -web "$WEB_DIR"
+    python3 "$DAEMONIZE" "$PIDFILE" "$LOG" "$BACKEND_DIR" -- "$BIN" -port "$PORT" -frontend "$FRONTEND_DIR"
     local i
     for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
         if healthy; then

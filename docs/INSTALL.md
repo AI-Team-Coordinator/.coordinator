@@ -105,7 +105,7 @@ Retell why two layouts exist (`ONBOARDING.md` block 3), briefly.
 
 > Install the way I recommend? If not, say `inside` or `one level up`.
 
-Remember the choice. Later blocks depend on it. The web wizard must **not** ask layout again — only confirm.
+Remember the choice. Later blocks depend on it. The setup wizard must **not** ask layout again — only confirm.
 
 ---
 
@@ -214,10 +214,10 @@ PORT=4321
 `workspace-parent`: `WORKSPACE_ROOT` = window root; `BUS_DIR` / `DATA_DIR` / `DOCS_DIR` inside the product git; `CURSOR_DIR` = `.cursor` at the window root.
 
 4. Append `pack/gitignore.host` to the **product git** `.gitignore` (for `in-repo` that is the same root).
-5. Copy seed: `pack/seed/*` → `coordinator-data/settings/` (locale, `coordinator.json` with the assistant's name, empty team, empty project_profile) and `current_author.example`. Do **not** ask for project name, alias, or people in chat — the first web screen confirms that. Do **not** set `setup.completed`.
+5. Copy seed: `pack/seed/*` → `coordinator-data/settings/` (locale, `coordinator.json` with the assistant's name, empty team, empty project_profile) and `current_author.example`. Do **not** ask for project name, alias, or people in chat — the first setup screen confirms that. Do **not** set `setup.completed`.
 6. From `.coordinator` run `./utils/install_cursor_pack.sh` (uses `CURSOR_DIR` from `.env`). It copies `pack/cursor-rules/` → `.cursor/rules/coordinator/`, Coordinator hooks → `.cursor/hooks/`, and **merges** `hooks.json`. Host rules outside `rules/coordinator/` stay. Do not copy AlinaAssist `safety.mdc` or prod skills.
 7. `cd .coordinator && ./utils/run.sh` (npm install if needed, Go build, API + Vite).
-8. Give the link: [Coordinator](http://localhost:5175) as an address, not “I will open it for you”. The first screen is a confirm form (language, project name, installer as admin). Layout was already chosen in chat — the form only shows it.
+8. Give the link: [Coordinator](http://localhost:5175) as an address, not “I will open it for you”. The first screen is a confirm form: **Solo** vs **Team** (two cards), language, project name, installer as admin. Default is Solo — states stay on this machine, no git bus. Team needs an existing or separate repo for snapshots (in a monorepo that is the same git). Layout was already chosen in chat — the form only shows it.
 
 ### Not ready yet (do not pretend)
 

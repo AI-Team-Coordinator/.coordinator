@@ -19,7 +19,7 @@ Paths (`BUS_DIR`, `DATA_DIR`, `DOCS_DIR`) — `coordinator/workspace.mdc`.
    Documentation, coordination events, and progress updates commit on `main` of `BUS_DIR`. Never open a feature branch whose only job is the bus.
    If `BUS_DIR` **is** the product git (in-repo install), product **code** still uses feature branches; files under `DATA_DIR` and `DOCS_DIR` are bus files (hooks allow them).
    **`.coordinator`** is always `main` (local dashboard, not a product service). Do not open feature branches there.
-   After a **Go** change in `.coordinator`, restart only the API: `./utils/backend.sh restart` (detached, survives the chat). After a **web** change, do not rebuild — Vite HMR on `:5175` picks it up. Show the dashboard at [Coordinator](http://localhost:5175) (`coordinator/show.mdc`). Do not propose product deploy for `.cursor`, `.coordinator`, or bus-only changes. A **human-requested** push of those to `origin/main` is the ship (`after-ship.mdc`) — Pulse closes, no deploy.
+   After a **Go** change in `.coordinator`, restart only the API: `./utils/backend.sh restart` (detached, survives the chat). After a **frontend** change, do not rebuild — Vite HMR on `:5175` picks it up. Show the dashboard at [Coordinator](http://localhost:5175) (`coordinator/show.mdc`). Do not propose product deploy for `.cursor`, `.coordinator`, or bus-only changes. A **human-requested** push of those to `origin/main` is the ship (`after-ship.mdc`) — Pulse closes, no deploy.
    **Logging is not exempt.** Edits to `.coordinator` / `.cursor` / the bus still call `task_started` on `main` (Pulse + timeline). The exemption is feature branches and product deploy — not «no event because it is not a product service».
 2. **Unified Branch Names Across Services:**
    Feature work must use the exact same branch name in all affected product repositories.
@@ -27,11 +27,11 @@ Paths (`BUS_DIR`, `DATA_DIR`, `DOCS_DIR`) — `coordinator/workspace.mdc`.
    The canonical branch name is defined in the task document header in `DOCS_DIR` (e.g. `Branch: ...`).
 4. **Developer State Tracked in Git:**
    Open slots for each developer are recorded in `DATA_DIR/progress/.current_task_<ALIAS>` (alias from `DATA_DIR/.current_author`).
-   - This file is **COMMITTED TO GIT** and pushed with the bus (`main`).
+   - In **team** mode (`collaboration.mdc`) this file is synced through git (`origin/coordinator-state`). In **solo** mode it stays on disk only — do not pull or push snapshots.
    - Each developer has a dedicated state file, ensuring **zero merge conflicts** in Git.
    - `tasks[]` holds every `in_progress` slot. Root `task_id` / `branch` / `services` mirror the **latest** started slot (legacy readers).
    - Each slot MUST include intent: `doc` (path under `DOCS_DIR`, if it exists) and/or `summary` (one or two sentences — required for a hotfix with no doc).
-   - Any team member (or their AI agent) must read **all** `.current_task_*` files (after pulling the bus) and treat every slot’s `doc` / `summary` as the source for semantic collision checks. Do not copy this state into `.cursor`.
+   - Any team member (or their AI agent) must read **all** `.current_task_*` files (after pulling the bus **when `collaboration` is `team`**) and treat every slot’s `doc` / `summary` as the source for semantic collision checks. Do not copy this state into `.cursor`.
    - Parallel slots: rule `coordinator/parallel.mdc`. Research lives in nested `research` and is not a slot.
 
 ---
@@ -114,7 +114,7 @@ When the user asks to start, resume, or switch to a task (e.g., "Start task [ID]
 1. **Identify Author:** Read `<ALIAS>` from `DATA_DIR/.current_author`.
 2. **Read Task Document:** Find the specification in `DOCS_DIR` and extract `Branch: ...` and `Services: ...` from its header.
 3. **Unclosed work:** Apply **§1.1** and `coordinator/parallel.mdc`. Do not continue until the user chooses if the new slot is blocked.
-4. **Sync the bus:** On `main` in `BUS_DIR`, run `git pull --rebase origin main`.
+4. **Sync the bus:** If `collaboration` is `team` (`coordinator/collaboration.mdc`), on `main` in `BUS_DIR` run `git pull --rebase origin main`. If `solo`, skip the pull and read `DATA_DIR/progress/` on disk.
 5. **Collisions:** Follow `coordinator/parallel.mdc` against **every** open slot (own `tasks[]` and every other alias). **Stop** if product services overlap or the meaning clashes.
 6. **Clean-main on new product services:** For each repo in `Services:` that this slot will own (skip the bus / `.cursor` / `.coordinator`, skip repos already owned by another of **your** slots), run the §1.1 gate. If any repo fails, stop and ask.
 7. **State & Event Log:** If *this* tab is converting from research to a task, `research_completed` first (same `session_id`). Do **not** close a research bound to another tab. Then:
@@ -172,7 +172,7 @@ If during work it becomes clear that **another** service must change (not listed
 Before generating or modifying **product** code (anything the branch hook would guard):
 
 1. Perform the **Pre-flight check** so this chat, **this slot**, and the git branch of the repo you are editing still match.
-2. Run `git pull --rebase origin main` in `BUS_DIR` so teammate snapshots are current.
+2. If `collaboration` is `team`, run `git pull --rebase origin main` in `BUS_DIR` so teammate snapshots are current. If `solo`, skip the pull.
 3. Read **all** `DATA_DIR/progress/.current_task_*` files.
 4. For every *other* open slot:
    - If `doc` is set, read that file (path relative to `DOCS_DIR` or the bus root, as stored).

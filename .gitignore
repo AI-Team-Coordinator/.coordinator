@@ -1,6 +1,6 @@
 .env
-web/node_modules/
-web/dist/
+frontend/node_modules/
+frontend/dist/
 backend/coordinator-server
 .cache/
 **/.DS_Store

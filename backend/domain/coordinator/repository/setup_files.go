@@ -61,15 +61,8 @@ func (r *FileRepository) CoordinatorName(ctx context.Context) string {
 	if loc, err := r.GetLocale(ctx); err == nil && loc != nil {
 		lang = loc.ChatLanguage
 	}
-	data, err := os.ReadFile(filepath.Join(r.settingsDir(), "coordinator.json"))
-	if err != nil {
-		return DefaultCoordinatorName(lang)
-	}
-	var cfg model.CoordinatorFile
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return DefaultCoordinatorName(lang)
-	}
-	if name := strings.TrimSpace(cfg.Name); name != "" {
+	name := strings.TrimSpace(r.coordinatorFileFromDisk().Name)
+	if name != "" {
 		return name
 	}
 	return DefaultCoordinatorName(lang)
@@ -96,6 +89,48 @@ func (r *FileRepository) SaveLocale(_ context.Context, loc *model.LocaleFile) er
 	}
 	data = append(data, '\n')
 	return writeFileAtomic(filepath.Join(r.settingsDir(), "locale.json"), data)
+}
+
+func (r *FileRepository) coordinatorFileFromDisk() model.CoordinatorFile {
+	data, err := os.ReadFile(filepath.Join(r.settingsDir(), "coordinator.json"))
+	if err != nil {
+		return model.CoordinatorFile{Version: 1}
+	}
+	var cfg model.CoordinatorFile
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return model.CoordinatorFile{Version: 1}
+	}
+	if cfg.Version == 0 {
+		cfg.Version = 1
+	}
+	return cfg
+}
+
+func (r *FileRepository) CoordinatorFile(_ context.Context) model.CoordinatorFile {
+	return r.coordinatorFileFromDisk()
+}
+
+// Collaboration is team unless the file explicitly says solo.
+// Missing field keeps existing installs on the git bus.
+func (r *FileRepository) Collaboration() string {
+	return model.NormalizeCollaboration(r.coordinatorFileFromDisk().Collaboration, model.CollaborationTeam)
+}
+
+func (r *FileRepository) SaveCoordinatorFile(_ context.Context, cfg model.CoordinatorFile) error {
+	current := r.coordinatorFileFromDisk()
+	if strings.TrimSpace(cfg.Name) == "" {
+		cfg.Name = current.Name
+	}
+	if cfg.Version == 0 {
+		cfg.Version = 1
+	}
+	cfg.Collaboration = model.NormalizeCollaboration(cfg.Collaboration, model.CollaborationTeam)
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	return writeFileAtomic(filepath.Join(r.settingsDir(), "coordinator.json"), data)
 }
 
 func (r *FileRepository) SetupLayout() SetupLayout {

@@ -11,7 +11,7 @@ Slot source: `DATA_DIR/progress/.current_task_*` — `tasks[]`. If there is no a
 
 Before any `task_started` (including hotfixes and work only in `.coordinator` / `.cursor` / the bus):
 
-1. `git pull --rebase origin main` in `BUS_DIR`.
+1. If `collaboration` is `team` (`coordinator/collaboration.mdc`), `git pull --rebase origin main` in `BUS_DIR`. If `solo`, skip the pull and read disk.
 2. Read **all** `.current_task_*`. Collect open slots: yours and others’.
 3. New scope: `Services:` from the document (or the hotfix list) + `summary`/`doc` + branch.
 4. **Ignore research.** Do not call `research_completed` unless this *is* the tab that is leaving research and becoming a task.

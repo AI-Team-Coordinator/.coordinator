@@ -153,6 +153,14 @@ CMD=${1:-}
 shift || true
 
 case "$CMD" in
+    ensure|pull|push)
+        if [ "$(coordinator_collaboration)" = "solo" ]; then
+            exit 0
+        fi
+        ;;
+esac
+
+case "$CMD" in
     ensure) ensure ;;
     pull) pull_state ;;
     push) push_state "$*" ;;

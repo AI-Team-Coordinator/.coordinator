@@ -18,7 +18,7 @@ func main() {
 	flag.StringVar(&cfg.DocsDir, "docs", "", "Path to docs directory")
 	flag.StringVar(&cfg.BusDir, "bus", "", "Path to git data-bus repo (settings sync / pull)")
 	flag.StringVar(&cfg.CursorDir, "cursor", "", "Path to .cursor directory")
-	flag.StringVar(&cfg.WebDir, "web", "", "Path to web frontend static assets")
+	flag.StringVar(&cfg.FrontendDir, "frontend", "", "Path to local UI static assets")
 	flag.Parse()
 
 	cwd, err := os.Getwd()
@@ -34,7 +34,7 @@ func main() {
 	infra.LogInfo("Docs dir:   %s", cfg.DocsDir)
 	infra.LogInfo("Bus dir:    %s", cfg.BusDir)
 	infra.LogInfo("Cursor dir: %s", cfg.CursorDir)
-	infra.LogInfo("Web dir:    %s", cfg.WebDir)
+	infra.LogInfo("UI dir:     %s", cfg.FrontendDir)
 
 	application, err := app.NewApp(cfg)
 	if err != nil {

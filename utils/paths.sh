@@ -75,6 +75,23 @@ coordinator_current_author() {
     echo "$alias"
 }
 
+coordinator_collaboration() {
+    python3 - "$SETTINGS_DIR/coordinator.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+mode = "team"
+if os.path.isfile(path):
+    try:
+        data = json.load(open(path))
+        raw = str(data.get("collaboration") or "").strip().lower()
+        if raw == "solo":
+            mode = "solo"
+    except Exception:
+        pass
+print(mode)
+PY
+}
+
 coordinator_events_file() {
     local alias=$1
     local year

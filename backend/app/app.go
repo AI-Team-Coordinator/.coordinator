@@ -11,6 +11,7 @@ import (
 	"coordinator/domain/coordinator/repository"
 	"coordinator/infra"
 	"coordinator/infra/db"
+	"coordinator/model"
 )
 
 type App struct {
@@ -94,6 +95,9 @@ func (a *App) pullCommonLoop() {
 }
 
 func (a *App) pullCommonOnce() {
+	if a.repo != nil && a.repo.Collaboration() == model.CollaborationSolo {
+		return
+	}
 	updated, err := a.repo.PullCommonOrigin(context.Background())
 	if err != nil {
 		infra.LogWarn("common pull origin/main: %v", err)

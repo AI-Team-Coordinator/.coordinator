@@ -118,6 +118,13 @@ func TestCompleteSetupWritesLocalFiles(t *testing.T) {
 	if err != nil || loc.ChatLanguage != "ru" {
 		t.Fatalf("locale %+v %v", loc, err)
 	}
+	if repo.Collaboration() != model.CollaborationSolo {
+		t.Fatalf("collaboration=%s", repo.Collaboration())
+	}
+	cfg := repo.CoordinatorFile(ctx)
+	if cfg.Collaboration != model.CollaborationSolo {
+		t.Fatalf("coordinator file %+v", cfg)
+	}
 
 	again, err := svc.CompleteSetup(ctx, dto.CompleteSetupRequest{ProjectName: "Other"})
 	if err != nil {
@@ -177,6 +184,41 @@ func TestSlugifyProjectID(t *testing.T) {
 	}
 	if got := slugifyProjectID("  "); got != "project" {
 		t.Fatal(got)
+	}
+}
+
+func TestCompleteSetupWritesTeamCollaboration(t *testing.T) {
+	repo := newSetupTestRepo(t)
+	svc := NewService(repo, nil)
+	if _, err := svc.CompleteSetup(context.Background(), dto.CompleteSetupRequest{
+		ProjectName:   "Acme",
+		Alias:         "AK",
+		Name:          "Alex",
+		Collaboration: "team",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if repo.Collaboration() != model.CollaborationTeam {
+		t.Fatalf("collaboration=%s", repo.Collaboration())
+	}
+}
+
+func TestCollaborationMissingFileIsTeam(t *testing.T) {
+	repo := newSetupTestRepo(t)
+	if repo.Collaboration() != model.CollaborationTeam {
+		t.Fatalf("got %s", repo.Collaboration())
+	}
+}
+
+func TestNormalizeCollaboration(t *testing.T) {
+	if model.NormalizeCollaboration("solo", model.CollaborationTeam) != model.CollaborationSolo {
+		t.Fatal("solo")
+	}
+	if model.NormalizeCollaboration("", model.CollaborationSolo) != model.CollaborationSolo {
+		t.Fatal("empty uses fallback")
+	}
+	if model.NormalizeCollaboration("nope", model.CollaborationTeam) != model.CollaborationTeam {
+		t.Fatal("unknown uses fallback")
 	}
 }
 

@@ -36,10 +36,10 @@ func (a *App) SetupRoutes() {
 }
 
 func (a *App) mountStatic(mux *http.ServeMux) {
-	if a.config.WebDir == "" {
+	if a.config.FrontendDir == "" {
 		return
 	}
-	indexPath := filepath.Join(a.config.WebDir, "index.html")
+	indexPath := filepath.Join(a.config.FrontendDir, "index.html")
 	if _, err := os.Stat(indexPath); err != nil {
 		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -48,13 +48,13 @@ func (a *App) mountStatic(mux *http.ServeMux) {
 		return
 	}
 
-	fileServer := http.FileServer(http.Dir(a.config.WebDir))
+	fileServer := http.FileServer(http.Dir(a.config.FrontendDir))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if len(r.URL.Path) >= 4 && r.URL.Path[:4] == "/api" {
 			http.NotFound(w, r)
 			return
 		}
-		targetPath := filepath.Join(a.config.WebDir, filepath.Clean(r.URL.Path))
+		targetPath := filepath.Join(a.config.FrontendDir, filepath.Clean(r.URL.Path))
 		if fi, err := os.Stat(targetPath); err == nil && !fi.IsDir() {
 			if filepath.Base(targetPath) == "index.html" {
 				w.Header().Set("Cache-Control", "no-cache")

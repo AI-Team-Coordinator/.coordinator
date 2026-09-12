@@ -1,0 +1,20 @@
+---
+description: Solo vs team — whether task snapshots sync through git
+alwaysApply: true
+---
+
+# Collaboration mode
+
+How task snapshots are stored lives in `DATA_DIR/settings/coordinator.json`:
+
+| Field | Meaning |
+|---|---|
+| `collaboration` | `solo` or `team` |
+
+- **`solo`** — one person, one machine. Write `.current_task_*` and jsonl on disk. Do **not** `git pull` / `git push` the bus for snapshots. Do **not** run `coordinator_state.sh`. Two Cursor chats on this Mac share the disk and are fine. Not for several people or machines.
+- **`team`** — several people or machines. After writing disk, sync `origin/coordinator-state`. Before reading Pulse, pull the bus so teammate snapshots are current.
+- Missing field → **`team`** (existing installs keep the git bus).
+
+Product git (feature branches, `main`, pushing code) does not change with this field.
+
+Read the file before a bus pull. If it says `solo`, skip the pull and read disk.

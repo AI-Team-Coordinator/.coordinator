@@ -14,6 +14,9 @@ type setupFiles interface {
 	WriteCurrentAuthor(ctx context.Context, alias string) error
 	GetLocale(ctx context.Context) (*model.LocaleFile, error)
 	SaveLocale(ctx context.Context, loc *model.LocaleFile) error
+	CoordinatorFile(ctx context.Context) model.CoordinatorFile
+	SaveCoordinatorFile(ctx context.Context, cfg model.CoordinatorFile) error
+	Collaboration() string
 	SetupLayout() repository.SetupLayout
 	ApplySetupFolders(docsRel, dataRel string) error
 	GuessProjectName(ctx context.Context) string
@@ -55,6 +58,7 @@ func (s *Service) GetSetup(ctx context.Context) (*dto.SetupStateResponse, error)
 		Language:        "en",
 		Layout:          "existing",
 		Local:           true,
+		Collaboration:   model.CollaborationSolo,
 	}
 	if files, ok := s.repo.(setupFiles); ok {
 		out.CoordinatorName = files.CoordinatorName(ctx)
@@ -67,6 +71,11 @@ func (s *Service) GetSetup(ctx context.Context) (*dto.SetupStateResponse, error)
 		}
 		if loc, err := files.GetLocale(ctx); err == nil && loc != nil {
 			out.Language = normalizeSetupLanguage(loc.ChatLanguage)
+		}
+		if out.Needed {
+			out.Collaboration = model.CollaborationSolo
+		} else {
+			out.Collaboration = files.Collaboration()
 		}
 	}
 	if person := setupPrefillMember(team, author); person != nil {
@@ -157,6 +166,11 @@ func (s *Service) CompleteSetup(ctx context.Context, req dto.CompleteSetupReques
 		ChatLanguage: language,
 		DocsLanguage: language,
 	}); err != nil {
+		return nil, err
+	}
+	cfg := files.CoordinatorFile(ctx)
+	cfg.Collaboration = model.NormalizeCollaboration(req.Collaboration, model.CollaborationSolo)
+	if err := files.SaveCoordinatorFile(ctx, cfg); err != nil {
 		return nil, err
 	}
 	if err := s.repo.SaveTeam(ctx, merged); err != nil {

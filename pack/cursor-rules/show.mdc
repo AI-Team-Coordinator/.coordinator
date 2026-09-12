@@ -18,7 +18,7 @@ If the human asks to **show / open the Coordinator** (dashboard, coordinator, lo
    ```
    The script starts a **new session** (`start_new_session`) — it survives the chat. Do not wait on `run.sh` in the foreground.
 
-2. **UI** — always Vite `npm run dev` on `5175` (HMR). Do not build `web/dist` just to look.
+2. **UI** — always Vite `npm run dev` on `5175` (HMR). Do not build `frontend/dist` just to look.
    ```bash
    lsof -nP -tiTCP:5175 -sTCP:LISTEN
    ```
@@ -34,6 +34,6 @@ If the human asks to **show / open the Coordinator** (dashboard, coordinator, lo
 4. In the reply, give the link `[Coordinator](http://localhost:5175)` as an address, not a “go” button. Coordinator voice (`chat_language`): “Coordinator: the board is here — …”, not “UI is up on the port”.
 
 After **Go** edits: only `./utils/backend.sh restart`. Leave Vite alone.
-After **web** edits: restart nothing.
+After **frontend** edits: restart nothing.
 
 Do not offer product deploy for `.coordinator`.

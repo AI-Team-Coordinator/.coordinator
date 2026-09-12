@@ -6,14 +6,14 @@ import (
 )
 
 type Config struct {
-	Port      string
-	AppRoot   string
-	Workspace string
-	DataDir   string
-	DocsDir   string
-	BusDir    string
-	CursorDir string
-	WebDir    string
+	Port        string
+	AppRoot     string
+	Workspace   string
+	DataDir     string
+	DocsDir     string
+	BusDir      string
+	CursorDir   string
+	FrontendDir string
 }
 
 func DefaultConfig() *Config {
@@ -35,7 +35,7 @@ func (c *Config) ResolvePaths(cwd string) {
 	c.DocsDir = firstNonEmpty(c.DocsDir, os.Getenv("DOCS_DIR"))
 	c.BusDir = firstNonEmpty(c.BusDir, os.Getenv("BUS_DIR"), os.Getenv("COMMON_DIR"))
 	c.CursorDir = firstNonEmpty(c.CursorDir, os.Getenv("CURSOR_DIR"))
-	c.WebDir = firstNonEmpty(c.WebDir, os.Getenv("WEB_DIR"))
+	c.FrontendDir = firstNonEmpty(c.FrontendDir, os.Getenv("FRONTEND_DIR"))
 
 	c.Workspace = resolvePath(c.AppRoot, c.Workspace, "..")
 	c.BusDir = resolvePath(c.AppRoot, c.BusDir, filepath.Join("..", "Common"))
@@ -43,16 +43,16 @@ func (c *Config) ResolvePaths(cwd string) {
 	c.DocsDir = resolvePath(c.AppRoot, c.DocsDir, filepath.Join(c.BusDir, "docs"))
 	c.CursorDir = resolvePath(c.AppRoot, c.CursorDir, filepath.Join("..", ".cursor"))
 
-	if c.WebDir != "" {
-		c.WebDir = resolvePath(c.AppRoot, c.WebDir, "")
-		if _, err := os.Stat(filepath.Join(c.WebDir, "dist", "index.html")); err == nil {
-			c.WebDir = filepath.Join(c.WebDir, "dist")
+	if c.FrontendDir != "" {
+		c.FrontendDir = resolvePath(c.AppRoot, c.FrontendDir, "")
+		if _, err := os.Stat(filepath.Join(c.FrontendDir, "dist", "index.html")); err == nil {
+			c.FrontendDir = filepath.Join(c.FrontendDir, "dist")
 		}
 		return
 	}
-	c.WebDir = detectDir("index.html", []string{
-		filepath.Join(c.AppRoot, "web", "dist"),
-		filepath.Join(c.AppRoot, "web"),
+	c.FrontendDir = detectDir("index.html", []string{
+		filepath.Join(c.AppRoot, "frontend", "dist"),
+		filepath.Join(c.AppRoot, "frontend"),
 	})
 }
 

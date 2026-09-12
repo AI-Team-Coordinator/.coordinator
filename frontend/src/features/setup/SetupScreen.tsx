@@ -2,10 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../shared/api/client'
 import { parseJSON } from '../../shared/api/http'
+import { cn } from '../../shared/lib/utils'
 import { Button } from '../../shared/ui/Button'
 import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher'
 import { ThemeToggle } from '../../shared/ui/ThemeToggle'
-import type { SetupState } from '../../shared/types/api'
+import type { CollaborationMode, SetupState } from '../../shared/types/api'
 import { Typewriter } from './Typewriter'
 
 interface SetupScreenProps {
@@ -22,9 +23,13 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
   const [alias, setAlias] = useState((initial.alias || '').toUpperCase())
   const [docsDir, setDocsDir] = useState(initial.docs_dir || 'docs')
   const [dataDir, setDataDir] = useState(initial.data_dir || 'coordinator-data')
+  const [collaboration, setCollaboration] = useState<CollaborationMode>(
+    initial.collaboration === 'team' ? 'team' : 'solo'
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const coordinatorName = initial.coordinator_name?.trim() || t('setup.coordinatorFallback')
+  const inRepo = initial.layout === 'in-repo'
 
   useEffect(() => {
     if (initial.language) {
@@ -55,6 +60,7 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
           language,
           docs_dir: docsDir.trim(),
           data_dir: dataDir.trim(),
+          collaboration,
         }),
       })
       const next = await parseJSON<SetupState>(res)
@@ -75,7 +81,7 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
       </div>
 
       <div className="flex-1 flex items-start justify-center px-4 pb-16">
-        <form onSubmit={submit} className="w-full max-w-lg space-y-6 pt-4 md:pt-8">
+        <form onSubmit={submit} className="w-full max-w-3xl space-y-6 pt-4 md:pt-8">
           <div className="flex flex-col items-center text-center space-y-4">
             <img
               src="/coordinator-octopus-purple-front-512.png"
@@ -98,6 +104,31 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
                 },
               ]}
             />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 text-center sm:text-left">
+              {t('setup.modeLabel')}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <ModeCard
+                selected={collaboration === 'solo'}
+                title={t('setup.soloTitle')}
+                lead={t('setup.soloLead')}
+                points={[t('setup.soloPointLocal'), t('setup.soloPointChats'), t('setup.soloPointPeople')]}
+                onClick={() => setCollaboration('solo')}
+              />
+              <ModeCard
+                selected={collaboration === 'team'}
+                title={t('setup.teamTitle')}
+                lead={t('setup.teamLead')}
+                points={[
+                  t('setup.teamPointAgents'),
+                  inRepo ? t('setup.teamPointMono') : t('setup.teamPointRepo'),
+                ]}
+                onClick={() => setCollaboration('team')}
+              />
+            </div>
           </div>
 
           <label className="block space-y-1.5">
@@ -189,5 +220,44 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
         </form>
       </div>
     </div>
+  )
+}
+
+function ModeCard({
+  selected,
+  title,
+  lead,
+  points,
+  onClick,
+}: {
+  selected: boolean
+  title: string
+  lead: string
+  points: string[]
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        'rounded-2xl border-2 p-4 text-left transition-colors h-full',
+        selected
+          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 shadow-sm'
+          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 hover:border-slate-400 dark:hover:border-slate-500'
+      )}
+    >
+      <p className="text-base font-semibold text-slate-900 dark:text-white">{title}</p>
+      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{lead}</p>
+      <ul className="mt-3 space-y-1.5 text-sm text-slate-600 dark:text-slate-300">
+        {points.map((point) => (
+          <li key={point} className="flex gap-2">
+            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500" />
+            <span>{point}</span>
+          </li>
+        ))}
+      </ul>
+    </button>
   )
 }

@@ -28,7 +28,7 @@ How it works (Zero-Trust, local-first):
 
 1. **Voice in chat.** Before edits, the agent checks open tasks and stops on overlapping scope.
 2. **Branch discipline.** New work starts from clean `main`. One Cursor tab — one task.
-3. **Bus in the product git.** Task status and docs live in the project repository, not in a Coordinator cloud. No third-party SaaS takes your code.
+3. **Bus in the product git.** Task docs live in the project repository, not in a Coordinator cloud. No third-party SaaS takes your code. **Task status** is either local (Solo — default on first setup, one person / one machine) or synced through git (Team — several people or machines). Two Cursor chats on the same Mac work in Solo; several people do not.
 4. **The board.** Pulse on localhost: who is doing what, which branches, where it collides. That screen is not “the Coordinator itself”.
 
 Words worth knowing:

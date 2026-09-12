@@ -266,6 +266,8 @@ export interface TeamPerson {
   focus?: string[]
 }
 
+export type CollaborationMode = 'solo' | 'team'
+
 export interface SetupState {
   needed: boolean
   coordinator_name?: string
@@ -278,6 +280,7 @@ export interface SetupState {
   docs_dir: string
   data_dir: string
   local: boolean
+  collaboration?: CollaborationMode | string
 }
 
 export interface SyncStatus {

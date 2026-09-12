@@ -251,6 +251,8 @@ if [ -n "$EVENT_JSON" ]; then
 fi
 
 # 2. Push snapshots to origin/coordinator-state (Common main stays clean)
-(
-    "$COORD_DIR/coordinator_state.sh" push "chore(progress): $ALIAS $EVENT_TYPE ${TASK_ID:-}"
-) </dev/null >> "$SYNC_LOG" 2>&1 &
+if [ "$(coordinator_collaboration)" != "solo" ]; then
+    (
+        "$COORD_DIR/coordinator_state.sh" push "chore(progress): $ALIAS $EVENT_TYPE ${TASK_ID:-}"
+    ) </dev/null >> "$SYNC_LOG" 2>&1 &
+fi

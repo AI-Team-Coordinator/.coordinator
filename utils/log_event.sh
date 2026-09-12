@@ -121,6 +121,8 @@ with open(path, "a") as f:
     f.write(json.dumps(row, ensure_ascii=False) + "\n")
 PY
 
-(
-    "$(dirname "$0")/coordinator_state.sh" push "chore(progress): $ALIAS $EVENT_TYPE ${SERVICE:-$TASK_ID}"
-) </dev/null >> "$SYNC_LOG" 2>&1 &
+if [ "$(coordinator_collaboration)" != "solo" ]; then
+    (
+        "$(dirname "$0")/coordinator_state.sh" push "chore(progress): $ALIAS $EVENT_TYPE ${SERVICE:-$TASK_ID}"
+    ) </dev/null >> "$SYNC_LOG" 2>&1 &
+fi
