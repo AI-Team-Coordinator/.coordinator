@@ -25,4 +25,5 @@ type CoordinatorRepository interface {
 	SyncSettings(ctx context.Context, alias string) (*model.SyncResult, error)
 	GetTaskDoc(ctx context.Context, taskID string) (*model.TaskDoc, error)
 	TaskTitle(ctx context.Context, taskID string) string
+	AppendEvent(ctx context.Context, ev model.Event) error
 }

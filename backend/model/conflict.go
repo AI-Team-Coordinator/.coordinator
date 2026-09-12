@@ -6,4 +6,5 @@ type Conflict struct {
 	Title           string
 	Description     string
 	AffectedAliases []string
+	Service         string
 }

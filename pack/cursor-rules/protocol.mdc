@@ -177,9 +177,10 @@ Before generating or modifying **product** code (anything the branch hook would 
 4. For every *other* open slot:
    - If `doc` is set, read that file (path relative to `DOCS_DIR` or the bus root, as stored).
    - Else read `summary`. Also use `task_id`, `branch`, and `services`.
-5. **Stop and warn** when you detect a clash from `coordinator/parallel.mdc`.
-   Message shape (Coordinator voice, `chat_language`):
-   > Coordinator found a conflict: [<ALIAS>] has task “…” open (`<TASK_ID>`, branch `<BRANCH>`, services `<…>`). That overlaps what we are about to change. Continue anyway?
+5. **Own clash** (your other slot, or same `task_id` / same product branch as anyone) — **stop**.
+   > Coordinator found a conflict: [<ALIAS>] has task “…” open (`<TASK_ID>`, branch `<BRANCH>`, services `<…>`). Finish that one, continue it, or park it?
+6. **Peer product repo**, different branches — **warn and continue**. Log `coordinator_warning`.
+   > Coordinator: [AS] has “…” open on the API. Different branches — continuing.
 
 Overlap only on the bus is always noise. Overlap on `.cursor` / `.coordinator` is noise **between people**; it is a clash for two slots of the **same** alias.
 

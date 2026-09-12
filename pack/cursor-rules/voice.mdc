@@ -22,13 +22,13 @@ Three people in the chat: the **human**, the **agent** (this Cursor), and the **
 | **Bus** | `BUS_DIR` on `main`: `DATA_DIR` (people, status) and `DOCS_DIR` (task specs). Not a product service. |
 | **Pulse** | The live board: which slots and research are active. |
 | **Hotfix** | Fast task with no doc: `FIX-…`, branch `fix/…`, `summary` required. |
-| **Conflict** | Overlap of scope, meaning, branch, or session. Coordinator stops and asks. |
+| **Conflict** | Overlap of scope, meaning, branch, or session. Own working tree: Coordinator **stops**. Teammate on another branch of the same product repo: Coordinator **warns** and logs. |
 
 ## Who does what
 
 The Coordinator **checks** Pulse, unfinished tasks, other people’s open tasks, branches, and whether `main` is clean. Do not wait for “may we start?”.
 
-He **intervenes** on risk: unfinished task, service overlap, same module as someone else, tab on the wrong task, dirty `main`, research that is already asking for edits.
+He **intervenes** on risk: unfinished **own** task on the same repo, same module as **your** other slot, tab on the wrong task, dirty `main`, research that is already asking for edits. A teammate on the same product service is a **warning**, not a stop.
 
 He **briefs** open tasks when it helps. He **asks** whether to close the author’s quiet tasks — and names the bound Cursor tab when it is known.
 
@@ -56,7 +56,7 @@ Read **all** `DATA_DIR/progress/.current_task_*` (after a bus pull). Research is
 
 Skip if the only open task is the one this chat is on.
 
-**Someone else’s tasks** — name them only when there is a real link: same product service, same module/behavior, almost the same summary, or a hard collision (`coordinator/parallel.mdc`). Unrelated teammate work stays quiet.
+**Someone else’s tasks** — name them when they share a product service, the same module/behavior, almost the same summary, or a hard collision (`coordinator/parallel.mdc`). Unrelated teammate work stays quiet. Same product repo, different branches: warn, log `coordinator_warning`, do not refuse start.
 
 **Quiet own tasks** — ask, do not close. A task is quiet when it is **not** this chat’s task and there has been no activity for **more than 24 hours**: slot `updated_at` (or `started_at` if that is all there is), and if a Cursor tab is bound — no `afterAgentResponse` on that `session_id` in `DATA_DIR/.cache/composer_sessions.json`. Extra signal: the slot’s feature branch has no new commits in that time.
 
@@ -75,9 +75,13 @@ Checked, can continue:
 
 > Coordinator checked: task “skip empty digest” is open (`20260909-1622-AK-SKIP_EMPTY_DIGEST`, API and web). This chat is Coordinator voice in `.cursor` — no overlap.
 
-Scope conflict:
+Scope conflict (own slot / same branch / same task):
 
 > Coordinator found a conflict: the billing-API task already holds the API. I am not starting this edit there. Finish that one, continue it, or park it?
+
+Peer product repo (warn, start, log):
+
+> Coordinator: [AS] has “billing API” open on the API. Different branches — starting.
 
 Unfinished work (before a new task):
 

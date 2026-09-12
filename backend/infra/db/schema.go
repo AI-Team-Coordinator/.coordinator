@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS events (
   spend_kind TEXT NOT NULL DEFAULT '',
   summary TEXT NOT NULL DEFAULT '',
   findings TEXT NOT NULL DEFAULT '',
+  active_seconds INTEGER,
   source_file TEXT NOT NULL,
   source_line INTEGER NOT NULL,
   UNIQUE(source_file, source_line)

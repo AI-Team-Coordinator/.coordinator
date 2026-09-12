@@ -17,6 +17,7 @@ type MemberResponse struct {
 	Branch          string               `json:"branch,omitempty"`
 	UpdatedAt       time.Time            `json:"updated_at"`
 	DurationSeconds int64                `json:"duration_seconds,omitempty"`
+	ClockPaused     bool                 `json:"clock_paused,omitempty"`
 	Repos           []RepoWorkResponse   `json:"repos,omitempty"`
 	CostUSD         *float64             `json:"cost_usd,omitempty"`
 	BudgetUSD       *float64             `json:"budget_usd,omitempty"`
@@ -37,6 +38,7 @@ type MemberTaskResponse struct {
 	Services        []string           `json:"services,omitempty"`
 	StartedAt       time.Time          `json:"started_at,omitempty"`
 	DurationSeconds int64              `json:"duration_seconds,omitempty"`
+	ClockPaused     bool               `json:"clock_paused,omitempty"`
 	Repos           []RepoWorkResponse `json:"repos,omitempty"`
 	CostUSD         *float64           `json:"cost_usd,omitempty"`
 	BudgetUSD       *float64           `json:"budget_usd,omitempty"`
@@ -57,6 +59,7 @@ type ResearchResponse struct {
 	Summary         string           `json:"summary,omitempty"`
 	StartedAt       time.Time        `json:"started_at,omitempty"`
 	DurationSeconds int64            `json:"duration_seconds,omitempty"`
+	ClockPaused     bool             `json:"clock_paused,omitempty"`
 	CostUSD         *float64         `json:"cost_usd,omitempty"`
 	BudgetUSD       *float64         `json:"budget_usd,omitempty"`
 	OnDemandUSD     *float64         `json:"ondemand_usd,omitempty"`

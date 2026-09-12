@@ -5,6 +5,9 @@
       {
         "command": ".cursor/hooks/coordinator-check-branch.sh",
         "matcher": "Write|StrReplace|Delete"
+      },
+      {
+        "command": "python3 .cursor/hooks/coordinator-research.py preToolUse"
       }
     ],
     "afterShellExecution": [

@@ -265,3 +265,115 @@ func TestDetectConflictsDuplicateTaskIDNotAlsoTopic(t *testing.T) {
 		}
 	}
 }
+
+func TestComputeTasksUsesActiveSecondsWhenCompleted(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	active := int64(600)
+	tasks := computeTasks([]model.Event{
+		{Event: "task_started", TaskID: "T1", Alias: "EK", Timestamp: now.Unix() - 3600},
+		{Event: "task_completed", TaskID: "T1", Alias: "EK", Timestamp: now.Unix(), ActiveSeconds: &active},
+	}, nil, now)
+	if len(tasks) != 1 || tasks[0].DurationSeconds != 600 {
+		t.Fatalf("got %+v", tasks)
+	}
+}
+
+func TestComputeTasksWindowsSkipIdle(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	tasks := computeTasks(nil, []model.Member{
+		{
+			Alias:  "EK",
+			Status: "in_progress",
+			Tasks: []model.MemberTask{
+				{
+					TaskID:    "T-CLOCK",
+					StartedAt: now.Add(-20 * time.Hour),
+					UpdatedAt: now.Add(-3 * time.Hour),
+					ActivityWindows: []model.ActivityWindow{
+						{StartedAt: now.Add(-20 * time.Hour), EndedAt: now.Add(-18 * time.Hour)},
+						{StartedAt: now.Add(-4 * time.Hour), EndedAt: now.Add(-3 * time.Hour)},
+					},
+				},
+			},
+		},
+	}, now)
+	if len(tasks) != 1 {
+		t.Fatalf("len=%d", len(tasks))
+	}
+	if !tasks[0].ClockPaused || tasks[0].DurationSeconds != int64((3 * time.Hour).Seconds()) {
+		t.Fatalf("got %+v", tasks[0])
+	}
+}
+
+func TestDetectConflictsPeerProductOverlap(t *testing.T) {
+	got := detectConflicts([]model.Member{
+		{
+			Alias:  "EK",
+			Status: "in_progress",
+			Tasks: []model.MemberTask{
+				{TaskID: "T-VOICE", Title: "Web voice", Branch: "feat/web-voice-mvp", Services: []string{"LLM", "WebChat"}},
+			},
+		},
+		{
+			Alias:  "AS",
+			Status: "in_progress",
+			Tasks: []model.MemberTask{
+				{TaskID: "T-LLM", Title: "LLM timeout", Branch: "fix/llm-timeout", Services: []string{"LLM"}},
+			},
+		},
+	})
+	if len(got) != 1 || got[0].Title != "Peer Scope Overlap" || got[0].Severity != "warning" || got[0].Service != "LLM" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestDetectConflictsPeerBusAndWorkspaceIgnored(t *testing.T) {
+	got := detectConflicts([]model.Member{
+		{
+			Alias:  "EK",
+			Status: "in_progress",
+			Tasks: []model.MemberTask{
+				{TaskID: "T-CLOCK", Title: "Task clock", Branch: "main", Services: []string{"Common", ".cursor", ".coordinator"}},
+			},
+		},
+		{
+			Alias:  "AS",
+			Status: "in_progress",
+			Tasks: []model.MemberTask{
+				{TaskID: "T-RULES", Title: "Rules", Branch: "main", Services: []string{"Common", ".cursor", ".coordinator"}},
+			},
+		},
+	})
+	if len(got) != 0 {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestPendingNoticesDedupeByFingerprint(t *testing.T) {
+	c := model.Conflict{
+		Severity:        "warning",
+		Title:           "Peer Scope Overlap",
+		Description:     "EK «Web voice» and AS «LLM timeout» both claim LLM",
+		AffectedAliases: []string{"AS", "EK"},
+		Service:         "LLM",
+	}
+	first := pendingNotices("EK", "T-CLOCK", []model.Conflict{c}, nil)
+	if len(first) != 1 || first[0].Event != "coordinator_warning" || first[0].Findings == "" {
+		t.Fatalf("first=%+v", first)
+	}
+	known := noticeFingerprints(first)
+	second := pendingNotices("EK", "T-CLOCK", []model.Conflict{c}, known)
+	if len(second) != 0 {
+		t.Fatalf("second=%+v", second)
+	}
+	stop := pendingNotices("EK", "T-CLOCK", []model.Conflict{{
+		Severity:        "critical",
+		Title:           "Parallel Slot Overlap",
+		Description:     "EK has two in-progress tasks claiming Core",
+		AffectedAliases: []string{"EK"},
+		Service:         "Core",
+	}}, nil)
+	if len(stop) != 1 || stop[0].Event != "coordinator_stop" {
+		t.Fatalf("stop=%+v", stop)
+	}
+}

@@ -22,6 +22,7 @@ type Event struct {
 	UsagePlan       string   `json:"usage_plan,omitempty"`
 	PlanPriceUSD    *float64 `json:"plan_price_usd,omitempty"`
 	SpendKind       string   `json:"spend_kind,omitempty"`
+	ActiveSeconds   *int64   `json:"active_seconds,omitempty"`
 }
 
 // EventQuery filters the SQLite event cache. Limit 0 means no page cap.

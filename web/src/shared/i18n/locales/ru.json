@@ -14,6 +14,7 @@
   },
   "radar": {
     "warning": "Обнаружен конфликт",
+    "notice": "Предупреждение координатора",
     "affected": "Затронуты"
   },
   "metrics": {
@@ -100,6 +101,7 @@
     "research": "РЕСЁРЧ",
     "idle": "СВОБОДЕН",
     "duration": "В работе",
+    "clockPaused": "часы стоят",
     "branch": "Активная ветка",
     "task": "Задача",
     "fix": "Фикс",
@@ -219,7 +221,9 @@
       "deploy_finished": "Задеплоено",
       "deploy_failed": "Деплой не удался",
       "research_started": "Ресёрч",
-      "research_completed": "Ресёрч закончен"
+      "research_completed": "Ресёрч закончен",
+      "coordinator_warning": "Предупреждение",
+      "coordinator_stop": "Стоп"
     }
   },
   "docs": {

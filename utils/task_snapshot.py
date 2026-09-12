@@ -7,6 +7,7 @@ import fcntl
 import json
 import os
 import sys
+from datetime import datetime, timezone
 
 
 def main() -> None:
@@ -241,6 +242,10 @@ def upsert_started(
             slot["started_at"] = existing.get("started_at") or iso
             if not slot.get("cursor_usage") and isinstance(existing.get("cursor_usage"), dict):
                 slot["cursor_usage"] = existing["cursor_usage"]
+            if isinstance(existing.get("activity_windows"), list) and existing["activity_windows"]:
+                slot["activity_windows"] = existing["activity_windows"]
+            if existing.get("last_activity_at"):
+                slot["last_activity_at"] = existing["last_activity_at"]
             ids = merge_session_ids(existing, sid)
             if ids:
                 slot["session_ids"] = ids
@@ -340,6 +345,16 @@ def complete_once(path: str, events_file: str, alias: str, task_id: str, ts: str
             row["spend_kind"] = kind
         if services:
             row["services"] = services
+        if done:
+            try:
+                import activity_clock
+
+                activity_clock.ping_slot(done, datetime.now(timezone.utc))
+                row["active_seconds"] = activity_clock.frozen_active_seconds(done)
+                if isinstance(done.get("activity_windows"), list) and done["activity_windows"]:
+                    row["activity_windows"] = done["activity_windows"]
+            except Exception:
+                pass
         start_usage = (done or {}).get("cursor_usage") if isinstance((done or {}).get("cursor_usage"), dict) else None
         end_usage = take_usage(coord_dir)
         delta = usage_delta(start_usage, end_usage, coord_dir)

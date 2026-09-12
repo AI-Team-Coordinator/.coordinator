@@ -14,6 +14,7 @@
   },
   "radar": {
     "warning": "Conflict Detected",
+    "notice": "Coordinator warning",
     "affected": "Affected"
   },
   "metrics": {
@@ -100,6 +101,7 @@
     "research": "RESEARCH",
     "idle": "IDLE",
     "duration": "Duration",
+    "clockPaused": "clock paused",
     "branch": "Active Branch",
     "task": "Task",
     "fix": "Fix",
@@ -219,7 +221,9 @@
       "deploy_finished": "Deployed",
       "deploy_failed": "Deploy failed",
       "research_started": "Research",
-      "research_completed": "Research done"
+      "research_completed": "Research done",
+      "coordinator_warning": "Warning",
+      "coordinator_stop": "Stop"
     }
   },
   "docs": {

@@ -42,7 +42,10 @@ type MemberTask struct {
 	Services        []string
 	StartedAt       time.Time
 	UpdatedAt       time.Time
+	LastActivityAt  time.Time
+	ActivityWindows []ActivityWindow
 	DurationSeconds int64
+	ClockPaused     bool
 	Repos           []RepoWork
 	CursorUsage     *CursorUsage
 	CostUSD         *float64
@@ -103,4 +106,5 @@ type Research struct {
 	CursorModelsPct *float64
 	OtherModelsPct  *float64
 	DurationSeconds int64
+	ClockPaused     bool
 }

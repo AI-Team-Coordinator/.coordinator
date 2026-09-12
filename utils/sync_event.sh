@@ -8,6 +8,7 @@
 # Example: ./sync_event.sh EK task_completed 20260907-1756
 # Example: ./sync_event.sh EK research_started summary="How coordinator logs off-task chats"
 # Example: ./sync_event.sh EK research_completed
+# Example: ./sync_event.sh EK coordinator_warning TASK_ID feat/x Core summary="AS has «filter» on Core" findings="peer-scope:as:core"
 
 set -e
 
@@ -225,7 +226,24 @@ elif [ "$EVENT_TYPE" = "task_completed" ]; then
     fi
     EVENT_JSON=""
 else
-    EVENT_JSON="{\"timestamp\": $TIMESTAMP, \"event\": \"$EVENT_TYPE\", \"task_id\": \"$TASK_ID\", \"alias\": \"$ALIAS\"}"
+    EVENT_JSON=$(python3 - "$TIMESTAMP" "$EVENT_TYPE" "$TASK_ID" "$ALIAS" "$BRANCH_NAME" "$SERVICES_CSV" "$SUMMARY" "$FINDINGS" <<'PY'
+import json, sys
+ts, event, task_id, alias, branch, services, summary, findings = sys.argv[1:]
+row = {"timestamp": int(ts), "event": event, "alias": alias}
+if task_id:
+    row["task_id"] = task_id
+if branch:
+    row["branch"] = branch
+svc = services.split(",")[0].strip() if services else ""
+if svc:
+    row["service"] = svc
+if summary:
+    row["summary"] = summary
+if findings:
+    row["findings"] = findings
+print(json.dumps(row, ensure_ascii=False))
+PY
+)
 fi
 
 if [ -n "$EVENT_JSON" ]; then

@@ -280,21 +280,24 @@ export function App() {
       setMembers((prev) =>
         prev.map((m) => ({
           ...m,
-          duration_seconds:
-            m.status === 'in_progress' ? (m.duration_seconds || 0) + 1 : m.duration_seconds,
+          duration_seconds: m.clock_paused
+            ? m.duration_seconds
+            : m.status === 'in_progress'
+              ? (m.duration_seconds || 0) + 1
+              : m.duration_seconds,
           tasks: m.tasks?.map((task) => ({
             ...task,
-            duration_seconds: (task.duration_seconds || 0) + 1,
+            duration_seconds: task.clock_paused ? task.duration_seconds : (task.duration_seconds || 0) + 1,
           })),
           research:
-            m.research?.status === 'active'
+            m.research?.status === 'active' && !m.research.clock_paused
               ? { ...m.research, duration_seconds: (m.research.duration_seconds || 0) + 1 }
               : m.research,
         }))
       )
       setTasks((prev) =>
         prev.map((task) => {
-          if (task.status === 'in_progress') {
+          if (task.status === 'in_progress' && !task.clock_paused) {
             return { ...task, duration_seconds: (task.duration_seconds || 0) + 1 }
           }
           return task

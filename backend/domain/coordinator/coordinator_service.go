@@ -25,10 +25,13 @@ var (
 )
 
 type Service struct {
-	repo       repository.CoordinatorRepository
-	events     repository.EventStore
-	completeMu sync.Mutex
-	createMu   sync.Mutex
+	repo        repository.CoordinatorRepository
+	events      repository.EventStore
+	completeMu  sync.Mutex
+	createMu    sync.Mutex
+	noticeMu    sync.Mutex
+	noticeAlias string
+	noticeSeen  map[string]struct{}
 }
 
 func NewService(repo repository.CoordinatorRepository, events repository.EventStore) *Service {
@@ -338,12 +341,64 @@ func (s *Service) GetPulse(ctx context.Context) (*dto.PulseResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	conflicts := detectConflicts(members)
+	s.persistCoordinatorNotices(ctx, members, conflicts)
 	return &dto.PulseResponse{
 		UpdatedAt: time.Now(),
 		Members:   mapMembers(members),
-		Conflicts: mapConflicts(detectConflicts(members)),
+		Conflicts: mapConflicts(conflicts),
 		Stray:     mapStray(stray),
 	}, nil
+}
+
+func (s *Service) persistCoordinatorNotices(ctx context.Context, members []model.Member, conflicts []model.Conflict) {
+	if len(conflicts) == 0 {
+		return
+	}
+	alias, err := s.repo.CurrentAuthor(ctx)
+	if err != nil || alias == "" {
+		return
+	}
+	s.noticeMu.Lock()
+	defer s.noticeMu.Unlock()
+	if s.noticeSeen == nil || s.noticeAlias != alias {
+		s.noticeSeen = s.loadNoticeFingerprints(ctx, alias)
+		s.noticeAlias = alias
+	}
+	pending := pendingNotices(alias, observerTaskID(members, alias), conflicts, s.noticeSeen)
+	if len(pending) == 0 {
+		return
+	}
+	wrote := false
+	for _, ev := range pending {
+		if err := s.repo.AppendEvent(ctx, ev); err != nil {
+			continue
+		}
+		wrote = true
+		if ev.Findings != "" {
+			s.noticeSeen[ev.Findings] = struct{}{}
+		}
+		if ev.Summary != "" {
+			s.noticeSeen[ev.Event+"|"+ev.Summary] = struct{}{}
+		}
+	}
+	if wrote {
+		_ = s.events.Sync(ctx)
+	}
+}
+
+func (s *Service) loadNoticeFingerprints(ctx context.Context, alias string) map[string]struct{} {
+	known := make(map[string]struct{})
+	for _, kind := range []string{eventCoordinatorWarning, eventCoordinatorStop} {
+		events, _, err := s.events.List(ctx, model.EventQuery{Alias: alias, Event: kind})
+		if err != nil {
+			continue
+		}
+		for k := range noticeFingerprints(events) {
+			known[k] = struct{}{}
+		}
+	}
+	return known
 }
 
 func (s *Service) maybeCompleteDeployed(ctx context.Context) bool {
@@ -530,6 +585,7 @@ func (s *Service) GetTasks(ctx context.Context, query dto.TasksQuery) (*dto.Task
 			StartedAt:       t.StartedAt,
 			CompletedAt:     t.CompletedAt,
 			DurationSeconds: t.DurationSeconds,
+			ClockPaused:     t.ClockPaused,
 			CostUSD:         t.CostUSD,
 			BudgetUSD:       t.BudgetUSD,
 			OnDemandUSD:     t.OnDemandUSD,
@@ -596,7 +652,6 @@ func (s *Service) GetEvents(ctx context.Context, query dto.EventsQuery) (*dto.Ev
 }
 
 func mapMembers(members []model.Member) []dto.MemberResponse {
-	now := time.Now()
 	out := make([]dto.MemberResponse, 0, len(members))
 	for _, m := range members {
 		focus := m.Focus
@@ -631,13 +686,9 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 		}
 		if len(m.Tasks) > 0 {
 			item.Tasks = mapMemberTasks(m.Tasks)
-		}
-		if m.Status == "in_progress" {
-			d := int64(now.Sub(m.UpdatedAt).Seconds())
-			if d < 0 {
-				d = 0
-			}
-			item.DurationSeconds = d
+			newest := m.Tasks[len(m.Tasks)-1]
+			item.DurationSeconds = newest.DurationSeconds
+			item.ClockPaused = newest.ClockPaused
 		}
 		if m.Research != nil {
 			item.Research = &dto.ResearchResponse{
@@ -645,6 +696,7 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 				Summary:         m.Research.Summary,
 				StartedAt:       m.Research.StartedAt,
 				DurationSeconds: m.Research.DurationSeconds,
+				ClockPaused:     m.Research.ClockPaused,
 				CostUSD:         m.Research.CostUSD,
 				BudgetUSD:       m.Research.BudgetUSD,
 				OnDemandUSD:     m.Research.OnDemandUSD,
@@ -685,6 +737,7 @@ func mapMemberTasks(tasks []model.MemberTask) []dto.MemberTaskResponse {
 			Services:        services,
 			StartedAt:       task.StartedAt,
 			DurationSeconds: task.DurationSeconds,
+			ClockPaused:     task.ClockPaused,
 			Repos:           mapRepos(task.Repos),
 			CostUSD:         task.CostUSD,
 			BudgetUSD:       task.BudgetUSD,

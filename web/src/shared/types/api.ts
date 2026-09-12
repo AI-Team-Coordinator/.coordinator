@@ -18,6 +18,7 @@ export interface MemberState {
   branch?: string
   updated_at: string
   duration_seconds?: number
+  clock_paused?: boolean
   repos?: RepoWork[]
   cost_usd?: number
   budget_usd?: number
@@ -38,6 +39,7 @@ export interface MemberTaskState {
   services?: string[]
   started_at?: string
   duration_seconds?: number
+  clock_paused?: boolean
   repos?: RepoWork[]
   cost_usd?: number
   budget_usd?: number
@@ -58,6 +60,7 @@ export interface ResearchState {
   summary?: string
   started_at?: string
   duration_seconds?: number
+  clock_paused?: boolean
   cost_usd?: number
   budget_usd?: number
   ondemand_usd?: number
@@ -171,6 +174,7 @@ export interface TaskItem {
   started_at?: number
   completed_at?: number
   duration_seconds?: number
+  clock_paused?: boolean
   cost_usd?: number
   budget_usd?: number
   ondemand_usd?: number

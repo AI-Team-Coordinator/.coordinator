@@ -333,6 +333,7 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 			t.CursorModelsPct = ev.CursorModelsPct
 			t.OtherModelsPct = ev.OtherModelsPct
 			t.SpendKind = ev.SpendKind
+			t.ActiveSeconds = ev.ActiveSeconds
 			if t.StartedAt == 0 {
 				t.StartedAt = ev.Timestamp
 			}
@@ -367,6 +368,13 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 			if t.StartedAt == 0 && !slot.UpdatedAt.IsZero() {
 				t.StartedAt = slot.UpdatedAt.Unix()
 			}
+			last := slot.LastActivityAt
+			if last.IsZero() {
+				last = slot.UpdatedAt
+			}
+			d, paused := model.ActiveDuration(slot.ActivityWindows, slot.StartedAt, last, now)
+			t.DurationSeconds = d
+			t.ClockPaused = paused
 		}
 	}
 
@@ -378,12 +386,17 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 		if t.Kind == "" {
 			t.Kind = taskKind(t.TaskID, t.Branch)
 		}
-		end := nowUnix
-		if t.Status == "completed" && t.CompletedAt > 0 {
-			end = t.CompletedAt
-		}
-		if t.StartedAt > 0 && end >= t.StartedAt {
-			t.DurationSeconds = end - t.StartedAt
+		if t.Status == "in_progress" && t.DurationSeconds == 0 && !t.ClockPaused {
+			end := nowUnix
+			if t.StartedAt > 0 && end >= t.StartedAt {
+				t.DurationSeconds = end - t.StartedAt
+			}
+		} else if t.Status == "completed" {
+			if t.ActiveSeconds != nil {
+				t.DurationSeconds = *t.ActiveSeconds
+			} else if t.StartedAt > 0 && t.CompletedAt >= t.StartedAt {
+				t.DurationSeconds = t.CompletedAt - t.StartedAt
+			}
 		}
 		out = append(out, *t)
 	}
@@ -743,6 +756,7 @@ func detectConflicts(members []model.Member) []model.Conflict {
 	}
 
 	conflicts = append(conflicts, selfScopeConflicts(members)...)
+	conflicts = append(conflicts, peerScopeConflicts(members)...)
 
 	return conflicts
 }
@@ -812,12 +826,79 @@ func selfScopeConflicts(members []model.Member) []model.Conflict {
 						Title:           "Parallel Slot Overlap",
 						Description:     m.Alias + " has two in-progress tasks claiming " + label,
 						AffectedAliases: []string{m.Alias},
+						Service:         strings.TrimSpace(label),
 					})
 				}
 			}
 		}
 	}
 	return out
+}
+
+type peerClaim struct {
+	alias, taskID, title, branch, service, serviceKey string
+}
+
+func peerScopeConflicts(members []model.Member) []model.Conflict {
+	claims := make([]peerClaim, 0)
+	for _, m := range members {
+		for _, slot := range m.Slots() {
+			title := strings.TrimSpace(slot.Title)
+			if title == "" {
+				title = strings.TrimSpace(slot.Summary)
+			}
+			if title == "" {
+				title = slot.TaskID
+			}
+			for _, raw := range slot.Services {
+				key, kind := scopeKey(raw)
+				if kind != "product" {
+					continue
+				}
+				claims = append(claims, peerClaim{
+					alias:      m.Alias,
+					taskID:     slot.TaskID,
+					title:      title,
+					branch:     slot.Branch,
+					service:    strings.TrimSpace(raw),
+					serviceKey: key,
+				})
+			}
+		}
+	}
+	out := make([]model.Conflict, 0)
+	seen := make(map[string]struct{})
+	for i := 0; i < len(claims); i++ {
+		for j := i + 1; j < len(claims); j++ {
+			a, b := claims[i], claims[j]
+			if a.alias == b.alias || a.serviceKey != b.serviceKey {
+				continue
+			}
+			fp := peerPairKey(a, b)
+			if _, ok := seen[fp]; ok {
+				continue
+			}
+			seen[fp] = struct{}{}
+			aliases := []string{a.alias, b.alias}
+			sort.Strings(aliases)
+			out = append(out, model.Conflict{
+				Severity:        "warning",
+				Title:           "Peer Scope Overlap",
+				Description:     a.alias + " «" + a.title + "» and " + b.alias + " «" + b.title + "» both claim " + a.service,
+				AffectedAliases: aliases,
+				Service:         a.service,
+			})
+		}
+	}
+	return out
+}
+
+func peerPairKey(a, b peerClaim) string {
+	left, right := a, b
+	if a.alias > b.alias || (a.alias == b.alias && a.taskID > b.taskID) {
+		left, right = b, a
+	}
+	return strings.ToLower(left.alias + ":" + left.taskID + "|" + right.alias + ":" + right.taskID + "|" + left.serviceKey)
 }
 
 func slotScopeOverlap(a, b []string) (bool, string) {

@@ -19,6 +19,13 @@ def paths() -> dict[str, Path]:
     return load_paths(Path(__file__))
 
 
+try:
+    sys.path.insert(0, str(paths()["COORDINATOR_ROOT"] / "utils"))
+    from activity_clock import ping_slot
+except Exception:
+    ping_slot = None
+
+
 def main() -> None:
     event = sys.argv[1] if len(sys.argv) > 1 else ""
     try:
@@ -30,6 +37,9 @@ def main() -> None:
     try:
         if event == "sessionStart":
             handle_session_start(payload)
+            return
+        if event == "preToolUse":
+            handle_pre_tool(payload)
             return
         if event == "afterAgentResponse":
             handle_after_response(payload)
@@ -62,6 +72,18 @@ def handle_session_start(payload: dict) -> None:
             f"{sid} to task_started."
         )
     print(json.dumps(out, ensure_ascii=False))
+    if sid:
+        bump_bound_slot(sid, datetime.now(timezone.utc))
+
+
+def handle_pre_tool(payload: dict) -> None:
+    print("{}")
+    sid = os.environ.get("COORDINATOR_SESSION_ID", "").strip()
+    if not sid:
+        sid = str(payload.get("session_id") or "").strip()
+    if not sid:
+        return
+    bump_bound_slot(sid, datetime.now(timezone.utc))
 
 
 def handle_after_response(payload: dict) -> None:
@@ -86,7 +108,7 @@ def handle_after_response(payload: dict) -> None:
             research["session_id"] = sid
             snap["research"] = research
             write_snapshot(alias, snap)
-    bump_slot_activity(snap, alias, sid, now)
+    bump_bound_slot(sid, now)
 
 
 def handle_session_end(payload: dict) -> None:
@@ -165,6 +187,14 @@ def slot_session_ids(slot: dict) -> set[str]:
     return ids
 
 
+def bump_bound_slot(sid: str, now: datetime) -> None:
+    alias = current_alias(paths())
+    snap = load_snapshot(alias)
+    if not isinstance(snap, dict):
+        return
+    bump_slot_activity(snap, alias, sid, now)
+
+
 def bump_slot_activity(snap: dict, alias: str, sid: str, now: datetime) -> None:
     iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     tasks = snap.get("tasks")
@@ -176,10 +206,13 @@ def bump_slot_activity(snap: dict, alias: str, sid: str, now: datetime) -> None:
             continue
         if sid not in slot_session_ids(slot):
             continue
-        slot["updated_at"] = iso
+        if ping_slot:
+            ping_slot(slot, now)
+        else:
+            slot["updated_at"] = iso
         changed = True
         if snap.get("task_id") == slot.get("task_id"):
-            snap["updated_at"] = iso
+            snap["updated_at"] = slot.get("updated_at") or iso
     if changed:
         write_snapshot(alias, snap)
 

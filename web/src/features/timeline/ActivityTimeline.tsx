@@ -30,6 +30,8 @@ const EVENT_TYPES = [
   'deploy_started',
   'deploy_finished',
   'deploy_failed',
+  'coordinator_warning',
+  'coordinator_stop',
 ] as const
 
 const selectClass =

@@ -48,3 +48,14 @@ func TestEventUnmarshalSpendKind(t *testing.T) {
 		t.Fatalf("spend_kind=%q", ev.SpendKind)
 	}
 }
+
+func TestEventUnmarshalActiveSeconds(t *testing.T) {
+	raw := `{"timestamp": 1, "event": "task_completed", "task_id": "T1", "active_seconds": 420}`
+	var ev model.Event
+	if err := json.Unmarshal([]byte(raw), &ev); err != nil {
+		t.Fatal(err)
+	}
+	if ev.ActiveSeconds == nil || *ev.ActiveSeconds != 420 {
+		t.Fatalf("active_seconds=%v", ev.ActiveSeconds)
+	}
+}

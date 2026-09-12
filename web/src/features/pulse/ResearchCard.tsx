@@ -1,3 +1,4 @@
+import { Clock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
@@ -26,9 +27,18 @@ export function ResearchCard({ member }: ResearchCardProps) {
             {summary || t('pulse.research')}
           </h3>
         </div>
-        <Badge variant="default" className="font-bold text-[10px] shrink-0">
-          ● {t('pulse.research')}
-        </Badge>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Badge variant="default" className="font-bold text-[10px]">
+            ● {t('pulse.research')}
+          </Badge>
+          {member.research?.clock_paused ? (
+            <Clock
+              className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"
+              aria-label={t('pulse.clockPaused')}
+              title={t('pulse.clockPaused')}
+            />
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-2 flex items-center space-x-2">
@@ -51,7 +61,13 @@ export function ResearchCard({ member }: ResearchCardProps) {
       <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span className="text-slate-500 dark:text-slate-400">{t('pulse.duration')}:</span>
-          <span className="font-mono text-indigo-600 dark:text-indigo-300 font-semibold">
+          <span
+            className={`font-mono font-semibold ${
+              member.research?.clock_paused
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-indigo-600 dark:text-indigo-300'
+            }`}
+          >
             {formatDuration(member.research?.duration_seconds)}
           </span>
         </div>

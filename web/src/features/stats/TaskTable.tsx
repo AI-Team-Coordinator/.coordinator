@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Clock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
@@ -183,7 +184,16 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
                       )}
                     </td>
                     <td className="py-3 pr-3 font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                      {formatDuration(task.duration_seconds)}
+                      <span className="inline-flex items-center gap-1.5">
+                        {formatDuration(task.duration_seconds)}
+                        {open && task.clock_paused ? (
+                          <Clock
+                            className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"
+                            aria-label={t('pulse.clockPaused')}
+                            title={t('pulse.clockPaused')}
+                          />
+                        ) : null}
+                      </span>
                     </td>
                     <td className="py-3 pr-3 text-right whitespace-nowrap">
                       <UsageSpend

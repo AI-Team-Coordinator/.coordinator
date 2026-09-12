@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	schemaVersion = "5"
+	schemaVersion = "6"
 	hotYearSpan   = 3
 	dbFileName    = "coordinator.sqlite"
 )
@@ -76,7 +76,7 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		return nil, 0, err
 	}
 
-	listQ := "SELECT timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings FROM events" + where + " ORDER BY timestamp DESC"
+	listQ := "SELECT timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings, active_seconds FROM events" + where + " ORDER BY timestamp DESC"
 	if q.Limit > 0 {
 		listQ += " LIMIT ?"
 		args = append(args, q.Limit)
@@ -96,9 +96,10 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 	for rows.Next() {
 		var ev model.Event
 		var cost, budget, ondemand, cursorPct, otherPct, planPrice sql.NullFloat64
+		var active sql.NullInt64
 		if err := rows.Scan(
 			&ev.Timestamp, &ev.Event, &ev.TaskID, &ev.Branch, &ev.Alias, &ev.Repo, &ev.Service, &ev.Status,
-			&cost, &budget, &ondemand, &cursorPct, &otherPct, &ev.UsagePlan, &planPrice, &ev.SpendKind, &ev.Summary, &ev.Findings,
+			&cost, &budget, &ondemand, &cursorPct, &otherPct, &ev.UsagePlan, &planPrice, &ev.SpendKind, &ev.Summary, &ev.Findings, &active,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -108,6 +109,7 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		ev.CursorModelsPct = nullFloatPtr(cursorPct)
 		ev.OtherModelsPct = nullFloatPtr(otherPct)
 		ev.PlanPriceUSD = nullFloatPtr(planPrice)
+		ev.ActiveSeconds = nullInt64Ptr(active)
 		items = append(items, ev)
 	}
 	return items, total, rows.Err()
@@ -159,4 +161,19 @@ func floatPtrValue(v *float64) any {
 		return nil
 	}
 	return *v
+}
+
+func int64PtrValue(v *int64) any {
+	if v == nil {
+		return nil
+	}
+	return *v
+}
+
+func nullInt64Ptr(v sql.NullInt64) *int64 {
+	if !v.Valid {
+		return nil
+	}
+	n := v.Int64
+	return &n
 }

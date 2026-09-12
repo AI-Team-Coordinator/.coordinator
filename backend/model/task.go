@@ -12,6 +12,8 @@ type Task struct {
 	StartedAt       int64
 	CompletedAt     int64
 	DurationSeconds int64
+	ClockPaused     bool
+	ActiveSeconds   *int64
 	CostUSD         *float64
 	BudgetUSD       *float64
 	OnDemandUSD     *float64

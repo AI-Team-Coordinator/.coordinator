@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check, GitBranch } from 'lucide-react'
+import { Copy, Check, Clock, GitBranch } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
@@ -72,7 +72,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
             </p>
           ) : null}
         </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {isActive ? (
             <Badge variant="success" className="font-bold text-[10px]">
               ● {t('pulse.inProgress')}
@@ -82,6 +82,13 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
               ○ {t('pulse.idle')}
             </Badge>
           )}
+          {isActive && (task?.clock_paused ?? member.clock_paused) ? (
+            <Clock
+              className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"
+              aria-label={t('pulse.clockPaused')}
+              title={t('pulse.clockPaused')}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -161,7 +168,13 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500 dark:text-slate-400">{t('pulse.duration')}:</span>
-            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+            <span
+              className={`font-mono font-semibold ${
+                task?.clock_paused ?? member.clock_paused
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-emerald-600 dark:text-emerald-400'
+              }`}
+            >
               {formatDuration(duration)}
             </span>
           </div>

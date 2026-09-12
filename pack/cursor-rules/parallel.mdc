@@ -15,22 +15,39 @@ Before any `task_started` (including hotfixes and work only in `.coordinator` / 
 2. Read **all** `.current_task_*`. Collect open slots: yours and others’.
 3. New scope: `Services:` from the document (or the hotfix list) + `summary`/`doc` + branch.
 4. **Ignore research.** Do not call `research_completed` unless this *is* the tab that is leaving research and becoming a task.
-5. Scope collision → **stop**, do not start:
+5. Scope collision:
 
    | Overlap | Your other slot | Someone else’s slot |
    |---|---|---|
-   | Product repo (not the bus / `.cursor` / `.coordinator`) | refuse | refuse |
+   | Product repo (not the bus / `.cursor` / `.coordinator`) | refuse | **warn**, start; log `coordinator_warning` |
    | Bus (`BUS_DIR` / `DATA_DIR` / `DOCS_DIR`) | ignore | ignore |
    | `.cursor` or `.coordinator` | refuse | not a collision |
 
-6. Semantic collision (yours or someone else’s) → **stop and ask**: same `task_id`; same product branch (not `main`/`master`); same FIX slug after the alias; almost the same `summary`; same module/behavior in an overlapping product service.
-7. Clean-main (`coordinator/protocol.mdc` §1.1) only for **new** product repos of this slot. Do not require `main` of a repo another of your slots already holds.
-8. This tab binds to the new `task_id`. The neighboring tab stays on its own. You may edit only **this** slot’s repos, on **its** branch.
+6. Hard stop (yours or someone else’s): same `task_id`; same product branch (not `main`/`master`). Do not start.
+7. Semantic: same FIX slug after the alias; almost the same `summary`; same module in an overlapping product service — **your** other slot: stop and ask. **Someone else’s** slot: warn, log, start (unless same `task_id` / same branch — §6).
+8. Clean-main (`coordinator/protocol.mdc` §1.1) only for **new** product repos of this slot. Do not require `main` of a repo another of your slots already holds.
+9. This tab binds to the new `task_id`. The neighboring tab stays on its own. You may edit only **this** slot’s repos, on **its** branch.
 
 `task_started` **appends** a slot to `tasks[]`; it does not wipe the others. `task_completed <TASK_ID>` drops one slot; `idle` only when `tasks` is empty.
 
 If the check fails — do not call `task_started` and do not check out branches “just in case”.
 
-Tell the human in Coordinator voice (`coordinator/voice.mdc`, `chat_language`): name the **task** that holds the service, not a folder name. If the start is allowed, still name the author’s *other* live tasks when that helps; name a teammate’s task only if it relates.
+Tell the human in Coordinator voice (`coordinator/voice.mdc`, `chat_language`): name the **task** that holds the service, not a folder name. If the start is allowed, still name the author’s *other* live tasks when that helps; name a teammate’s task when they share a product repo or the meaning clashes.
 
 > Coordinator found a conflict: task “…” already holds the API. Not starting a new one that needs the API.
+
+Peer product overlap (start anyway):
+
+> Coordinator: [AS] has “billing API” on the API. Different branches — starting. Logging the warning.
+
+Also log:
+
+```bash
+./.coordinator/utils/sync_event.sh <ALIAS> coordinator_warning <THIS_TASK_ID> <BRANCH> <Service> summary="<other alias> has «task» on <Service>" findings="peer:<other-alias>:<Service>"
+```
+
+On refuse (own overlap, same branch, same `task_id`):
+
+```bash
+./.coordinator/utils/sync_event.sh <ALIAS> coordinator_stop <THIS_TASK_ID> <BRANCH> <Service> summary="<why we stopped>"
+```

@@ -11,6 +11,7 @@ type TaskResponse struct {
 	StartedAt       int64    `json:"started_at,omitempty"`
 	CompletedAt     int64    `json:"completed_at,omitempty"`
 	DurationSeconds int64    `json:"duration_seconds,omitempty"`
+	ClockPaused     bool     `json:"clock_paused,omitempty"`
 	CostUSD         *float64 `json:"cost_usd,omitempty"`
 	BudgetUSD       *float64 `json:"budget_usd,omitempty"`
 	OnDemandUSD     *float64 `json:"ondemand_usd,omitempty"`

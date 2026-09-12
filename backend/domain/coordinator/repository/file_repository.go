@@ -349,6 +349,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 	}
 
 	now := time.Now()
+	cache := r.loadComposerSessions()
 	members := make([]model.Member, 0)
 	seen := make(map[string]struct{})
 
@@ -424,10 +425,11 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 					started = t
 				}
 			}
-			d := int64(now.Sub(started).Seconds())
-			if d < 0 {
-				d = 0
+			last := started
+			if rec := cacheSession(cache, raw.Research.SessionID); rec != nil && rec.LastAgentAt > 0 {
+				last = time.Unix(rec.LastAgentAt, 0)
 			}
+			d, paused := model.ActiveDuration(nil, started, last, now)
 			member.Research = &model.Research{
 				Status:          "active",
 				Summary:         raw.Research.Summary,
@@ -435,6 +437,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 				SessionID:       raw.Research.SessionID,
 				CursorUsage:     raw.Research.CursorUsage,
 				DurationSeconds: d,
+				ClockPaused:     paused,
 			}
 		}
 		members = append(members, member)
@@ -514,17 +517,24 @@ func (r *FileRepository) idleAuthors(authors map[string]string, roster map[strin
 	return members
 }
 
+type snapshotWindow struct {
+	StartedAt string `json:"started_at"`
+	EndedAt   string `json:"ended_at"`
+}
+
 type snapshotTask struct {
-	TaskID      string             `json:"task_id"`
-	Branch      string             `json:"branch"`
-	Services    []string           `json:"services"`
-	Doc         string             `json:"doc"`
-	Summary     string             `json:"summary"`
-	StartedAt   string             `json:"started_at"`
-	UpdatedAt   string             `json:"updated_at"`
-	CursorUsage *model.CursorUsage `json:"cursor_usage"`
-	SessionID   string             `json:"session_id"`
-	SessionIDs  []string           `json:"session_ids"`
+	TaskID          string             `json:"task_id"`
+	Branch          string             `json:"branch"`
+	Services        []string           `json:"services"`
+	Doc             string             `json:"doc"`
+	Summary         string             `json:"summary"`
+	StartedAt       string             `json:"started_at"`
+	UpdatedAt       string             `json:"updated_at"`
+	LastActivityAt  string             `json:"last_activity_at"`
+	ActivityWindows []snapshotWindow   `json:"activity_windows"`
+	CursorUsage     *model.CursorUsage `json:"cursor_usage"`
+	SessionID       string             `json:"session_id"`
+	SessionIDs      []string           `json:"session_ids"`
 }
 
 type snapshotFile struct {
@@ -569,10 +579,9 @@ func (r *FileRepository) parseSnapshotTasks(raw snapshotFile, now time.Time) []m
 		}
 		started := parseSnapshotTime(row.StartedAt, now)
 		updated := parseSnapshotTime(row.UpdatedAt, started)
-		d := int64(now.Sub(started).Seconds())
-		if d < 0 {
-			d = 0
-		}
+		last := parseSnapshotTime(row.LastActivityAt, updated)
+		windows := parseActivityWindows(row.ActivityWindows, started)
+		d, paused := model.ActiveDuration(windows, started, last, now)
 		out = append(out, model.MemberTask{
 			TaskID:          row.TaskID,
 			Title:           r.taskTitle(row.TaskID),
@@ -582,7 +591,10 @@ func (r *FileRepository) parseSnapshotTasks(raw snapshotFile, now time.Time) []m
 			Services:        row.Services,
 			StartedAt:       started,
 			UpdatedAt:       updated,
+			LastActivityAt:  last,
+			ActivityWindows: windows,
 			DurationSeconds: d,
+			ClockPaused:     paused,
 			CursorUsage:     row.CursorUsage,
 			SpendKind:       model.SpendKind(row.Services),
 			SessionIDs:      collectSessionIDs(row.SessionID, row.SessionIDs),
@@ -600,4 +612,27 @@ func parseSnapshotTime(raw string, fallback time.Time) time.Time {
 		return fallback
 	}
 	return t
+}
+
+func parseActivityWindows(rows []snapshotWindow, fallback time.Time) []model.ActivityWindow {
+	if len(rows) == 0 {
+		return nil
+	}
+	out := make([]model.ActivityWindow, 0, len(rows))
+	for _, row := range rows {
+		started := parseSnapshotTime(row.StartedAt, time.Time{})
+		ended := parseSnapshotTime(row.EndedAt, started)
+		if started.IsZero() {
+			started = ended
+		}
+		if started.IsZero() {
+			started = fallback
+			ended = fallback
+		}
+		if started.IsZero() {
+			continue
+		}
+		out = append(out, model.ActivityWindow{StartedAt: started, EndedAt: ended})
+	}
+	return out
 }

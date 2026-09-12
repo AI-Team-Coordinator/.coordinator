@@ -95,8 +95,8 @@ func (s *Store) replaceFile(ctx context.Context, file jsonlFile, mtime, size int
 	defer fh.Close()
 
 	insert, err := tx.PrepareContext(ctx, `
-INSERT INTO events(timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings, source_file, source_line)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+INSERT INTO events(timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings, active_seconds, source_file, source_line)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 			ev.Alias = file.Alias
 		}
 		if _, err := insert.ExecContext(ctx, ev.Timestamp, ev.Event, ev.TaskID, ev.Branch, ev.Alias, ev.Repo, ev.Service, ev.Status,
-			floatPtrValue(ev.CostUSD), floatPtrValue(ev.BudgetUSD), floatPtrValue(ev.OnDemandUSD), floatPtrValue(ev.CursorModelsPct), floatPtrValue(ev.OtherModelsPct), ev.UsagePlan, floatPtrValue(ev.PlanPriceUSD), ev.SpendKind, ev.Summary, ev.Findings,
+			floatPtrValue(ev.CostUSD), floatPtrValue(ev.BudgetUSD), floatPtrValue(ev.OnDemandUSD), floatPtrValue(ev.CursorModelsPct), floatPtrValue(ev.OtherModelsPct), ev.UsagePlan, floatPtrValue(ev.PlanPriceUSD), ev.SpendKind, ev.Summary, ev.Findings, int64PtrValue(ev.ActiveSeconds),
 			file.Rel, lineNo); err != nil {
 			return err
 		}
