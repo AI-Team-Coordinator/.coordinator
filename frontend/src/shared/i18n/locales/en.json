@@ -65,7 +65,7 @@
     "today": "Today",
     "consumption": "Usage",
     "consumptionPersonal": "Personal usage",
-    "consumptionHover": "Hover a column",
+    "consumptionHover": "Hover a column — details stay while the pointer is in this card",
     "unboundChat": "Tab / unbound chat"
   },
   "usage": {

@@ -65,7 +65,7 @@
     "today": "Сегодня",
     "consumption": "Потребление",
     "consumptionPersonal": "Персональное потребление",
-    "consumptionHover": "Наведите столбик",
+    "consumptionHover": "Наведите столбик — подробности остаются, пока курсор в этом блоке",
     "unboundChat": "Tab или чат без слота"
   },
   "usage": {
