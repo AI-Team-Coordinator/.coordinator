@@ -5,7 +5,7 @@ import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
 import { Button } from '../../shared/ui/Button'
 import { formatDate, formatDuration, formatTime, formatUSD } from '../../shared/lib/formatters'
-import { UsageSpend } from '../../shared/ui/UsageSpend'
+import { SharedQuotaIcon, UsageSpend } from '../../shared/ui/UsageSpend'
 import { TaskDocLink } from '../docs/TaskDocLink'
 import type { MemberState, TaskItem } from '../../shared/types/api'
 
@@ -190,9 +190,9 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
                           <Clock
                             className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"
                             aria-label={t('pulse.clockPaused')}
-                            title={t('pulse.clockPaused')}
                           />
                         ) : null}
+                        {task.spend_shared ? <SharedQuotaIcon /> : null}
                       </span>
                     </td>
                     <td className="py-3 pr-3 text-right whitespace-nowrap">
@@ -201,14 +201,17 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
                         budgetUsd={task.budget_usd}
                         cursorModelsPct={task.cursor_models_pct}
                         otherModelsPct={task.other_models_pct}
+                        shared={task.spend_shared}
                       />
                     </td>
                     <td className="py-3 text-right font-mono text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                      {task.ondemand_usd != null && task.ondemand_usd > 0
-                        ? formatUSD(task.ondemand_usd)
-                        : task.cost_usd != null && task.cost_usd > 0
-                          ? formatUSD(task.cost_usd)
-                          : '—'}
+                      {task.spend_shared
+                        ? '—'
+                        : task.ondemand_usd != null && task.ondemand_usd > 0
+                          ? formatUSD(task.ondemand_usd)
+                          : task.cost_usd != null && task.cost_usd > 0
+                            ? formatUSD(task.cost_usd)
+                            : '—'}
                     </td>
                   </tr>
                 )

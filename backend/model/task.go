@@ -20,6 +20,7 @@ type Task struct {
 	CursorModelsPct *float64
 	OtherModelsPct  *float64
 	SpendKind       string
+	SpendShared     bool
 }
 
 // TaskQuery filters the aggregated task list. Limit 0 means no page cap.

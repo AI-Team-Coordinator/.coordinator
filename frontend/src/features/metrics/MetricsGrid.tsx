@@ -110,7 +110,7 @@ export function MetricsGrid({ stats, onStatusClick, onSpendClick, hideSpend }: M
         </div>
         {spend.hasPlanPrice ? (
           <div className="mt-2">
-            <UsageHeadline usd={spend.planCycle} cursor={spend.cursorCycle} other={spend.otherCycle} hasPrice />
+            <UsageHeadline usd={spend.planCycle} cursor={spend.cursorCycle} other={spend.otherCycle} hasPrice seatUsd={spend.planPrice} />
           </div>
         ) : (
           <UsageHeadline usd={0} cursor={spend.cursorCycle} other={spend.otherCycle} hasPrice={false} />

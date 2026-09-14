@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
 import { formatDuration } from '../../shared/lib/formatters'
-import { hasUsageSpend, UsageSpend } from '../../shared/ui/UsageSpend'
+import { hasUsageSpend, SharedQuotaIcon, UsageSpend } from '../../shared/ui/UsageSpend'
 import { ChatTabs } from './ChatTabs'
 import type { MemberState } from '../../shared/types/api'
 
@@ -61,14 +61,17 @@ export function ResearchCard({ member }: ResearchCardProps) {
       <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span className="text-slate-500 dark:text-slate-400">{t('pulse.duration')}:</span>
-          <span
-            className={`font-mono font-semibold ${
-              member.research?.clock_paused
-                ? 'text-amber-600 dark:text-amber-400'
-                : 'text-indigo-600 dark:text-indigo-300'
-            }`}
-          >
-            {formatDuration(member.research?.duration_seconds)}
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className={`font-mono font-semibold ${
+                member.research?.clock_paused
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-indigo-600 dark:text-indigo-300'
+              }`}
+            >
+              {formatDuration(member.research?.duration_seconds)}
+            </span>
+            {member.research?.spend_shared ? <SharedQuotaIcon label={t('usage.sharedResearch')} /> : null}
           </span>
         </div>
         {hasUsageSpend({
@@ -76,12 +79,14 @@ export function ResearchCard({ member }: ResearchCardProps) {
           ondemandUsd: member.research?.ondemand_usd,
           cursorModelsPct: member.research?.cursor_models_pct,
           otherModelsPct: member.research?.other_models_pct,
+          shared: member.research?.spend_shared,
         }) ? (
           <UsageSpend
             budgetUsd={member.research?.budget_usd}
             ondemandUsd={member.research?.ondemand_usd}
             cursorModelsPct={member.research?.cursor_models_pct}
             otherModelsPct={member.research?.other_models_pct}
+            shared={member.research?.spend_shared}
           />
         ) : null}
         <p className="text-[11px] text-slate-400 dark:text-slate-500">{t('pulse.researchNoBranch')}</p>

@@ -32,6 +32,7 @@ export function cursorSpendFromStats(stats: Stats | null) {
     ondemandTaskCycle,
     ondemandResearchCycle,
     billingCycleStart: stats?.billing_cycle_start,
+    planPrice: stats?.plan_price_usd && stats.plan_price_usd > 0 ? stats.plan_price_usd : 0,
     cursorCycle,
     otherCycle,
     cursorToday,

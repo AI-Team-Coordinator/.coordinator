@@ -18,6 +18,7 @@ type CoordinatorRepository interface {
 	WorkspaceDir() string
 	GetMembers(ctx context.Context) ([]model.Member, error)
 	CursorUsageSnapshot() *model.CursorUsage
+	LoadUsageSamples() []model.UsageSample
 	CompleteTask(ctx context.Context, alias, taskID string) error
 	GetStrayWork(ctx context.Context, members []model.Member) ([]model.StrayRepo, error)
 	CurrentAuthor(ctx context.Context) (string, error)

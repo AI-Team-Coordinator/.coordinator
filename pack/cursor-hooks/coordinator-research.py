@@ -21,9 +21,10 @@ def paths() -> dict[str, Path]:
 
 try:
     sys.path.insert(0, str(paths()["COORDINATOR_ROOT"] / "utils"))
-    from activity_clock import ping_slot
+    from activity_clock import ping_research, ping_slot
 except Exception:
     ping_slot = None
+    ping_research = None
 
 
 def main() -> None:
@@ -109,6 +110,7 @@ def handle_after_response(payload: dict) -> None:
             snap["research"] = research
             write_snapshot(alias, snap)
     bump_bound_slot(sid, now)
+    record_usage_sample(alias, sid, snap if isinstance(snap, dict) else load_snapshot(alias))
 
 
 def handle_session_end(payload: dict) -> None:
@@ -197,24 +199,49 @@ def bump_bound_slot(sid: str, now: datetime) -> None:
 
 def bump_slot_activity(snap: dict, alias: str, sid: str, now: datetime) -> None:
     iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    tasks = snap.get("tasks")
-    if not isinstance(tasks, list) or not tasks:
-        return
     changed = False
-    for slot in tasks:
-        if not isinstance(slot, dict):
-            continue
-        if sid not in slot_session_ids(slot):
-            continue
-        if ping_slot:
-            ping_slot(slot, now)
-        else:
-            slot["updated_at"] = iso
-        changed = True
-        if snap.get("task_id") == slot.get("task_id"):
-            snap["updated_at"] = slot.get("updated_at") or iso
+    research = snap.get("research") if isinstance(snap.get("research"), dict) else None
+    if isinstance(research, dict) and research.get("status") == "active":
+        bound = str(research.get("session_id") or "").strip()
+        if bound == sid:
+            if ping_research:
+                ping_research(research, now)
+            else:
+                research["updated_at"] = iso
+            snap["research"] = research
+            changed = True
+    tasks = snap.get("tasks")
+    if isinstance(tasks, list):
+        for slot in tasks:
+            if not isinstance(slot, dict):
+                continue
+            if sid not in slot_session_ids(slot):
+                continue
+            if ping_slot:
+                ping_slot(slot, now)
+            else:
+                slot["updated_at"] = iso
+            changed = True
+            if snap.get("task_id") == slot.get("task_id"):
+                snap["updated_at"] = slot.get("updated_at") or iso
     if changed:
         write_snapshot(alias, snap)
+
+
+def record_usage_sample(alias: str, sid: str, snap: dict | None) -> None:
+    try:
+        import cursor_usage
+        import usage_meter
+
+        usage_meter.record_session(
+            paths()["CACHE_DIR"],
+            alias=alias or "",
+            session_id=sid,
+            snap=snap,
+            fetch_usage=cursor_usage.take_snapshot,
+        )
+    except Exception:
+        pass
 
 
 def cache_file() -> Path:

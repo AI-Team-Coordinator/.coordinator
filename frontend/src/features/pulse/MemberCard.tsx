@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
 import { formatDuration } from '../../shared/lib/formatters'
-import { hasUsageSpend, UsageSpend } from '../../shared/ui/UsageSpend'
+import { hasUsageSpend, SharedQuotaIcon, UsageSpend } from '../../shared/ui/UsageSpend'
 import { TaskDocLink } from '../docs/TaskDocLink'
 import { ChatTabs } from './ChatTabs'
 import type { MemberState, MemberTaskState } from '../../shared/types/api'
@@ -40,6 +40,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
   const cursorModelsPct = task?.cursor_models_pct ?? member.cursor_models_pct
   const otherModelsPct = task?.other_models_pct ?? member.other_models_pct
   const spendKind = task?.spend_kind || member.spend_kind
+  const spendShared = task?.spend_shared ?? member.spend_shared
 
   const copyBranch = () => {
     if (branch) {
@@ -168,14 +169,17 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
         <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500 dark:text-slate-400">{t('pulse.duration')}:</span>
-            <span
-              className={`font-mono font-semibold ${
-                task?.clock_paused ?? member.clock_paused
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-emerald-600 dark:text-emerald-400'
-              }`}
-            >
-              {formatDuration(duration)}
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                className={`font-mono font-semibold ${
+                  task?.clock_paused ?? member.clock_paused
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {formatDuration(duration)}
+              </span>
+              {spendShared ? <SharedQuotaIcon /> : null}
             </span>
           </div>
 
@@ -184,6 +188,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
             ondemandUsd: ondemand,
             cursorModelsPct,
             otherModelsPct,
+            shared: spendShared,
           }) && (
             <UsageSpend
               budgetUsd={budget}
@@ -191,6 +196,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
               cursorModelsPct={cursorModelsPct}
               otherModelsPct={otherModelsPct}
               spendKind={spendKind}
+              shared={spendShared}
             />
           )}
 

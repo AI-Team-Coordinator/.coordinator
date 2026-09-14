@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Layers } from 'lucide-react'
 import { formatPoolPct, formatUSD } from '../lib/formatters'
 
 export type UsageSpendValues = {
@@ -7,15 +8,16 @@ export type UsageSpendValues = {
   cursorModelsPct?: number | null
   otherModelsPct?: number | null
   spendKind?: string
+  shared?: boolean
 }
 
 export function hasUsageSpend(v: UsageSpendValues): boolean {
-  const hasPrice = typeof v.budgetUsd === 'number'
+  const hasPrice = !v.shared && typeof v.budgetUsd === 'number'
   return (
     (hasPrice && (v.budgetUsd ?? 0) > 0) ||
     (v.cursorModelsPct ?? 0) > 0 ||
     (v.otherModelsPct ?? 0) > 0 ||
-    (v.ondemandUsd ?? 0) > 0
+    (!v.shared && (v.ondemandUsd ?? 0) > 0)
   )
 }
 
@@ -29,18 +31,20 @@ export function UsageSpend({
   cursorModelsPct,
   otherModelsPct,
   spendKind,
+  shared = false,
   variant = 'block',
 }: UsageSpendProps) {
   const { t } = useTranslation()
-  const hasPrice = typeof budgetUsd === 'number'
+  const hasPrice = !shared && typeof budgetUsd === 'number'
   const cursor = cursorModelsPct ?? 0
   const other = otherModelsPct ?? 0
-  const od = ondemandUsd ?? 0
+  const od = shared ? 0 : ondemandUsd ?? 0
   const infra = spendKind === 'infra' ? ` · ${t('metrics.infraSpend')}` : ''
 
   if (variant === 'inline') {
     return (
       <>
+        {shared ? <SharedQuotaIcon /> : null}
         {hasPrice && (budgetUsd ?? 0) > 0 && (
           <span className="text-emerald-700 dark:text-emerald-400 font-mono shrink-0">
             {t('timeline.planShare', { amount: formatUSD(budgetUsd) })}
@@ -134,6 +138,27 @@ export function UsageSpend({
   )
 }
 
+export function SharedQuotaIcon({ label }: { label?: string }) {
+  const { t } = useTranslation()
+  const text = label || t('usage.sharedTask')
+  return (
+    <button
+      type="button"
+      aria-label={text}
+      onClick={(e) => e.stopPropagation()}
+      className="relative inline-flex items-center justify-center text-indigo-600 dark:text-indigo-300 hover:text-indigo-500 dark:hover:text-indigo-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-sm shrink-0 group/shared"
+    >
+      <Layers className="w-3.5 h-3.5" aria-hidden />
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute z-40 right-0 top-full mt-1.5 w-56 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-2 text-left text-[11px] font-normal normal-case tracking-normal leading-snug text-slate-600 dark:text-slate-300 shadow-lg opacity-0 group-hover/shared:opacity-100 group-focus/shared:opacity-100 transition-opacity"
+      >
+        {text}
+      </span>
+    </button>
+  )
+}
+
 function poolClass(secondary: boolean): string {
   return secondary
     ? 'font-mono text-[11px] text-slate-500 dark:text-slate-400'
@@ -145,21 +170,28 @@ export function UsageHeadline({
   cursor,
   other,
   hasPrice,
+  seatUsd,
 }: {
   usd: number
   cursor: number
   other: number
   hasPrice: boolean
+  seatUsd?: number
 }) {
   const { t } = useTranslation()
   if (hasPrice) {
-    if (usd <= 0 && cursor <= 0 && other <= 0) {
+    if (usd <= 0 && cursor <= 0 && other <= 0 && !(seatUsd && seatUsd > 0)) {
       return <div className="mt-2 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white">—</div>
     }
     return (
       <>
         <div className="mt-1 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tabular-nums">
           {formatUSD(usd)}
+          {seatUsd && seatUsd > 0 ? (
+            <span className="ml-1.5 text-base md:text-lg font-semibold text-slate-400 dark:text-slate-500">
+              / {formatUSD(seatUsd)}
+            </span>
+          ) : null}
         </div>
         {(cursor > 0 || other > 0) && (
           <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 font-mono leading-snug">

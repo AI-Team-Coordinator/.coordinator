@@ -28,7 +28,10 @@ function memberTasks(member: MemberState): MemberTaskState[] {
         cost_usd: member.cost_usd,
         budget_usd: member.budget_usd,
         ondemand_usd: member.ondemand_usd,
+        cursor_models_pct: member.cursor_models_pct,
+        other_models_pct: member.other_models_pct,
         spend_kind: member.spend_kind,
+        spend_shared: member.spend_shared,
       },
     ]
   }

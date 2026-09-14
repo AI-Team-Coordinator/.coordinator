@@ -468,6 +468,8 @@ func (s *Service) GetStats(ctx context.Context) (*dto.StatsEnvelope, error) {
 		p := *snap.PlanPriceUSD
 		stats.PlanPriceUSD = &p
 	}
+	stats.Hours = s.usageHours(members)
+	stats.Days = BuildDailySpend(stats.Hours, time.Now(), dailySpendDays)
 	return &dto.StatsEnvelope{
 		Stats: dto.StatsResponse{
 			TotalCompleted:               stats.TotalCompleted,
@@ -530,6 +532,8 @@ func (s *Service) GetStats(ctx context.Context) (*dto.StatsEnvelope, error) {
 			OtherModelsPctResearchCycle:  stats.OtherModelsPctResearchCycle,
 			CursorModelsPctResearchOpen:  stats.CursorModelsPctResearchOpen,
 			OtherModelsPctResearchOpen:   stats.OtherModelsPctResearchOpen,
+			Hours:                        mapHours(stats.Hours),
+			Days:                         mapHours(stats.Days),
 		},
 	}, nil
 }
@@ -562,7 +566,9 @@ func (s *Service) GetTasks(ctx context.Context, query dto.TasksQuery) (*dto.Task
 		return nil, err
 	}
 
-	filtered := filterTasks(computeTasks(events, members, time.Now()), model.TaskQuery{
+	tasks := computeTasks(events, members, time.Now())
+	applyCompletedSpendSharing(tasks, s.usageHours(members))
+	filtered := filterTasks(tasks, model.TaskQuery{
 		Status: status,
 		Alias:  strings.TrimSpace(query.Alias),
 		Kind:   kind,
@@ -592,6 +598,7 @@ func (s *Service) GetTasks(ctx context.Context, query dto.TasksQuery) (*dto.Task
 			CursorModelsPct: t.CursorModelsPct,
 			OtherModelsPct:  t.OtherModelsPct,
 			SpendKind:       t.SpendKind,
+			SpendShared:     t.SpendShared,
 		})
 	}
 	return &dto.TasksResponse{Tasks: out, Total: len(filtered), Offset: query.Offset, Limit: query.Limit}, nil
@@ -683,6 +690,7 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 			CursorModelsPct: m.CursorModelsPct,
 			OtherModelsPct:  m.OtherModelsPct,
 			SpendKind:       m.SpendKind,
+			SpendShared:     m.SpendShared,
 		}
 		if len(m.Tasks) > 0 {
 			item.Tasks = mapMemberTasks(m.Tasks)
@@ -702,6 +710,7 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 				OnDemandUSD:     m.Research.OnDemandUSD,
 				CursorModelsPct: m.Research.CursorModelsPct,
 				OtherModelsPct:  m.Research.OtherModelsPct,
+				SpendShared:     m.Research.SpendShared,
 				Chat:            mapChat(m.Research.Chat),
 			}
 		}
@@ -745,6 +754,7 @@ func mapMemberTasks(tasks []model.MemberTask) []dto.MemberTaskResponse {
 			CursorModelsPct: task.CursorModelsPct,
 			OtherModelsPct:  task.OtherModelsPct,
 			SpendKind:       task.SpendKind,
+			SpendShared:     task.SpendShared,
 			Chats:           mapChats(task.Chats),
 		})
 	}
@@ -815,6 +825,40 @@ func mapStray(items []model.StrayRepo) []dto.StrayRepoResponse {
 			Repo:    item.Repo,
 			Branch:  item.Branch,
 			Commits: commits,
+		})
+	}
+	return out
+}
+
+func (s *Service) usageHours(members []model.Member) []model.HourSpend {
+	return BuildHourlySpend(s.repo.LoadUsageSamples(), members, time.Now(), hourlySpendWindow)
+}
+
+func mapHours(hours []model.HourSpend) []dto.HourSpendResponse {
+	if len(hours) == 0 {
+		return nil
+	}
+	out := make([]dto.HourSpendResponse, 0, len(hours))
+	for _, hour := range hours {
+		parts := make([]dto.HourParticipantResponse, 0, len(hour.Participants))
+		for _, p := range hour.Participants {
+			parts = append(parts, dto.HourParticipantResponse{
+				Kind:   p.Kind,
+				ID:     p.ID,
+				Title:  p.Title,
+				Alias:  p.Alias,
+				Shared: p.Shared,
+			})
+		}
+		out = append(out, dto.HourSpendResponse{
+			Hour:            hour.Hour,
+			Alias:           hour.Alias,
+			Aliases:         hour.Aliases,
+			CursorModelsPct: hour.CursorModelsPct,
+			OtherModelsPct:  hour.OtherModelsPct,
+			BudgetUSD:       hour.BudgetUSD,
+			OnDemandUSD:     hour.OnDemandUSD,
+			Participants:    parts,
 		})
 	}
 	return out

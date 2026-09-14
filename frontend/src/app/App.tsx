@@ -7,6 +7,7 @@ import { TeamPulseSection } from '../features/pulse/TeamPulseSection'
 import { ActivityTimeline, type EventsFilter } from '../features/timeline/ActivityTimeline'
 import { TaskTable, type TasksFilter } from '../features/stats/TaskTable'
 import { SpendBreakdown } from '../features/stats/SpendBreakdown'
+import { HourlySpendChart, padTodayHours } from '../features/stats/HourlySpendChart'
 import { ServiceMap } from '../features/project/ServiceMap'
 import { TeamRosterSection } from '../features/team/TeamRosterSection'
 import { SectionNav } from '../features/nav/SectionNav'
@@ -385,6 +386,11 @@ export function App() {
                   onSpendClick={() => changeSection('stats')}
                 />
               )}
+              <HourlySpendChart
+                grain="hour"
+                rows={padTodayHours(stats?.hours, currentUser.alias)}
+                title={t('spend.consumptionPersonal')}
+              />
               <TeamPulseSection members={members} stray={stray} serviceNames={serviceNames} />
               {(!quietBoard || tasksTotal > 0) && (
                 <TaskTable
@@ -424,6 +430,7 @@ export function App() {
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('sections.stats')}</h2>
               <SpendBreakdown stats={stats} />
+              <HourlySpendChart grain="day" rows={stats?.days ?? []} />
               <MetricsGrid
                 stats={stats}
                 onStatusClick={(status) => onTasksFilter({ ...tasksFilter, status })}

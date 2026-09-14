@@ -7,6 +7,11 @@ from datetime import datetime, timezone
 IDLE_TIMEOUT_SEC = 20 * 60
 
 
+def ping_research(research: dict, now: datetime) -> None:
+    """Same windows as a task slot, stored on nested research."""
+    ping_slot(research, now)
+
+
 def ping_slot(slot: dict, now: datetime) -> None:
     if not isinstance(slot, dict):
         return

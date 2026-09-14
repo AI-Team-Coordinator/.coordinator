@@ -25,6 +25,7 @@ type MemberResponse struct {
 	CursorModelsPct *float64             `json:"cursor_models_pct,omitempty"`
 	OtherModelsPct  *float64             `json:"other_models_pct,omitempty"`
 	SpendKind       string               `json:"spend_kind,omitempty"`
+	SpendShared     bool                 `json:"spend_shared,omitempty"`
 	Research        *ResearchResponse    `json:"research,omitempty"`
 	Tasks           []MemberTaskResponse `json:"tasks,omitempty"`
 }
@@ -46,6 +47,7 @@ type MemberTaskResponse struct {
 	CursorModelsPct *float64           `json:"cursor_models_pct,omitempty"`
 	OtherModelsPct  *float64           `json:"other_models_pct,omitempty"`
 	SpendKind       string             `json:"spend_kind,omitempty"`
+	SpendShared     bool               `json:"spend_shared,omitempty"`
 	Chats           []ChatTabResponse  `json:"chats,omitempty"`
 }
 
@@ -65,6 +67,7 @@ type ResearchResponse struct {
 	OnDemandUSD     *float64         `json:"ondemand_usd,omitempty"`
 	CursorModelsPct *float64         `json:"cursor_models_pct,omitempty"`
 	OtherModelsPct  *float64         `json:"other_models_pct,omitempty"`
+	SpendShared     bool             `json:"spend_shared,omitempty"`
 	Chat            *ChatTabResponse `json:"chat,omitempty"`
 }
 

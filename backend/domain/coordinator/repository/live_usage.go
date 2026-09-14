@@ -85,6 +85,7 @@ func (r *FileRepository) attachLiveUsage(members []model.Member) {
 		}
 		applyUsageDelta(&members[i].Research.CostUSD, &members[i].Research.BudgetUSD, &members[i].Research.OnDemandUSD, &members[i].Research.CursorModelsPct, &members[i].Research.OtherModelsPct, delta)
 	}
+	applyLiveSpendSharing(members)
 }
 
 func applyUsageDelta(cost, budget, ondemand, cursorPct, otherPct **float64, delta *model.UsageDelta) {
@@ -162,6 +163,8 @@ func (r *FileRepository) cachedUsageSnapshot() *model.CursorUsage {
 	r.usageAt = time.Now()
 	if snap != nil {
 		r.usageSnap = snap
+		alias, _ := r.CurrentAuthor(context.Background())
+		r.AppendUsageSample(sampleFromCursorUsage(snap, alias))
 	}
 	return r.usageSnap
 }

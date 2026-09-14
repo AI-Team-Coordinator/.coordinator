@@ -27,7 +27,7 @@ type Member struct {
 	CursorModelsPct *float64
 	OtherModelsPct  *float64
 	SpendKind       string
-
+	SpendShared     bool
 	Research *Research
 	Tasks    []MemberTask
 }
@@ -54,6 +54,7 @@ type MemberTask struct {
 	CursorModelsPct *float64
 	OtherModelsPct  *float64
 	SpendKind       string
+	SpendShared     bool
 	SessionIDs      []string
 	Chats           []ChatTab
 }
@@ -87,6 +88,7 @@ func (m Member) Slots() []MemberTask {
 			CursorModelsPct: m.CursorModelsPct,
 			OtherModelsPct:  m.OtherModelsPct,
 			SpendKind:       m.SpendKind,
+			SpendShared:     m.SpendShared,
 		}}
 	}
 	return nil
@@ -107,4 +109,6 @@ type Research struct {
 	OtherModelsPct  *float64
 	DurationSeconds int64
 	ClockPaused     bool
+	SpendShared     bool
+	ActivityWindows []ActivityWindow
 }

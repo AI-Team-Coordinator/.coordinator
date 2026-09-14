@@ -425,11 +425,15 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 					started = t
 				}
 			}
-			last := started
+			last := parseSnapshotTime(raw.Research.LastActivityAt, started)
 			if rec := cacheSession(cache, raw.Research.SessionID); rec != nil && rec.LastAgentAt > 0 {
-				last = time.Unix(rec.LastAgentAt, 0)
+				ping := time.Unix(rec.LastAgentAt, 0)
+				if ping.After(last) {
+					last = ping
+				}
 			}
-			d, paused := model.ActiveDuration(nil, started, last, now)
+			windows := parseActivityWindows(raw.Research.ActivityWindows, started)
+			d, paused := model.ActiveDuration(windows, started, last, now)
 			member.Research = &model.Research{
 				Status:          "active",
 				Summary:         raw.Research.Summary,
@@ -438,6 +442,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 				CursorUsage:     raw.Research.CursorUsage,
 				DurationSeconds: d,
 				ClockPaused:     paused,
+				ActivityWindows: windows,
 			}
 		}
 		members = append(members, member)
@@ -549,13 +554,17 @@ type snapshotFile struct {
 	CursorUsage *model.CursorUsage `json:"cursor_usage"`
 	GitReport   *model.GitReport   `json:"git_report"`
 	Tasks       []snapshotTask     `json:"tasks"`
-	Research    *struct {
-		Status      string             `json:"status"`
-		Summary     string             `json:"summary"`
-		StartedAt   string             `json:"started_at"`
-		SessionID   string             `json:"session_id"`
-		CursorUsage *model.CursorUsage `json:"cursor_usage"`
-	} `json:"research"`
+	Research    *snapshotResearch  `json:"research"`
+}
+
+type snapshotResearch struct {
+	Status          string             `json:"status"`
+	Summary         string             `json:"summary"`
+	StartedAt       string             `json:"started_at"`
+	SessionID       string             `json:"session_id"`
+	CursorUsage     *model.CursorUsage `json:"cursor_usage"`
+	LastActivityAt  string             `json:"last_activity_at"`
+	ActivityWindows []snapshotWindow   `json:"activity_windows"`
 }
 
 func (r *FileRepository) parseSnapshotTasks(raw snapshotFile, now time.Time) []model.MemberTask {

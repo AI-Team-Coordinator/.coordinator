@@ -62,4 +62,6 @@ type Stats struct {
 	OtherModelsPctResearchCycle  float64
 	CursorModelsPctResearchOpen  float64
 	OtherModelsPctResearchOpen   float64
+	Hours                        []HourSpend
+	Days                         []HourSpend
 }

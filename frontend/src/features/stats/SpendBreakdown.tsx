@@ -121,9 +121,6 @@ export function SpendBreakdown({ stats }: SpendBreakdownProps) {
       <div>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('spend.title')}</h2>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{cycleLabel}</p>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug">
-          {spend.hasPlanPrice ? t('spend.hint') : t('spend.hintNoPrice')}
-        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -136,6 +133,7 @@ export function SpendBreakdown({ stats }: SpendBreakdownProps) {
             cursor={spend.cursorCycle}
             other={spend.otherCycle}
             hasPrice={spend.hasPlanPrice}
+            seatUsd={spend.planPrice}
           />
         </div>
         <div className="rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-2">

@@ -248,7 +248,7 @@ func addResearchSpend(stats *model.Stats, ev model.Event, startOfToday, startOfW
 
 func addOpenResearchSpend(stats *model.Stats, members []model.Member) {
 	for _, m := range members {
-		if m.Research == nil {
+		if m.Research == nil || m.Research.SpendShared {
 			continue
 		}
 		if m.Research.BudgetUSD != nil {
@@ -356,6 +356,7 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 				t.Services = slot.Services
 			}
 			t.SpendKind = slot.SpendKind
+			t.SpendShared = slot.SpendShared
 			t.CostUSD = slot.CostUSD
 			t.BudgetUSD = slot.BudgetUSD
 			t.OnDemandUSD = slot.OnDemandUSD
@@ -453,10 +454,15 @@ func addOpenTaskSpend(stats *model.Stats, members []model.Member) {
 	for _, m := range members {
 		slots := m.Slots()
 		if len(slots) == 0 && m.Status == "in_progress" {
-			addOneOpenSpend(stats, m.CostUSD, m.BudgetUSD, m.OnDemandUSD, m.CursorModelsPct, m.OtherModelsPct, m.SpendKind)
+			if !m.SpendShared {
+				addOneOpenSpend(stats, m.CostUSD, m.BudgetUSD, m.OnDemandUSD, m.CursorModelsPct, m.OtherModelsPct, m.SpendKind)
+			}
 			continue
 		}
 		for _, slot := range slots {
+			if slot.SpendShared {
+				continue
+			}
 			addOneOpenSpend(stats, slot.CostUSD, slot.BudgetUSD, slot.OnDemandUSD, slot.CursorModelsPct, slot.OtherModelsPct, slot.SpendKind)
 		}
 	}

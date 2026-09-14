@@ -51,8 +51,6 @@
     "title": "Cursor spend",
     "thisCycle": "current subscription billing cycle",
     "cycleSince": "current billing cycle, since {{date}}",
-    "hint": "100% Cursor Models plus 100% Other Models equals the seat price ($20 / $60 / $200). On-demand is exact extra past included pools.",
-    "hintNoPrice": "Seat price is unknown (Team and similar plans). Spend is Cursor Models and Other Models percents. On-demand is exact extra past included pools.",
     "plan": "Share of plan",
     "pools": "Pools",
     "ondemand": "On-demand",
@@ -64,14 +62,22 @@
     "tasks": "Tasks",
     "research": "Research",
     "open": "In progress",
-    "today": "Today"
+    "today": "Today",
+    "consumption": "Usage",
+    "consumptionPersonal": "Personal usage",
+    "consumptionHover": "Hover a column",
+    "unboundChat": "Tab / unbound chat"
   },
   "usage": {
     "cursorPool": "Cursor Models",
     "otherPool": "Other Models",
     "deltaPct": "+{{pct}}%",
     "cursorShort": "Cursor +{{pct}}%",
-    "otherShort": "Other +{{pct}}%"
+    "otherShort": "Other +{{pct}}%",
+    "shared": "shared meter",
+    "sharedHint": "Part of the shared meter — do not add these amounts.",
+    "sharedTask": "This task shares the account quota",
+    "sharedResearch": "This research shares the account quota"
   },
   "tasks": {
     "title": "Tasks",

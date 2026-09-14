@@ -77,3 +77,28 @@ func TestComputeStatsPoolPctsWithoutPlanPrice(t *testing.T) {
 		t.Fatalf("budget=%v", stats.BudgetUSDCycle)
 	}
 }
+
+func TestComputeStatsSkipsSharedOpenSpend(t *testing.T) {
+	now := time.Now().Unix()
+	stats := computeStats([]model.Event{
+		{Event: "task_completed", TaskID: "A", Timestamp: now, BudgetUSD: f64(1), SpendKind: "product"},
+	}, []model.Member{
+		{
+			Status: "in_progress",
+			Tasks: []model.MemberTask{{
+				TaskID:          "OPEN",
+				SpendKind:       "infra",
+				BudgetUSD:       f64(9),
+				CursorModelsPct: f64(4),
+				SpendShared:     true,
+			}},
+			Research: &model.Research{Status: "active", BudgetUSD: f64(3), SpendShared: true, CursorModelsPct: f64(2)},
+		},
+	})
+	if stats.BudgetUSDToday != 1 || stats.BudgetUSDOpen != 0 {
+		t.Fatalf("budget today=%v open=%v", stats.BudgetUSDToday, stats.BudgetUSDOpen)
+	}
+	if stats.BudgetUSDResearchOpen != 0 || stats.CursorModelsPctOpen != 0 {
+		t.Fatalf("research open=%v cursor open=%v", stats.BudgetUSDResearchOpen, stats.CursorModelsPctOpen)
+	}
+}

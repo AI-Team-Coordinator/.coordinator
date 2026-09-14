@@ -51,8 +51,6 @@
     "title": "Расход Cursor",
     "thisCycle": "текущий биллинг-цикл подписки",
     "cycleSince": "текущий биллинг-цикл, с {{date}}",
-    "hint": "100% Cursor Models плюс 100% Other Models — цена места ($20 / $60 / $200). On-demand — точная доплата сверх included-пулов.",
-    "hintNoPrice": "Цена места неизвестна (Team и похожие планы). Расход — проценты Cursor Models и Other Models. On-demand — точная доплата сверх included-пулов.",
     "plan": "Доля подписки",
     "pools": "Пулы",
     "ondemand": "On-demand",
@@ -64,14 +62,22 @@
     "tasks": "Задачи",
     "research": "Ресёрч",
     "open": "В работе",
-    "today": "Сегодня"
+    "today": "Сегодня",
+    "consumption": "Потребление",
+    "consumptionPersonal": "Персональное потребление",
+    "consumptionHover": "Наведите столбик",
+    "unboundChat": "Tab или чат без слота"
   },
   "usage": {
     "cursorPool": "Cursor Models",
     "otherPool": "Other Models",
     "deltaPct": "+{{pct}}%",
     "cursorShort": "Cursor +{{pct}}%",
-    "otherShort": "Other +{{pct}}%"
+    "otherShort": "Other +{{pct}}%",
+    "shared": "общий счётчик",
+    "sharedHint": "Часть общего счётчика, не складывать.",
+    "sharedTask": "Задача в общем потреблении квоты",
+    "sharedResearch": "Ресёрч в общем потреблении квоты"
   },
   "tasks": {
     "title": "Задачи",

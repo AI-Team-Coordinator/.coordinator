@@ -26,6 +26,7 @@ export interface MemberState {
   cursor_models_pct?: number
   other_models_pct?: number
   spend_kind?: 'infra' | 'product' | 'research' | string
+  spend_shared?: boolean
   research?: ResearchState
   tasks?: MemberTaskState[]
 }
@@ -47,6 +48,7 @@ export interface MemberTaskState {
   cursor_models_pct?: number
   other_models_pct?: number
   spend_kind?: string
+  spend_shared?: boolean
   chats?: ChatTab[]
 }
 
@@ -66,6 +68,7 @@ export interface ResearchState {
   ondemand_usd?: number
   cursor_models_pct?: number
   other_models_pct?: number
+  spend_shared?: boolean
   chat?: ChatTab
 }
 
@@ -161,6 +164,27 @@ export interface Stats {
   other_models_pct_research_cycle: number
   cursor_models_pct_research_open: number
   other_models_pct_research_open: number
+  hours?: HourSpend[]
+  days?: HourSpend[]
+}
+
+export interface HourSpend {
+  hour: number
+  alias?: string
+  aliases?: string[]
+  cursor_models_pct: number
+  other_models_pct: number
+  budget_usd?: number
+  ondemand_usd: number
+  participants: HourParticipant[]
+}
+
+export interface HourParticipant {
+  kind: string
+  id?: string
+  title?: string
+  alias?: string
+  shared?: boolean
 }
 
 export interface TaskItem {
@@ -181,6 +205,7 @@ export interface TaskItem {
   cursor_models_pct?: number
   other_models_pct?: number
   spend_kind?: 'infra' | 'product' | string
+  spend_shared?: boolean
 }
 
 export interface EventItem {
