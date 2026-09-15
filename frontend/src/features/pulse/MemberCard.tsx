@@ -21,26 +21,30 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
 
   const isActive = Boolean(task) || (!task && member.status === 'in_progress')
   const isBusy = isActive
-  const taskId = task?.task_id || member.task_id
-  const branch = task?.branch || member.branch
-  const summary = task?.task_summary || member.task_summary
+  const fromTask = Boolean(task)
+  const taskId = fromTask ? task?.task_id : member.task_id
+  const branch = fromTask ? task?.branch : member.branch
+  const summary = fromTask ? task?.task_summary : member.task_summary
   const isFix = Boolean(taskId && (taskId.startsWith('FIX-') || (branch && branch.startsWith('fix/'))))
   const roleLabel = member.role ? t(`pulse.roles.${member.role}`, { defaultValue: member.role }) : ''
   const accessLabel = member.access === 'admin' ? t('setup.accessAdmin') : ''
-  const claimed = task?.services || member.services || []
-  const repos = task?.repos || member.repos || []
+  const claimed = (fromTask ? task?.services : member.services) || []
+  const repos = (fromTask ? task?.repos : member.repos) || []
   const workspaceRepos = repos.filter((repo) => repo.kind === 'workspace')
   const productRepos = repos.filter((repo) => repo.kind !== 'workspace')
   const showInfraHint = productRepos.length === 0 && (workspaceRepos.length > 0 || (isActive && claimed.length > 0))
   const claimedLabels = claimed.map((id) => serviceNames[id] || id)
-  const taskTitle = task?.task_title || task?.task_id || member.task_title || member.task_id || ''
-  const duration = task?.duration_seconds ?? member.duration_seconds
-  const budget = task?.budget_usd ?? member.budget_usd
-  const ondemand = task?.ondemand_usd ?? member.ondemand_usd
-  const cursorModelsPct = task?.cursor_models_pct ?? member.cursor_models_pct
-  const otherModelsPct = task?.other_models_pct ?? member.other_models_pct
-  const spendKind = task?.spend_kind || member.spend_kind
-  const spendShared = task?.spend_shared ?? member.spend_shared
+  const taskTitle = fromTask
+    ? task?.task_title || task?.task_id || ''
+    : member.task_title || member.task_id || ''
+  const duration = fromTask ? task?.duration_seconds : member.duration_seconds
+  const budget = fromTask ? task?.budget_usd : member.budget_usd
+  const ondemand = fromTask ? task?.ondemand_usd : member.ondemand_usd
+  const cursorModelsPct = fromTask ? task?.cursor_models_pct : member.cursor_models_pct
+  const otherModelsPct = fromTask ? task?.other_models_pct : member.other_models_pct
+  const spendKind = fromTask ? task?.spend_kind : member.spend_kind
+  const spendShared = fromTask ? task?.spend_shared : member.spend_shared
+  const clockPaused = fromTask ? Boolean(task?.clock_paused) : Boolean(member.clock_paused)
 
   const copyBranch = () => {
     if (branch) {
@@ -83,12 +87,13 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
               ○ {t('pulse.idle')}
             </Badge>
           )}
-          {isActive && (task?.clock_paused ?? member.clock_paused) ? (
-            <Clock
-              className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"
-              aria-label={t('pulse.clockPaused')}
-              title={t('pulse.clockPaused')}
-            />
+          {isActive && clockPaused ? (
+            <span title={t('pulse.clockPaused')}>
+              <Clock
+                className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"
+                aria-label={t('pulse.clockPaused')}
+              />
+            </span>
           ) : null}
         </div>
       </div>
@@ -172,9 +177,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
             <span className="inline-flex items-center gap-1.5">
               <span
                 className={`font-mono font-semibold ${
-                  task?.clock_paused ?? member.clock_paused
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-emerald-600 dark:text-emerald-400'
+                  clockPaused ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
                 }`}
               >
                 {formatDuration(duration)}

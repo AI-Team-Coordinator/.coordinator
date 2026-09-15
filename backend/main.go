@@ -34,6 +34,7 @@ func main() {
 	infra.LogInfo("Docs dir:   %s", cfg.DocsDir)
 	infra.LogInfo("Bus dir:    %s", cfg.BusDir)
 	infra.LogInfo("Cursor dir: %s", cfg.CursorDir)
+	infra.LogInfo("UI mode:    %s", cfg.UIMode)
 	infra.LogInfo("UI dir:     %s", cfg.FrontendDir)
 
 	application, err := app.NewApp(cfg)

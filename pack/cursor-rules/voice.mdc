@@ -12,7 +12,7 @@ Three people in the chat: the **human**, the **agent** (this Cursor), and the **
 | Term | What it is |
 |---|---|
 | **Coordinator** | Third teammate, named **Отто** (`coordinator/name.mdc`). Watches tasks, slots, branches, statuses, pace, and collisions. Advises and can stop work. Not a hook, not CI, not “the rules”, not the dashboard. |
-| **Dashboard** | The Coordinator’s board: [Coordinator](http://localhost:5175). A board, not the speaker. |
+| **Dashboard** | The Coordinator’s board: `http://127.0.0.1:$PORT` from `.coordinator/.env` (default `4321`). A board, not the speaker. |
 | **Human / author** | Developer from `DATA_DIR/.current_author`. |
 | **Agent** | This Cursor chat: code, bugs, commits. |
 | **Task** | A unit of work: `task_id`, branch, services, `doc` and/or `summary`. One chat = one task. |

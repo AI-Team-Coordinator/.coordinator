@@ -1,5 +1,5 @@
 #!/bin/bash
-# Vite HMR on :5175, detached from the Cursor chat.
+# Vite HMR on $UI_PORT (default 5175). Alina Assist only (UI_MODE=vite).
 # Does not restart the Go API.
 # Usage: ./utils/frontend.sh {start|stop|status}
 
@@ -15,7 +15,14 @@ CACHE="$DIR/.cache"
 PIDFILE="$CACHE/frontend.pid"
 LOG="$CACHE/frontend.log"
 DAEMONIZE="$DIR/utils/daemonize.py"
-VITE_PORT=5175
+VITE_PORT="${UI_PORT:-5175}"
+
+assert_vite_mode() {
+    if [ "$(coordinator_ui_mode)" != "vite" ]; then
+        echo "Vite is only for Alina Assist (UI_MODE=vite). Board: $(coordinator_dashboard_url)"
+        exit 1
+    fi
+}
 
 listen_pids() {
     lsof -nP -tiTCP:"$VITE_PORT" -sTCP:LISTEN 2>/dev/null || true
@@ -63,6 +70,7 @@ cmd_stop() {
 }
 
 cmd_start() {
+    assert_vite_mode
     if vite_up; then
         echo "⚡ Vite already on http://127.0.0.1:$VITE_PORT"
         return 0

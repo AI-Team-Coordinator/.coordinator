@@ -288,7 +288,9 @@ export function App() {
               : m.duration_seconds,
           tasks: m.tasks?.map((task) => ({
             ...task,
-            duration_seconds: task.clock_paused ? task.duration_seconds : (task.duration_seconds || 0) + 1,
+            duration_seconds: task.clock_paused
+              ? task.duration_seconds
+              : (task.duration_seconds || 0) + 1,
           })),
           research:
             m.research?.status === 'active' && !m.research.clock_paused

@@ -5,6 +5,7 @@ import { api } from '../../shared/api/client'
 import { parseJSON } from '../../shared/api/http'
 import { Button } from '../../shared/ui/Button'
 import { Card } from '../../shared/ui/Card'
+import { aliasFromName, sanitizeAlias } from '../../shared/lib/aliasFromName'
 import type { ServiceNode, TeamPerson } from '../../shared/types/api'
 
 const ROLES = ['founder', 'engineer'] as const
@@ -161,12 +162,13 @@ export function TeamRosterSection({ services, onChanged, onDirtyChange }: TeamRo
                   value={member.alias}
                   onChange={(e) =>
                     updateMember(member.key, {
-                      alias: e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4),
+                      alias: sanitizeAlias(e.target.value),
                     })
                   }
                   placeholder="EK"
                   className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-sm font-mono"
                 />
+                <span className="mt-1 block text-[10px] text-slate-500 dark:text-slate-400">{t('team.aliasHint')}</span>
               </label>
               <label className="md:col-span-5 block">
                 <span className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -174,7 +176,16 @@ export function TeamRosterSection({ services, onChanged, onDirtyChange }: TeamRo
                 </span>
                 <input
                   value={member.name}
-                  onChange={(e) => updateMember(member.key, { name: e.target.value })}
+                  onChange={(e) => {
+                    const nextName = e.target.value
+                    const prevAuto = aliasFromName(member.name)
+                    const nextAuto = aliasFromName(nextName)
+                    const patch: Partial<DraftMember> = { name: nextName }
+                    if (!member.alias || member.alias === prevAuto) {
+                      patch.alias = nextAuto
+                    }
+                    updateMember(member.key, patch)
+                  }}
                   className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-sm"
                 />
               </label>

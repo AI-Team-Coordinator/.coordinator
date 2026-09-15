@@ -20,15 +20,14 @@ Do not install global extras “just in case” (`gh`, Docker, Coolify).
 | **git** | Clone `.coordinator`, product-git bus | `git --version` | 2.30+ |
 | **Cursor** | Rules and hooks | The human is already in Cursor | `hooks.json` support |
 | **Go** | Build the API | `go version` | 1.22+ (this repo is `go 1.25`) |
-| **Node.js + npm** | Vite UI | `node -v` && `npm -v` | Node 20+ |
+| **Node.js + npm** | Build the UI (static dist on install; Vite only in Alina Assist) | `node -v` && `npm -v` | Node 20+ |
 | **Python 3** | Hooks and daemonize | `python3 --version` | 3.10+ |
 
-Ports that must be free **or** already used by this Coordinator:
+Ports: one **API/UI** port must be free **or** already used by **this** Coordinator. Default `4321`. Several Coordinators on one machine each get their own `PORT` in `.env`.
 
-- `4321` — API
-- `5175` — UI
+Check: `./utils/free_port.sh 4321` (after `.coordinator` exists) or `lsof -nP -tiTCP:4321 -sTCP:LISTEN`. If another process owns the candidate port — propose the next free one; do not kill a neighbour Coordinator.
 
-Check: `lsof -nP -tiTCP:4321 -sTCP:LISTEN` and the same for `5175`. If another process owns the port — stop and ask.
+Do **not** require `:5175` for an install. Vite is Alina Assist development only.
 
 ---
 

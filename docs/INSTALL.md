@@ -54,7 +54,7 @@ Read `ONBOARDING.md`, retell block 1 briefly (including why task docs registry m
 
 Retell `ONBOARDING.md` block 2: hooks, localhost, git bus, what is absent (no cloud, no PAT in chat).
 
-> Ready to continue? Cursor hooks and ports 4321 / 5175 — OK?
+> Ready to continue? Cursor hooks and a free localhost port for the board (default 4321) — OK? Vite :5175 is only for Alina Assist development, not for this install.
 
 ---
 
@@ -161,7 +161,7 @@ In the current root (if there is no git yet — `git init` after consent on bloc
 - `.cursor/rules/coordinator/` and hooks via `./utils/install_cursor_pack.sh`; host rules outside that folder stay;
 - host rules outside `rules/coordinator/` stay as agreed in block 4;
 - `docs/` and `coordinator-data/` — bus in **this** git;
-- processes on :4321 and :5175.
+- processes on a **free** API port (default `4321`; if busy, the next free one). The board is that same port (built UI). Do not start Vite.
 
 ### If `workspace-parent` with no moves
 
@@ -182,7 +182,7 @@ Only if they chose this in block 3:
 
 ## Block 6 — dependencies
 
-Follow `DEPENDENCIES.md`: facts table first (`go version`, `node -v`, …), **then** offer to install. Ports 4321/5175: free or already this Coordinator.
+Follow `DEPENDENCIES.md`: facts table first (`go version`, `node -v`, …), **then** offer to install. After clone you will run `./utils/free_port.sh 4321`, propose that port (and the next free ones if 4321 is taken — another Coordinator is likely using it), and write it to `.env` as `PORT=`.
 
 > Ready to install missing tools and copy the Coordinator onto disk?
 
@@ -198,7 +198,7 @@ Be honest about what already works.
 
 1. `git init` at the product root if needed (`in-repo` with no git).
 2. Clone into `.coordinator/` from the source above. Do not clone the repo into itself.
-3. `cp .coordinator/.env.example .coordinator/.env` and set paths:
+3. `cp .coordinator/.env.example .coordinator/.env` and set paths. Pick a free API port (`./.coordinator/utils/free_port.sh 4321` after the clone, or from the install root `./utils/free_port.sh 4321`). Propose it. If 4321 is busy, say another Coordinator is probably already on this machine and use the next free port. Write `PORT=` and `UI_MODE=static`. Do **not** start Vite and do **not** write `UI_MODE=vite`.
 
 `in-repo`:
 
@@ -208,7 +208,8 @@ DATA_DIR=../coordinator-data
 DOCS_DIR=../docs
 BUS_DIR=..
 CURSOR_DIR=../.cursor
-PORT=4321
+PORT=<free port>
+UI_MODE=static
 ```
 
 `workspace-parent`: `WORKSPACE_ROOT` = window root; `BUS_DIR` / `DATA_DIR` / `DOCS_DIR` inside the product git; `CURSOR_DIR` = `.cursor` at the window root.
@@ -216,8 +217,8 @@ PORT=4321
 4. Append `pack/gitignore.host` to the **product git** `.gitignore` (for `in-repo` that is the same root).
 5. Copy seed: `pack/seed/*` → `coordinator-data/settings/` (locale, `coordinator.json` with the assistant's name, empty team, empty project_profile) and `current_author.example`. Do **not** ask for project name, alias, or people in chat — the first setup screen confirms that. Do **not** set `setup.completed`.
 6. From `.coordinator` run `./utils/install_cursor_pack.sh` (uses `CURSOR_DIR` from `.env`). It copies `pack/cursor-rules/` → `.cursor/rules/coordinator/`, Coordinator hooks → `.cursor/hooks/`, and **merges** `hooks.json`. Host rules outside `rules/coordinator/` stay. Do not copy AlinaAssist `safety.mdc` or prod skills.
-7. `cd .coordinator && ./utils/run.sh` (npm install if needed, Go build, API + Vite).
-8. Give the link: [Coordinator](http://localhost:5175) as an address, not “I will open it for you”. The first screen is a confirm form: **Solo** vs **Team** (two cards), language, project name, installer as admin. Default is Solo — states stay on this machine, no git bus. Team needs an existing or separate repo for snapshots (in a monorepo that is the same git). Layout was already chosen in chat — the form only shows it.
+7. `cd .coordinator && ./utils/run.sh` (npm install if needed, Go build, **static** UI on `PORT`). Do not start Vite.
+8. Give the link: [Coordinator](http://127.0.0.1:PORT) with the **real** port from `.env`, as an address, not “I will open it for you”. If Simple Browser is not open yet — once, by hand, at that URL. The first screen is a confirm form: **Solo** vs **Team** (two cards), language, project name, installer as admin. Default is Solo — states stay on this machine, no git bus. Team needs an existing or separate repo for snapshots (in a monorepo that is the same git). Layout was already chosen in chat — the form only shows it. Alias is filled from the name (first + last initials, or the first two letters).
 
 ### Not ready yet (do not pretend)
 

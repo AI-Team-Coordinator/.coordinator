@@ -1,39 +1,34 @@
 ---
-description: Show the Coordinator dashboard — Vite :5175 + API :4321, backend outside the chat
+description: Show the Coordinator dashboard — static UI on PORT from .env, API outside the chat
 alwaysApply: true
 ---
 
 # Show the Coordinator in Cursor
 
-If the human asks to **show / open the Coordinator** (dashboard, coordinator, localhost):
+Read `PORT` from `.coordinator/.env` (default `4321`). The board is **that** URL. Do not start Vite.
 
-1. **API** on `4321`:
+1. **API + UI** on `$PORT`:
    ```bash
-   lsof -nP -tiTCP:4321 -sTCP:LISTEN
-   curl -sf -o /dev/null -w "%{http_code}" http://127.0.0.1:4321/health
+   # PORT from .coordinator/.env — do not assume 4321 if the install picked another.
+   lsof -nP -tiTCP:"$PORT" -sTCP:LISTEN
+   curl -sf -o /dev/null -w "%{http_code}" "http://127.0.0.1:${PORT}/health"
    ```
    Live = LISTEN **and** `/health` → `200`. Otherwise from `.coordinator`:
    ```bash
    ./utils/backend.sh restart
    ```
-   The script starts a **new session** (`start_new_session`) — it survives the chat. Do not wait on `run.sh` in the foreground.
+   Static mode rebuilds `frontend/dist` and serves it on `$PORT`. The script starts a **new session** (`start_new_session`) — it survives the chat. Do not wait on `run.sh` in the foreground.
 
-2. **UI** — always Vite `npm run dev` on `5175` (HMR). Do not build `frontend/dist` just to look.
-   ```bash
-   lsof -nP -tiTCP:5175 -sTCP:LISTEN
-   ```
-   No process → `./utils/frontend.sh start`. Already listening → do not restart (keep HMR).
+2. **Do not** start `./utils/frontend.sh` or Vite on `:5175`. That is only for Alina Assist development (`UI_MODE=vite`).
 
-3. Look at **http://localhost:5175** (proxies `/api` and `/health` to `:4321`).
-   - **Do not** treat `:4321` as the UI (that is an old `dist`, if it is built at all).
+3. Look at **http://127.0.0.1:$PORT** (the Go process serves the built UI).
    - **Do not** rely on `open "cursor://vscode.simple-browser/show?..."`: Cursor does not navigate an already open tab with the same URL.
-   - **Do not** run `open http://localhost:5175` (opens Safari/Chrome).
-   - If Simple Browser is not open yet — once, by hand, at `http://localhost:5175`.
-   - After a **backend** restart the already open Vite tab reloads itself (`started_at` in `/health`). **Frontend** edits are picked up by HMR without a restart.
+   - **Do not** run `open http://127.0.0.1:…` (opens Safari/Chrome).
+   - If Simple Browser is not open yet — once, by hand, at `http://127.0.0.1:$PORT`.
+   - After a **backend** restart the already open tab reloads itself (`started_at` in `/health`).
 
-4. In the reply, give the link `[Coordinator](http://localhost:5175)` as an address, not a “go” button. Coordinator voice (`chat_language`): “Coordinator: the board is here — …”, not “UI is up on the port”.
+4. In the reply, give the link `[Coordinator](http://127.0.0.1:$PORT)` as an address, not a “go” button. Coordinator voice (`chat_language`): “Coordinator: the board is here — …”, not “UI is up on the port”. Use the real `PORT` from `.env`.
 
-After **Go** edits: only `./utils/backend.sh restart`. Leave Vite alone.
-After **frontend** edits: restart nothing.
+After **Go** or **frontend** edits: `./utils/backend.sh restart` (rebuilds dist, restarts API).
 
 Do not offer product deploy for `.coordinator`.

@@ -32,11 +32,12 @@ export function ResearchCard({ member }: ResearchCardProps) {
             ● {t('pulse.research')}
           </Badge>
           {member.research?.clock_paused ? (
-            <Clock
-              className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"
-              aria-label={t('pulse.clockPaused')}
-              title={t('pulse.clockPaused')}
-            />
+            <span title={t('pulse.clockPaused')}>
+              <Clock
+                className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"
+                aria-label={t('pulse.clockPaused')}
+              />
+            </span>
           ) : null}
         </div>
       </div>

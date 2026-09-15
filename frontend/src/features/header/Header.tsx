@@ -5,6 +5,7 @@ import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher'
 import { Button } from '../../shared/ui/Button'
 import { ProjectBanner } from '../project/ProjectBanner'
 import { CurrentUser } from './CurrentUser'
+import { isAlinaAssistProject } from '../../shared/lib/alinaAssist'
 import type { ProjectProfile } from '../../shared/types/api'
 
 interface HeaderProps {
@@ -48,7 +49,7 @@ export function Header({ connected, profile, currentUser, onReplaySetup }: Heade
           <Radio className="w-3.5 h-3.5 text-slate-400" />
         </div>
 
-        {onReplaySetup && (
+        {onReplaySetup && isAlinaAssistProject(profile) && (
           <Button type="button" variant="outline" size="sm" onClick={onReplaySetup}>
             {t('setup.testLaunch')}
           </Button>

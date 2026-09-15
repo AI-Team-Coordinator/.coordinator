@@ -61,6 +61,49 @@ EVENTS_DIR="${PROGRESS_DIR}/events"
 SETTINGS_DIR="${DATA_DIR}/settings"
 AUTHOR_FILE="${DATA_DIR}/.current_author"
 SYNC_LOG="${PROGRESS_DIR}/.sync.log"
+PORT="${PORT:-4321}"
+UI_PORT="${UI_PORT:-5175}"
+export PORT UI_PORT
+
+coordinator_is_alina_assist() {
+    python3 - "$SETTINGS_DIR/project_profile.json" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+ok = False
+if os.path.isfile(path):
+    try:
+        data = json.load(open(path))
+        proj = data.get("project") or {}
+        pid = str(proj.get("id") or "").strip().lower()
+        name = str(proj.get("name") or "").strip().lower()
+        ok = pid == "alina-assist" or name == "alina assist"
+    except Exception:
+        pass
+print("yes" if ok else "no")
+PY
+}
+
+coordinator_ui_mode() {
+    local raw
+    raw=$(printf '%s' "${UI_MODE:-}" | tr '[:upper:]' '[:lower:]')
+    if [ "$raw" = "vite" ] || [ "$raw" = "static" ]; then
+        echo "$raw"
+        return
+    fi
+    if [ "$(coordinator_is_alina_assist)" = "yes" ]; then
+        echo "vite"
+    else
+        echo "static"
+    fi
+}
+
+coordinator_dashboard_url() {
+    if [ "$(coordinator_ui_mode)" = "vite" ]; then
+        echo "http://localhost:${UI_PORT}"
+    else
+        echo "http://127.0.0.1:${PORT}"
+    fi
+}
 
 coordinator_current_author() {
     local alias=""

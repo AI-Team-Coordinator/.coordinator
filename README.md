@@ -123,7 +123,7 @@ Install the Coordinator.
 Playbook: https://github.com/AI-Team-Coordinator/.coordinator/blob/main/docs/INSTALL.md
 ```
 
-The agent will explain how it works, inspect your project and existing Cursor rules, propose the cleanest layout, verify required tools, and set up the local dashboard: [http://localhost:5175](http://localhost:5175).
+The agent will explain how it works, inspect your project and existing Cursor rules, propose the cleanest layout, verify required tools, pick a free localhost port, and set up the local dashboard on that port (default [http://127.0.0.1:4321](http://127.0.0.1:4321)).
 
 `docs/INSTALL.md` is the **agent playbook** (not a human terminal checklist). People paste the prompt above; the agent follows that file.
 
@@ -134,15 +134,16 @@ The agent will explain how it works, inspect your project and existing Cursor ru
 For developers working directly on the Coordinator codebase:
 
 ### Architecture
-- **Backend:** Go daemon (`127.0.0.1:4321`) managing JSONL event bus, SQLite cache, and Git synchronization.
-- **Frontend:** React + Vite SPA (`http://localhost:5175`) with real-time Team Pulse and timeline.
+- **Backend:** Go daemon (`127.0.0.1:$PORT`, default `4321`) managing JSONL event bus, SQLite cache, and Git synchronization.
+- **Frontend:** React SPA. **Installs** serve the built UI from the same `$PORT`. **Alina Assist** development uses Vite HMR on `$UI_PORT` (default `5175`).
 - **IDE Layer:** Cursor lifecycle hooks (`beforeFileEdit`, `sessionStart`, `afterAgentResponse`) and rule engines.
 
 ### Running Locally
 ```bash
 cp .env.example .env   # configure workspace paths
-./utils/run.sh         # starts API (port 4321) + Vite HMR (port 5175)
-# after Go edits:
+# Alina Assist: UI_MODE=vite (Vite on UI_PORT). Installs: UI_MODE=static (board on PORT).
+./utils/run.sh
+# after Go edits (and after UI edits in static mode):
 ./utils/backend.sh restart
 ```
 
@@ -155,4 +156,6 @@ cp .env.example .env   # configure workspace paths
 | `DOCS_DIR` | Task specifications and documentation registry | `../docs` |
 | `BUS_DIR` | Git coordination bus repository | `..` |
 | `CURSOR_DIR` | Cursor IDE rules and hooks | `../.cursor` |
-| `PORT` | Local API port (default: `4321`) | `4321` |
+| `PORT` | Local API port; in static mode this is also the board | `4321` |
+| `UI_PORT` | Vite port when `UI_MODE=vite` | `5175` |
+| `UI_MODE` | `static` (install default) or `vite` (Alina Assist) | `static` |

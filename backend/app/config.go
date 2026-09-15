@@ -1,8 +1,10 @@
 package app
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Config struct {
@@ -14,6 +16,8 @@ type Config struct {
 	BusDir      string
 	CursorDir   string
 	FrontendDir string
+	// UIMode is "vite" (Alina Assist HMR) or "static" (built dist on PORT).
+	UIMode string
 }
 
 func DefaultConfig() *Config {
@@ -43,6 +47,13 @@ func (c *Config) ResolvePaths(cwd string) {
 	c.DocsDir = resolvePath(c.AppRoot, c.DocsDir, filepath.Join(c.BusDir, "docs"))
 	c.CursorDir = resolvePath(c.AppRoot, c.CursorDir, filepath.Join("..", ".cursor"))
 
+	c.UIMode = detectUIMode(c.DataDir)
+	if c.UIMode == "vite" {
+		// API only — Vite on UI_PORT is the board. Do not serve a stale dist.
+		c.FrontendDir = ""
+		return
+	}
+
 	if c.FrontendDir != "" {
 		c.FrontendDir = resolvePath(c.AppRoot, c.FrontendDir, "")
 		if _, err := os.Stat(filepath.Join(c.FrontendDir, "dist", "index.html")); err == nil {
@@ -54,6 +65,37 @@ func (c *Config) ResolvePaths(cwd string) {
 		filepath.Join(c.AppRoot, "frontend", "dist"),
 		filepath.Join(c.AppRoot, "frontend"),
 	})
+}
+
+func detectUIMode(dataDir string) string {
+	raw := strings.ToLower(strings.TrimSpace(os.Getenv("UI_MODE")))
+	if raw == "vite" || raw == "static" {
+		return raw
+	}
+	if isAlinaAssistProfile(dataDir) {
+		return "vite"
+	}
+	return "static"
+}
+
+func isAlinaAssistProfile(dataDir string) bool {
+	path := filepath.Join(dataDir, "settings", "project_profile.json")
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	var file struct {
+		Project struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"project"`
+	}
+	if json.Unmarshal(body, &file) != nil {
+		return false
+	}
+	id := strings.ToLower(strings.TrimSpace(file.Project.ID))
+	name := strings.ToLower(strings.TrimSpace(file.Project.Name))
+	return id == "alina-assist" || name == "alina assist"
 }
 
 func firstNonEmpty(values ...string) string {

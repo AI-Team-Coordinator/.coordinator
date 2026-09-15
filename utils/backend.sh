@@ -1,6 +1,7 @@
 #!/bin/bash
-# Go API on :4321, detached from the Cursor chat (new session / nohup).
-# Does not touch Vite :5175.
+# Go API on $PORT (default 4321), detached from the Cursor chat.
+# In static mode (installs): builds frontend/dist and serves it on $PORT.
+# In vite mode (Alina Assist): API only — Vite is ./utils/frontend.sh.
 # Usage: ./utils/backend.sh {start|stop|restart|status}
 
 set -e
@@ -18,6 +19,18 @@ CACHE="$DIR/.cache"
 PIDFILE="$CACHE/backend.pid"
 LOG="$CACHE/backend.log"
 DAEMONIZE="$DIR/utils/daemonize.py"
+
+ensure_static_ui() {
+    if [ "$(coordinator_ui_mode)" != "static" ]; then
+        return 0
+    fi
+    if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
+        echo "📦 Installing frontend dependencies..."
+        (cd "$FRONTEND_DIR" && npm install)
+    fi
+    echo "📦 Building static UI for http://127.0.0.1:${PORT} ..."
+    (cd "$FRONTEND_DIR" && npm run build)
+}
 
 healthy() {
     local code
@@ -70,6 +83,7 @@ cmd_start() {
         echo "🌐 API already on http://127.0.0.1:$PORT"
         return 0
     fi
+    ensure_static_ui
     echo "📦 Compiling Go API server..."
     (cd "$BACKEND_DIR" && go build -o coordinator-server .)
     mkdir -p "$CACHE"

@@ -6,6 +6,7 @@ import { cn } from '../../shared/lib/utils'
 import { Button } from '../../shared/ui/Button'
 import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher'
 import { ThemeToggle } from '../../shared/ui/ThemeToggle'
+import { aliasFromName, sanitizeAlias } from '../../shared/lib/aliasFromName'
 import type { CollaborationMode, SetupState } from '../../shared/types/api'
 import { Typewriter } from './Typewriter'
 
@@ -20,7 +21,8 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
   const { t, i18n } = useTranslation()
   const [projectName, setProjectName] = useState(initial.project_name || '')
   const [name, setName] = useState(initial.name || '')
-  const [alias, setAlias] = useState((initial.alias || '').toUpperCase())
+  const [alias, setAlias] = useState((initial.alias || aliasFromName(initial.name || '')).toUpperCase())
+  const [aliasTouched, setAliasTouched] = useState(Boolean(initial.alias))
   const [docsDir, setDocsDir] = useState(initial.docs_dir || 'docs')
   const [dataDir, setDataDir] = useState(initial.data_dir || 'coordinator-data')
   const [collaboration, setCollaboration] = useState<CollaborationMode>(
@@ -151,7 +153,13 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
               </span>
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value
+                  setName(next)
+                  if (!aliasTouched) {
+                    setAlias(aliasFromName(next))
+                  }
+                }}
                 required
                 className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2.5 text-sm"
               />
@@ -162,14 +170,16 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
               </span>
               <input
                 value={alias}
-                onChange={(e) =>
-                  setAlias(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4))
-                }
+                onChange={(e) => {
+                  setAliasTouched(true)
+                  setAlias(sanitizeAlias(e.target.value))
+                }}
                 required
                 minLength={2}
-                placeholder="AK"
+                placeholder="EK"
                 className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2.5 text-sm font-mono"
               />
+              <span className="block text-xs text-slate-500 dark:text-slate-400">{t('setup.aliasHint')}</span>
             </label>
           </div>
 

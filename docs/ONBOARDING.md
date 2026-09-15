@@ -59,7 +59,7 @@ What the Coordinator **does** on this machine:
 - Places a `.coordinator/` folder (dashboard sources, a separate git).
 - Writes rules and hooks into the project’s `.cursor/` — otherwise the agent cannot hear the Coordinator.
 - Cursor hooks: before a file write, at session start/end. They may **block** an edit on the wrong branch. That is intentional.
-- Starts local processes: API `127.0.0.1:4321`, UI `http://localhost:5175`. The product does not leave this machine.
+- Starts local processes: API and the board on `127.0.0.1:$PORT` (default `4321`; another free port if that one is taken). The product does not leave this machine. Vite `:5175` is not started on install.
 - Writes settings and status into a folder **inside the product git** (the bus). Commits to that git happen only after consent.
 
 Network:

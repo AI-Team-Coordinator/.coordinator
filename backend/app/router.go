@@ -37,6 +37,10 @@ func (a *App) SetupRoutes() {
 
 func (a *App) mountStatic(mux *http.ServeMux) {
 	if a.config.FrontendDir == "" {
+		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			fmt.Fprintf(w, "<h2>Coordinator API</h2><p>See <a href='/api/v1/health'>/api/v1/health</a>. The board is Vite on UI_PORT (Alina Assist).</p>")
+		})
 		return
 	}
 	indexPath := filepath.Join(a.config.FrontendDir, "index.html")
