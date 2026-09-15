@@ -76,8 +76,8 @@
     "otherShort": "Other +{{pct}}%",
     "shared": "shared meter",
     "sharedHint": "Part of the shared meter — do not add these amounts.",
-    "sharedTask": "This task shares the account quota",
-    "sharedResearch": "This research shares the account quota"
+    "sharedTask": "Another task was active in the same windows — dollars stay unsplit",
+    "sharedResearch": "Research or another task was active in the same windows"
   },
   "tasks": {
     "title": "Tasks",

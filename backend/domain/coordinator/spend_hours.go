@@ -17,6 +17,10 @@ type liveParticipant struct {
 }
 
 func BuildHourlySpend(samples []model.UsageSample, members []model.Member, now time.Time, window time.Duration) []model.HourSpend {
+	return BuildHourlySpendExtra(samples, members, nil, now, window)
+}
+
+func BuildHourlySpendExtra(samples []model.UsageSample, members []model.Member, extra []liveParticipant, now time.Time, window time.Duration) []model.HourSpend {
 	if window <= 0 {
 		window = hourlySpendWindow
 	}
@@ -30,7 +34,7 @@ func BuildHourlySpend(samples []model.UsageSample, members []model.Member, now t
 	sorted := append([]model.UsageSample(nil), samples...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].TS < sorted[j].TS })
 
-	live := collectLiveParticipants(members, now)
+	live := collectLiveParticipants(members, extra, now)
 	var out []model.HourSpend
 	for h := start; !h.After(hourNow); h = h.Add(time.Hour) {
 		hEnd := h.Add(time.Hour)
@@ -75,10 +79,7 @@ func BuildHourlySpend(samples []model.UsageSample, members []model.Member, now t
 		}
 		hour.Participants = hourParticipants(inHour, live, h, hEnd)
 		hour.Aliases = spendAliases(hour.Alias, hour.Participants)
-		shared := len(hour.Participants) > 1
-		for i := range hour.Participants {
-			hour.Participants[i].Shared = shared
-		}
+		markHourSharing(hour.Participants, live, h, hEnd)
 		out = append(out, hour)
 	}
 	return out
@@ -194,7 +195,7 @@ func BuildDailySpend(hours []model.HourSpend, now time.Time, days int) []model.H
 	return out
 }
 
-func collectLiveParticipants(members []model.Member, now time.Time) []liveParticipant {
+func collectLiveParticipants(members []model.Member, extra []liveParticipant, now time.Time) []liveParticipant {
 	var live []liveParticipant
 	for _, m := range members {
 		for _, slot := range m.Slots() {
@@ -210,7 +211,7 @@ func collectLiveParticipants(members []model.Member, now time.Time) []livePartic
 				id:      slot.TaskID,
 				title:   title,
 				alias:   m.Alias,
-				windows: model.SlotWindows(slot.ActivityWindows, slot.StartedAt, slot.LastActivityAt, slot.UpdatedAt, now),
+				windows: model.SpendWindows(slot.ActivityWindows, slot.StartedAt, slot.LastActivityAt, slot.UpdatedAt, now),
 			})
 		}
 		if m.Research == nil || m.Research.Status != "active" {
@@ -225,10 +226,57 @@ func collectLiveParticipants(members []model.Member, now time.Time) []livePartic
 			id:      id,
 			title:   m.Research.Summary,
 			alias:   m.Alias,
-			windows: model.ResearchWindows(m.Research.ActivityWindows, now),
+			windows: model.ResearchSpendWindows(m.Research.ActivityWindows),
 		})
 	}
+	live = append(live, extra...)
 	return live
+}
+
+func participantKey(kind, id, alias string) string {
+	if id != "" {
+		return kind + "\x00" + id
+	}
+	return kind + "\x00" + alias
+}
+
+func markHourSharing(parts []model.HourParticipant, live []liveParticipant, hourStart, hourEnd time.Time) {
+	wins := make(map[string][]model.ActivityWindow, len(live))
+	for _, lp := range live {
+		wins[participantKey(lp.kind, lp.id, lp.alias)] = model.ClipWindows(lp.windows, hourStart, hourEnd)
+	}
+	sharedIDs := map[string]struct{}{}
+	for i := 0; i < len(parts); i++ {
+		ki := participantKey(parts[i].Kind, parts[i].ID, parts[i].Alias)
+		for j := i + 1; j < len(parts); j++ {
+			kj := participantKey(parts[j].Kind, parts[j].ID, parts[j].Alias)
+			if !model.WindowsOverlap(wins[ki], wins[kj]) {
+				continue
+			}
+			sharedIDs[ki] = struct{}{}
+			sharedIDs[kj] = struct{}{}
+		}
+	}
+	for i := range parts {
+		_, ok := sharedIDs[participantKey(parts[i].Kind, parts[i].ID, parts[i].Alias)]
+		parts[i].Shared = ok
+	}
+}
+
+func completedSpendParticipants(events []model.Event) []liveParticipant {
+	var extra []liveParticipant
+	for _, ev := range events {
+		if ev.Event != "task_completed" || ev.TaskID == "" || len(ev.ActivityWindows) == 0 {
+			continue
+		}
+		extra = append(extra, liveParticipant{
+			kind:    "task",
+			id:      ev.TaskID,
+			alias:   ev.Alias,
+			windows: ev.ActivityWindows,
+		})
+	}
+	return extra
 }
 
 func hourParticipants(inHour []model.UsageSample, live []liveParticipant, hourStart, hourEnd time.Time) []model.HourParticipant {
@@ -302,18 +350,86 @@ func windowsHitHour(windows []model.ActivityWindow, hourStart, hourEnd time.Time
 	return false
 }
 
-func applyCompletedSpendSharing(tasks []model.Task, hours []model.HourSpend) {
+func applyCompletedSpendSharing(tasks []model.Task, hours []model.HourSpend, samples []model.UsageSample) {
+	now := time.Now()
+	wins := make([][]model.ActivityWindow, len(tasks))
+	for i := range tasks {
+		started := unixTime(tasks[i].StartedAt)
+		last := unixTime(tasks[i].CompletedAt)
+		if last.IsZero() {
+			last = started
+		}
+		wins[i] = model.SpendWindows(tasks[i].ActivityWindows, started, last, last, now)
+	}
 	for i := range tasks {
 		if tasks[i].Status != "completed" {
 			continue
 		}
-		if !completedExclusive(tasks[i].TaskID, hours) {
+		shared := completedWindowsShared(i, wins)
+		if !shared && len(wins[i]) == 0 && !completedExclusive(tasks[i].TaskID, hours) {
+			shared = true
+		}
+		if shared {
 			tasks[i].SpendShared = true
 			tasks[i].BudgetUSD = nil
 			tasks[i].CostUSD = nil
 			tasks[i].OnDemandUSD = nil
+			continue
+		}
+		if len(wins[i]) == 0 {
+			continue
+		}
+		delta := model.SumUsageInWindows(samples, wins[i])
+		if delta == nil {
+			tasks[i].BudgetUSD = nil
+			tasks[i].CostUSD = nil
+			tasks[i].OnDemandUSD = nil
+			continue
+		}
+		applyCompletedDelta(&tasks[i], delta)
+	}
+}
+
+func completedWindowsShared(i int, wins [][]model.ActivityWindow) bool {
+	if len(wins[i]) == 0 {
+		return false
+	}
+	for j := range wins {
+		if i == j || len(wins[j]) == 0 {
+			continue
+		}
+		if model.WindowsOverlap(wins[i], wins[j]) {
+			return true
 		}
 	}
+	return false
+}
+
+func unixTime(ts int64) time.Time {
+	if ts <= 0 {
+		return time.Time{}
+	}
+	return time.Unix(ts, 0)
+}
+
+func applyCompletedDelta(task *model.Task, delta *model.UsageDelta) {
+	if task == nil || delta == nil {
+		return
+	}
+	c := delta.CostUSD
+	o := delta.OnDemandUSD
+	cp := delta.CursorModelsPct
+	op := delta.OtherModelsPct
+	task.CostUSD = &c
+	task.OnDemandUSD = &o
+	task.CursorModelsPct = &cp
+	task.OtherModelsPct = &op
+	if delta.HasPlanPrice() {
+		b := delta.BudgetUSD
+		task.BudgetUSD = &b
+		return
+	}
+	task.BudgetUSD = nil
 }
 
 func completedExclusive(taskID string, hours []model.HourSpend) bool {
@@ -323,9 +439,11 @@ func completedExclusive(taskID string, hours []model.HourSpend) bool {
 	seen := false
 	for _, hour := range hours {
 		hasMe := false
+		shared := false
 		for _, p := range hour.Participants {
 			if p.Kind == "task" && p.ID == taskID {
 				hasMe = true
+				shared = p.Shared
 				break
 			}
 		}
@@ -333,7 +451,7 @@ func completedExclusive(taskID string, hours []model.HourSpend) bool {
 			continue
 		}
 		seen = true
-		if len(hour.Participants) > 1 {
+		if shared {
 			return false
 		}
 	}

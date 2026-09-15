@@ -73,3 +73,27 @@ func TestApplyLiveSpendSharingNilsDollars(t *testing.T) {
 		t.Fatalf("slot B %+v", members[0].Tasks[1])
 	}
 }
+
+func TestLiveSlotSharedSequentialWindowsStaySolo(t *testing.T) {
+	now := time.Date(2026, 9, 14, 12, 0, 0, 0, time.UTC)
+	slotA := model.MemberTask{
+		TaskID: "TASK-A",
+		ActivityWindows: []model.ActivityWindow{{
+			StartedAt: now.Add(-40 * time.Minute),
+			EndedAt:   now.Add(-25 * time.Minute),
+		}},
+	}
+	slotB := model.MemberTask{
+		TaskID: "TASK-B",
+		ActivityWindows: []model.ActivityWindow{{
+			StartedAt: now.Add(-10 * time.Minute),
+			EndedAt:   now.Add(-2 * time.Minute),
+		}},
+	}
+	if liveSlotShared(slotA, []model.MemberTask{slotA, slotB}, nil, now) {
+		t.Fatal("sequential activity windows must not share")
+	}
+	if liveSlotShared(slotB, []model.MemberTask{slotA, slotB}, nil, now) {
+		t.Fatal("sequential activity windows must not share")
+	}
+}

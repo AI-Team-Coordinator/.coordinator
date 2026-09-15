@@ -21,7 +21,7 @@ func TestStoreRebuildsFromJSONL(t *testing.T) {
 	year := time.Now().Year()
 	payload := `{"timestamp": 100, "event": "task_started", "task_id": "T1", "branch": "feat/x"}
 {"timestamp": 200, "event": "deploy_finished", "task_id": "T1", "service": "Core", "status": "finished", "alias": "EK"}
-{"timestamp": 300, "event": "task_completed", "task_id": "T1", "alias": "EK", "cost_usd": 1.5, "budget_usd": 4.5, "cursor_models_pct": 0.4, "usage_plan": "ultra", "spend_kind": "infra"}
+{"timestamp": 300, "event": "task_completed", "task_id": "T1", "alias": "EK", "cost_usd": 1.5, "budget_usd": 4.5, "cursor_models_pct": 0.4, "usage_plan": "ultra", "spend_kind": "infra", "activity_windows": [{"started_at": "2026-09-14T10:00:00Z", "ended_at": "2026-09-14T10:20:00Z"}]}
 `
 	if err := os.WriteFile(filepath.Join(yearDir, itoa(year)+".jsonl"), []byte(payload), 0o644); err != nil {
 		t.Fatal(err)
@@ -53,6 +53,9 @@ func TestStoreRebuildsFromJSONL(t *testing.T) {
 	}
 	if items[0].SpendKind != "infra" {
 		t.Fatalf("spend_kind: %q", items[0].SpendKind)
+	}
+	if len(items[0].ActivityWindows) != 1 {
+		t.Fatalf("activity_windows: %+v", items[0].ActivityWindows)
 	}
 	if items[1].Timestamp != 200 || items[1].Service != "Core" {
 		t.Fatalf("deploy: %+v", items[1])

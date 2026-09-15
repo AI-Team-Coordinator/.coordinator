@@ -86,7 +86,8 @@ func TestCompletedExclusiveNeedsSoloHours(t *testing.T) {
 	if !completedExclusive("A", hours) {
 		t.Fatal("solo hour should be exclusive")
 	}
-	hours[0].Participants = append(hours[0].Participants, model.HourParticipant{Kind: "research", ID: "r"})
+	hours[0].Participants = append(hours[0].Participants, model.HourParticipant{Kind: "research", ID: "r", Shared: true})
+	hours[0].Participants[0].Shared = true
 	if completedExclusive("A", hours) {
 		t.Fatal("shared hour should not be exclusive")
 	}
@@ -100,7 +101,7 @@ func TestApplyCompletedSpendSharingHidesDollars(t *testing.T) {
 		{TaskID: "A", Status: "completed", BudgetUSD: f64(4), CostUSD: f64(1), CursorModelsPct: f64(2)},
 		{TaskID: "B", Status: "in_progress", BudgetUSD: f64(3)},
 	}
-	applyCompletedSpendSharing(tasks, nil)
+	applyCompletedSpendSharing(tasks, nil, nil)
 	if !tasks[0].SpendShared || tasks[0].BudgetUSD != nil || tasks[0].CostUSD != nil {
 		t.Fatalf("completed without meter should be shared: %+v", tasks[0])
 	}
@@ -143,5 +144,92 @@ func TestBuildDailySpendSumsHoursAndPadsDays(t *testing.T) {
 	}
 	if days[0].CursorModelsPct != 0 || days[1].CursorModelsPct != 0 {
 		t.Fatalf("empty pad days should be zero")
+	}
+}
+
+func TestBuildHourlySpendSequentialSameHourNotShared(t *testing.T) {
+	loc := time.FixedZone("test", 0)
+	hour := time.Date(2026, 9, 14, 11, 0, 0, 0, loc)
+	now := hour.Add(50 * time.Minute)
+	samples := []model.UsageSample{
+		{TS: hour.Add(-1 * time.Minute).Unix(), CursorModelsPct: 1, OtherModelsPct: 1},
+		{TS: hour.Add(10 * time.Minute).Unix(), CursorModelsPct: 3, OtherModelsPct: 1},
+	}
+	members := []model.Member{{
+		Alias: "EK",
+		Tasks: []model.MemberTask{
+			{
+				TaskID: "TASK-A",
+				Title:  "A",
+				ActivityWindows: []model.ActivityWindow{{
+					StartedAt: hour.Add(5 * time.Minute),
+					EndedAt:   hour.Add(15 * time.Minute),
+				}},
+			},
+			{
+				TaskID: "TASK-B",
+				Title:  "B",
+				ActivityWindows: []model.ActivityWindow{{
+					StartedAt: hour.Add(35 * time.Minute),
+					EndedAt:   hour.Add(45 * time.Minute),
+				}},
+			},
+		},
+	}}
+	hours := BuildHourlySpend(samples, members, now, 2*time.Hour)
+	if len(hours) != 1 {
+		t.Fatalf("hours=%d", len(hours))
+	}
+	if len(hours[0].Participants) != 2 {
+		t.Fatalf("participants=%+v", hours[0].Participants)
+	}
+	for _, p := range hours[0].Participants {
+		if p.Shared {
+			t.Fatalf("sequential windows in one hour must not be shared: %+v", p)
+		}
+	}
+}
+
+func TestApplyCompletedSpendSharingSoloWindowsKeepMeter(t *testing.T) {
+	loc := time.FixedZone("test", 0)
+	start := time.Date(2026, 9, 14, 10, 0, 0, 0, loc)
+	price := 60.0
+	tasks := []model.Task{
+		{
+			TaskID:    "A",
+			Status:    "completed",
+			StartedAt: start.Unix(),
+			CompletedAt: start.Add(2 * time.Hour).Unix(),
+			BudgetUSD: f64(9),
+			CostUSD:   f64(1),
+			ActivityWindows: []model.ActivityWindow{{
+				StartedAt: start.Add(10 * time.Minute),
+				EndedAt:   start.Add(30 * time.Minute),
+			}},
+		},
+		{
+			TaskID:    "B",
+			Status:    "in_progress",
+			StartedAt: start.Unix(),
+			ActivityWindows: []model.ActivityWindow{{
+				StartedAt: start.Add(90 * time.Minute),
+				EndedAt:   start.Add(100 * time.Minute),
+			}},
+		},
+	}
+	samples := []model.UsageSample{
+		{TS: start.Unix(), CursorModelsPct: 10, OtherModelsPct: 10, PlanPriceUSD: &price, Plan: "pro_plus"},
+		{TS: start.Add(20 * time.Minute).Unix(), CursorModelsPct: 12, OtherModelsPct: 10, PlanPriceUSD: &price, Plan: "pro_plus"},
+		{TS: start.Add(95 * time.Minute).Unix(), CursorModelsPct: 20, OtherModelsPct: 10, PlanPriceUSD: &price, Plan: "pro_plus"},
+	}
+	applyCompletedSpendSharing(tasks, nil, samples)
+	if tasks[0].SpendShared {
+		t.Fatal("sequential windows must stay solo")
+	}
+	if tasks[0].BudgetUSD == nil || *tasks[0].BudgetUSD != 0.6 {
+		t.Fatalf("solo window budget=%v", tasks[0].BudgetUSD)
+	}
+	if tasks[0].CursorModelsPct == nil || *tasks[0].CursorModelsPct != 2 {
+		t.Fatalf("solo window cursor=%v", tasks[0].CursorModelsPct)
 	}
 }

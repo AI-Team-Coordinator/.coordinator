@@ -38,16 +38,16 @@ func (r *FileRepository) attachLiveUsage(members []model.Member) {
 	if end == nil {
 		return
 	}
+	samples := r.LoadUsageSamples()
+	now := time.Now()
 	for i := range members {
 		if members[i].Alias != alias {
 			continue
 		}
 		slots := members[i].Slots()
 		for si := range slots {
-			if slots[si].CursorUsage == nil {
-				continue
-			}
-			delta := model.ComputeUsageDelta(slots[si].CursorUsage, end)
+			wins := model.AttributionWindows(slots[si].ActivityWindows, slots[si].StartedAt, slots[si].LastActivityAt, slots[si].UpdatedAt, now)
+			delta := model.SumUsageInWindows(samples, wins)
 			if delta == nil {
 				continue
 			}
@@ -76,10 +76,8 @@ func (r *FileRepository) attachLiveUsage(members []model.Member) {
 				members[i].Research.CursorUsage = &start
 			}
 		}
-		if members[i].Research.CursorUsage == nil {
-			continue
-		}
-		delta := model.ComputeUsageDelta(members[i].Research.CursorUsage, end)
+		wins := model.ExtendTailIfLive(model.ResearchSpendWindows(members[i].Research.ActivityWindows), now)
+		delta := model.SumUsageInWindows(samples, wins)
 		if delta == nil {
 			continue
 		}

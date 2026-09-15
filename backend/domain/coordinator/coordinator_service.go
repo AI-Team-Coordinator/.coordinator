@@ -468,7 +468,7 @@ func (s *Service) GetStats(ctx context.Context) (*dto.StatsEnvelope, error) {
 		p := *snap.PlanPriceUSD
 		stats.PlanPriceUSD = &p
 	}
-	stats.Hours = s.usageHours(members)
+	stats.Hours = s.usageHours(members, events)
 	stats.Days = BuildDailySpend(stats.Hours, time.Now(), dailySpendDays)
 	return &dto.StatsEnvelope{
 		Stats: dto.StatsResponse{
@@ -567,7 +567,7 @@ func (s *Service) GetTasks(ctx context.Context, query dto.TasksQuery) (*dto.Task
 	}
 
 	tasks := computeTasks(events, members, time.Now())
-	applyCompletedSpendSharing(tasks, s.usageHours(members))
+	applyCompletedSpendSharing(tasks, s.usageHours(members, events), s.repo.LoadUsageSamples())
 	filtered := filterTasks(tasks, model.TaskQuery{
 		Status: status,
 		Alias:  strings.TrimSpace(query.Alias),
@@ -830,8 +830,8 @@ func mapStray(items []model.StrayRepo) []dto.StrayRepoResponse {
 	return out
 }
 
-func (s *Service) usageHours(members []model.Member) []model.HourSpend {
-	return BuildHourlySpend(s.repo.LoadUsageSamples(), members, time.Now(), hourlySpendWindow)
+func (s *Service) usageHours(members []model.Member, events []model.Event) []model.HourSpend {
+	return BuildHourlySpendExtra(s.repo.LoadUsageSamples(), members, completedSpendParticipants(events), time.Now(), hourlySpendWindow)
 }
 
 func mapHours(hours []model.HourSpend) []dto.HourSpendResponse {

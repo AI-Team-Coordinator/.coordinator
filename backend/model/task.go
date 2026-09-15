@@ -21,6 +21,7 @@ type Task struct {
 	OtherModelsPct  *float64
 	SpendKind       string
 	SpendShared     bool
+	ActivityWindows []ActivityWindow
 }
 
 // TaskQuery filters the aggregated task list. Limit 0 means no page cap.

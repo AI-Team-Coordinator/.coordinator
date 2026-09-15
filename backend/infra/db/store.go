@@ -3,9 +3,11 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"coordinator/model"
@@ -14,7 +16,7 @@ import (
 )
 
 const (
-	schemaVersion = "6"
+	schemaVersion = "7"
 	hotYearSpan   = 3
 	dbFileName    = "coordinator.sqlite"
 )
@@ -76,7 +78,7 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		return nil, 0, err
 	}
 
-	listQ := "SELECT timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings, active_seconds FROM events" + where + " ORDER BY timestamp DESC"
+	listQ := "SELECT timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings, active_seconds, activity_windows FROM events" + where + " ORDER BY timestamp DESC"
 	if q.Limit > 0 {
 		listQ += " LIMIT ?"
 		args = append(args, q.Limit)
@@ -97,9 +99,10 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		var ev model.Event
 		var cost, budget, ondemand, cursorPct, otherPct, planPrice sql.NullFloat64
 		var active sql.NullInt64
+		var windows string
 		if err := rows.Scan(
 			&ev.Timestamp, &ev.Event, &ev.TaskID, &ev.Branch, &ev.Alias, &ev.Repo, &ev.Service, &ev.Status,
-			&cost, &budget, &ondemand, &cursorPct, &otherPct, &ev.UsagePlan, &planPrice, &ev.SpendKind, &ev.Summary, &ev.Findings, &active,
+			&cost, &budget, &ondemand, &cursorPct, &otherPct, &ev.UsagePlan, &planPrice, &ev.SpendKind, &ev.Summary, &ev.Findings, &active, &windows,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -110,6 +113,7 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		ev.OtherModelsPct = nullFloatPtr(otherPct)
 		ev.PlanPriceUSD = nullFloatPtr(planPrice)
 		ev.ActiveSeconds = nullInt64Ptr(active)
+		ev.ActivityWindows = parseActivityWindowsJSON(windows)
 		items = append(items, ev)
 	}
 	return items, total, rows.Err()
@@ -176,4 +180,27 @@ func nullInt64Ptr(v sql.NullInt64) *int64 {
 	}
 	n := v.Int64
 	return &n
+}
+
+func parseActivityWindowsJSON(raw string) []model.ActivityWindow {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var out []model.ActivityWindow
+	if json.Unmarshal([]byte(raw), &out) != nil || len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func marshalActivityWindows(windows []model.ActivityWindow) string {
+	if len(windows) == 0 {
+		return ""
+	}
+	raw, err := json.Marshal(windows)
+	if err != nil {
+		return ""
+	}
+	return string(raw)
 }

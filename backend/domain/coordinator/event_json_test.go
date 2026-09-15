@@ -59,3 +59,17 @@ func TestEventUnmarshalActiveSeconds(t *testing.T) {
 		t.Fatalf("active_seconds=%v", ev.ActiveSeconds)
 	}
 }
+
+func TestEventUnmarshalActivityWindows(t *testing.T) {
+	raw := `{"timestamp": 1, "event": "task_completed", "task_id": "T1", "activity_windows": [{"started_at": "2026-09-14T10:00:00Z", "ended_at": "2026-09-14T10:20:00Z"}]}`
+	var ev model.Event
+	if err := json.Unmarshal([]byte(raw), &ev); err != nil {
+		t.Fatal(err)
+	}
+	if len(ev.ActivityWindows) != 1 {
+		t.Fatalf("windows=%+v", ev.ActivityWindows)
+	}
+	if ev.ActivityWindows[0].StartedAt.UTC().Hour() != 10 {
+		t.Fatalf("started=%v", ev.ActivityWindows[0].StartedAt)
+	}
+}

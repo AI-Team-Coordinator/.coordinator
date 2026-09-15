@@ -67,11 +67,11 @@ func liveResearchShared(research model.Research, slots []model.MemberTask, now t
 }
 
 func slotWindows(slot model.MemberTask, now time.Time) []model.ActivityWindow {
-	return model.SlotWindows(slot.ActivityWindows, slot.StartedAt, slot.LastActivityAt, slot.UpdatedAt, now)
+	return model.SpendWindows(slot.ActivityWindows, slot.StartedAt, slot.LastActivityAt, slot.UpdatedAt, now)
 }
 
 func researchWindows(research model.Research, now time.Time) []model.ActivityWindow {
-	return model.ResearchWindows(research.ActivityWindows, now)
+	return model.ResearchSpendWindows(research.ActivityWindows)
 }
 
 func markSharedMemberTask(slot *model.MemberTask) {

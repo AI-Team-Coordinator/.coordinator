@@ -334,6 +334,9 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 			t.OtherModelsPct = ev.OtherModelsPct
 			t.SpendKind = ev.SpendKind
 			t.ActiveSeconds = ev.ActiveSeconds
+			if len(ev.ActivityWindows) > 0 {
+				t.ActivityWindows = ev.ActivityWindows
+			}
 			if t.StartedAt == 0 {
 				t.StartedAt = ev.Timestamp
 			}
@@ -357,6 +360,7 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 			}
 			t.SpendKind = slot.SpendKind
 			t.SpendShared = slot.SpendShared
+			t.ActivityWindows = slot.ActivityWindows
 			t.CostUSD = slot.CostUSD
 			t.BudgetUSD = slot.BudgetUSD
 			t.OnDemandUSD = slot.OnDemandUSD
