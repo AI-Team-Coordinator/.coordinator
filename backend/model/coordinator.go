@@ -9,7 +9,7 @@ const (
 
 // CoordinatorFile is settings/coordinator.json: who the Coordinator is
 // and how task snapshots are stored.
-// Name has no editor yet — the file is the only way to change it.
+// Name is set on the first setup screen (default Otto / Отто from chat_language).
 type CoordinatorFile struct {
 	Version       int    `json:"version"`
 	Name          string `json:"name"`

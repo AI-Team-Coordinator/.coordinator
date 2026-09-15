@@ -2,10 +2,8 @@ import { Radio } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ThemeToggle } from '../../shared/ui/ThemeToggle'
 import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher'
-import { Button } from '../../shared/ui/Button'
 import { ProjectBanner } from '../project/ProjectBanner'
 import { CurrentUser } from './CurrentUser'
-import { isAlinaAssistProject } from '../../shared/lib/alinaAssist'
 import type { ProjectProfile } from '../../shared/types/api'
 
 interface HeaderProps {
@@ -17,11 +15,11 @@ interface HeaderProps {
     role?: string
     access?: string
   }
-  onReplaySetup?: () => void
 }
 
-export function Header({ connected, profile, currentUser, onReplaySetup }: HeaderProps) {
+export function Header({ connected, profile, currentUser }: HeaderProps) {
   const { t } = useTranslation()
+  const liveLabel = connected ? t('nav.liveSync') : t('nav.connecting')
 
   return (
     <header className="flex flex-wrap items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-3">
@@ -37,23 +35,18 @@ export function Header({ connected, profile, currentUser, onReplaySetup }: Heade
       </div>
 
       <div className="flex items-center space-x-2 ml-auto">
-        <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
+        <div
+          className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800"
+          title={liveLabel}
+          aria-label={liveLabel}
+        >
           <span
             className={`w-2 h-2 rounded-full ${
               connected ? 'bg-emerald-500 animate-pulse-slow' : 'bg-rose-500'
             }`}
           />
-          <span className="hidden sm:inline">
-            {connected ? t('nav.liveSync') : t('nav.connecting')}
-          </span>
           <Radio className="w-3.5 h-3.5 text-slate-400" />
         </div>
-
-        {onReplaySetup && isAlinaAssistProject(profile) && (
-          <Button type="button" variant="outline" size="sm" onClick={onReplaySetup}>
-            {t('setup.testLaunch')}
-          </Button>
-        )}
         <LanguageSwitcher />
         <ThemeToggle />
       </div>

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"coordinator/domain/coordinator/dto"
 	"coordinator/domain/coordinator/repository"
@@ -168,7 +169,15 @@ func (s *Service) CompleteSetup(ctx context.Context, req dto.CompleteSetupReques
 	}); err != nil {
 		return nil, err
 	}
+	coordName := strings.TrimSpace(req.CoordinatorName)
+	if coordName == "" {
+		coordName = repository.DefaultCoordinatorName(language)
+	}
+	if utf8.RuneCountInString(coordName) > 40 {
+		return nil, &ValidationError{Msg: "coordinator name is too long"}
+	}
 	cfg := files.CoordinatorFile(ctx)
+	cfg.Name = coordName
 	cfg.Collaboration = model.NormalizeCollaboration(req.Collaboration, model.CollaborationSolo)
 	if err := files.SaveCoordinatorFile(ctx, cfg); err != nil {
 		return nil, err

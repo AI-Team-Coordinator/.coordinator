@@ -1,5 +1,8 @@
 # AI Team Coordinator
 
+**Author:** Evgeny Kosivtsov  
+**License:** [PolyForm Shield 1.0.0](./LICENSE) — you may use it in your own projects. You may not sell Coordinator as a ready-made product or offer it as a competing packaged solution.
+
 > **Air Traffic Control for AI-Assisted Software Development**  
 > Zero-Trust, Git-Native team coordination when your codebase grows faster than human attention.
 
@@ -162,4 +165,4 @@ cp .env.example .env   # configure workspace paths
 
 ### Updates
 
-Once a day the `sessionStart` hook compares local `.coordinator` to `origin/main` (commit date on the public repo). Cache: `$DATA_DIR/.cache/last_update_check`. If HEAD is behind, Otto asks in chat whether to update. Do not pull until the human says yes; then `git pull --ff-only` in `.coordinator` and `./utils/backend.sh restart`. Manual: `./utils/update_check.sh [--force] [--notice]`.
+Once a day the `sessionStart` hook compares local `.coordinator` to `origin/main` (commit date on the public repo). Cache: `$DATA_DIR/.cache/last_update_check`. If HEAD is behind, Otto asks in chat whether to update. Do not pull until the human says yes; then from `.coordinator` run `./utils/apply_update.sh` (pull, rebuild API and UI, restart on this project's `PORT` / `UI_PORT` from `.env`). Manual check: `./utils/update_check.sh [--force] [--notice]`.

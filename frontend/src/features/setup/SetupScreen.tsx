@@ -7,6 +7,7 @@ import { Button } from '../../shared/ui/Button'
 import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher'
 import { ThemeToggle } from '../../shared/ui/ThemeToggle'
 import { aliasFromName, sanitizeAlias } from '../../shared/lib/aliasFromName'
+import { defaultCoordinatorName, isStockCoordinatorName } from '../../shared/lib/coordinatorName'
 import type { CollaborationMode, SetupState } from '../../shared/types/api'
 import { Typewriter } from './Typewriter'
 
@@ -28,9 +29,17 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
   const [collaboration, setCollaboration] = useState<CollaborationMode>(
     initial.collaboration === 'team' ? 'team' : 'solo'
   )
+  const [coordinatorName, setCoordinatorName] = useState(
+    () => initial.coordinator_name?.trim() || defaultCoordinatorName(initial.language || i18n.language)
+  )
+  const [coordinatorNameTouched, setCoordinatorNameTouched] = useState(
+    () => !isStockCoordinatorName(initial.coordinator_name)
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const coordinatorName = initial.coordinator_name?.trim() || t('setup.coordinatorFallback')
+  const helloName = isStockCoordinatorName(initial.coordinator_name)
+    ? defaultCoordinatorName(i18n.language)
+    : (initial.coordinator_name || '').trim()
   const inRepo = initial.layout === 'in-repo'
 
   useEffect(() => {
@@ -40,6 +49,12 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
     // Only prefill once — do not fight the language button after that.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!coordinatorNameTouched) {
+      setCoordinatorName(defaultCoordinatorName(i18n.language))
+    }
+  }, [i18n.language, coordinatorNameTouched])
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -56,6 +71,7 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project_name: projectName.trim(),
+          coordinator_name: coordinatorName.trim() || defaultCoordinatorName(language),
           alias: alias.trim().toUpperCase(),
           name: name.trim(),
           role: initial.role || 'founder',
@@ -101,7 +117,7 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
                   className: 'text-2xl font-bold tracking-tight text-slate-900 dark:text-white',
                 },
                 {
-                  text: t('setup.helloLine2', { name: coordinatorName }),
+                  text: t('setup.helloLine2', { name: helloName }),
                   className: 'text-sm text-slate-600 dark:text-slate-300',
                 },
               ]}
@@ -179,9 +195,24 @@ export function SetupScreen({ initial, onDone, onCancel, replay }: SetupScreenPr
                 placeholder="EK"
                 className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2.5 text-sm font-mono"
               />
-              <span className="block text-xs text-slate-500 dark:text-slate-400">{t('setup.aliasHint')}</span>
             </label>
           </div>
+
+          <label className="block space-y-1.5">
+            <span className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {t('setup.coordinatorName')}
+            </span>
+            <input
+              value={coordinatorName}
+              onChange={(e) => {
+                setCoordinatorNameTouched(true)
+                setCoordinatorName(e.target.value)
+              }}
+              required
+              maxLength={40}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2.5 text-sm"
+            />
+          </label>
 
           <label className="block space-y-1.5">
             <span className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">

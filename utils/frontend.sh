@@ -1,7 +1,7 @@
 #!/bin/bash
 # Vite HMR on $UI_PORT (default 5175). Alina Assist only (UI_MODE=vite).
 # Does not restart the Go API.
-# Usage: ./utils/frontend.sh {start|stop|status}
+# Usage: ./utils/frontend.sh {start|stop|restart|status}
 
 set -e
 
@@ -95,12 +95,18 @@ cmd_start() {
     return 1
 }
 
+cmd_restart() {
+    cmd_stop
+    cmd_start
+}
+
 case "${1:-start}" in
     start) cmd_start ;;
     stop) cmd_stop ;;
+    restart) cmd_restart ;;
     status) cmd_status ;;
     *)
-        echo "Usage: $0 {start|stop|status}"
+        echo "Usage: $0 {start|stop|restart|status}"
         exit 1
         ;;
 esac

@@ -3,7 +3,8 @@
 [Read in English (README.md)](../README.md)
 
 Author: **Evgeny KOSIVTSOV** (`EK`)  
-Created: 2026-09-10 12:07
+Created: 2026-09-10 12:07  
+License: [PolyForm Shield 1.0.0](../LICENSE) — можно пользоваться у себя в команде; нельзя продавать Координатор как готовый продукт или подменять им чужое решение.
 
 ---
 

@@ -13,7 +13,7 @@ The Coordinator is a teammate with a name, not a role label. The name lives in:
 |---|---|
 | `name` | How the Coordinator is called in chat, in reports, and on the dashboard. |
 
-Missing file or empty field → **Отто** when `chat_language` is `ru`, **Otto** otherwise (it rhymes with *octopus*). Do not build a settings form for the name unless asked.
+Missing file or empty field → **Отто** when `chat_language` is `ru`, **Otto** otherwise (it rhymes with *octopus*). The first setup screen sets `name` (same defaults, installer can type another). After setup, change it in this file.
 
 ## Speaking as him
 

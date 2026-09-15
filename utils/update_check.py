@@ -163,15 +163,17 @@ def format_notice(data: dict) -> str:
         extra = f", {behind} коммит(ов)" if behind else ""
         return (
             f"Отто: вышло обновление координатора (репа origin/main{when}"
-            f"{extra}, {sha}). Обновить? По «да»: git pull --ff-only в `.coordinator` "
-            "и `./utils/backend.sh restart` (static-установки пересоберут dist)."
+            f"{extra}, {sha}). Обновить? По «да»: из `.coordinator` запусти "
+            "`./utils/apply_update.sh` — pull, пересборка API и UI, рестарт на "
+            "PORT/UI_PORT из `.env` этого проекта."
         )
     when = f" dated {day}" if day else ""
     extra = f", {behind} commit(s)" if behind else ""
     return (
         f"Otto: a Coordinator update is available (origin/main{when}"
-        f"{extra}, {sha}). Update? On yes: git pull --ff-only in `.coordinator` "
-        "and `./utils/backend.sh restart` (static installs rebuild dist)."
+        f"{extra}, {sha}). Update? On yes: from `.coordinator` run "
+        "`./utils/apply_update.sh` — pull, rebuild API and UI, restart on this "
+        "project's PORT/UI_PORT from `.env`."
     )
 
 

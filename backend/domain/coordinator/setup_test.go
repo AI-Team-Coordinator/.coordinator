@@ -125,6 +125,9 @@ func TestCompleteSetupWritesLocalFiles(t *testing.T) {
 	if cfg.Collaboration != model.CollaborationSolo {
 		t.Fatalf("coordinator file %+v", cfg)
 	}
+	if cfg.Name != "Отто" {
+		t.Fatalf("coordinator name=%q", cfg.Name)
+	}
 
 	again, err := svc.CompleteSetup(ctx, dto.CompleteSetupRequest{ProjectName: "Other"})
 	if err != nil {
@@ -200,6 +203,24 @@ func TestCompleteSetupWritesTeamCollaboration(t *testing.T) {
 	}
 	if repo.Collaboration() != model.CollaborationTeam {
 		t.Fatalf("collaboration=%s", repo.Collaboration())
+	}
+}
+
+func TestCompleteSetupWritesCoordinatorName(t *testing.T) {
+	repo := newSetupTestRepo(t)
+	svc := NewService(repo, nil)
+	if _, err := svc.CompleteSetup(context.Background(), dto.CompleteSetupRequest{
+		ProjectName:     "Acme",
+		Alias:           "AK",
+		Name:            "Alex",
+		Language:        "en",
+		CoordinatorName: "Max",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	cfg := repo.CoordinatorFile(context.Background())
+	if cfg.Name != "Max" {
+		t.Fatalf("coordinator name=%q", cfg.Name)
 	}
 }
 

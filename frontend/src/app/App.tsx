@@ -15,6 +15,7 @@ import { parseSection, type SectionId } from '../features/nav/sections'
 import { SetupScreen } from '../features/setup/SetupScreen'
 import { NextStepCard } from '../features/setup/NextStepCard'
 import { CoordinatorLogo } from '../shared/ui/Logo'
+import { isAlinaAssistProject } from '../shared/lib/alinaAssist'
 import type { Conflict, EventItem, MemberState, ProjectProfile, SetupState, Stats, StrayRepo, SyncStatus, TaskItem } from '../shared/types/api'
 import { api } from '../shared/api/client'
 import i18n from '../shared/i18n/config'
@@ -173,6 +174,16 @@ export function App() {
   const onDirtyChange = useCallback((dirty: boolean) => {
     setFormDirty(dirty)
   }, [])
+
+  const replaySetup = useCallback(() => {
+    fetch(api.setup)
+      .then((r) => (r.ok ? r.json() : setupPrefill))
+      .then((data: SetupState) => {
+        setSetupPrefill(data)
+        setSetupReplay(true)
+      })
+      .catch(() => setSetupReplay(true))
+  }, [setupPrefill])
 
   const quietBoard = (profile?.services?.length || 0) === 0 && !profile?.github?.org
 
@@ -363,19 +374,6 @@ export function App() {
             connected={connected}
             profile={profile}
             currentUser={currentUser}
-            onReplaySetup={
-              setupPrefill
-                ? () => {
-                    fetch(api.setup)
-                      .then((r) => (r.ok ? r.json() : setupPrefill))
-                      .then((data: SetupState) => {
-                        setSetupPrefill(data)
-                        setSetupReplay(true)
-                      })
-                      .catch(() => setSetupReplay(true))
-                  }
-                : undefined
-            }
           />
 
           {section === 'overview' && (
@@ -455,6 +453,18 @@ export function App() {
                 onFilterChange={onEventsFilter}
                 onLoadMore={onEventsLoadMore}
               />
+            </div>
+          )}
+
+          {section === 'overview' && isAlinaAssistProject(profile) && setupPrefill && (
+            <div className="pt-10 mt-4 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                onClick={replaySetup}
+              >
+                {t('setup.testLaunch')}
+              </button>
             </div>
           )}
         </div>
