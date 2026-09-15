@@ -159,3 +159,7 @@ cp .env.example .env   # configure workspace paths
 | `PORT` | Local API port; in static mode this is also the board | `4321` |
 | `UI_PORT` | Vite port when `UI_MODE=vite` | `5175` |
 | `UI_MODE` | `static` (install default) or `vite` (Alina Assist) | `static` |
+
+### Updates
+
+Once a day the `sessionStart` hook compares local `.coordinator` to `origin/main` (commit date on the public repo). Cache: `$DATA_DIR/.cache/last_update_check`. If HEAD is behind, Otto asks in chat whether to update. Do not pull until the human says yes; then `git pull --ff-only` in `.coordinator` and `./utils/backend.sh restart`. Manual: `./utils/update_check.sh [--force] [--notice]`.

@@ -25,6 +25,11 @@ try:
 except Exception:
     ping_slot = None
     ping_research = None
+try:
+    from update_check import session_notice
+except Exception:
+    def session_notice() -> str:  # type: ignore[misc]
+        return ""
 
 
 def main() -> None:
@@ -72,6 +77,13 @@ def handle_session_start(payload: dict) -> None:
             "If starting or resuming a task, pass session_id="
             f"{sid} to task_started."
         )
+    try:
+        notice = session_notice()
+    except Exception:
+        notice = ""
+    if notice:
+        prev = str(out.get("additional_context") or "").strip()
+        out["additional_context"] = f"{prev} {notice}".strip()
     print(json.dumps(out, ensure_ascii=False))
     if sid:
         bump_bound_slot(sid, datetime.now(timezone.utc))
