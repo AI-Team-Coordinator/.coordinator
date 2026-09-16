@@ -49,7 +49,9 @@ export function App() {
   const serviceNames = useMemo(() => {
     const map: Record<string, string> = {}
     for (const svc of profile?.services || []) {
-      map[svc.id] = svc.name
+      if (svc.id) map[svc.id] = svc.name
+      if (svc.name) map[svc.name] = svc.name
+      if (svc.repo) map[svc.repo] = svc.name
     }
     return map
   }, [profile])

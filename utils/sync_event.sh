@@ -9,6 +9,8 @@
 # Example: ./sync_event.sh EK research_started summary="How coordinator logs off-task chats"
 # Example: ./sync_event.sh EK research_completed
 # Example: ./sync_event.sh EK coordinator_warning TASK_ID feat/x Core summary="AS has «filter» on Core" findings="peer-scope:as:core"
+# Example: ./sync_event.sh EK handoff TASK_ID feat/x Core to_alias=AS summary="passing billing" session_id=<from>
+# Example: ./sync_event.sh EK decision TASK_ID main summary="advisory claims" findings="rejected file locks"
 
 set -e
 
@@ -18,6 +20,9 @@ DOC_PATH=""
 SUMMARY=""
 SESSION_ID=""
 FINDINGS=""
+TO_ALIAS=""
+TO_AGENT=""
+AGENT_ID=""
 POS=()
 
 if [ -z "$ALIAS" ] || [ -z "$EVENT_TYPE" ]; then
@@ -28,7 +33,7 @@ fi
 shift 2
 for arg in "$@"; do
     case "$arg" in
-        doc=*|summary=*|session_id=*|findings=*)
+        doc=*|summary=*|session_id=*|findings=*|to_alias=*|to_agent=*|agent_id=*)
             key=${arg%%=*}
             val=${arg#*=}
             case "$key" in
@@ -36,6 +41,9 @@ for arg in "$@"; do
                 summary) SUMMARY=$val ;;
                 session_id) SESSION_ID=$val ;;
                 findings) FINDINGS=$val ;;
+                to_alias) TO_ALIAS=$val ;;
+                to_agent) TO_AGENT=$val ;;
+                agent_id) AGENT_ID=$val ;;
             esac
             ;;
         *)
@@ -226,9 +234,9 @@ elif [ "$EVENT_TYPE" = "task_completed" ]; then
     fi
     EVENT_JSON=""
 else
-    EVENT_JSON=$(python3 - "$TIMESTAMP" "$EVENT_TYPE" "$TASK_ID" "$ALIAS" "$BRANCH_NAME" "$SERVICES_CSV" "$SUMMARY" "$FINDINGS" <<'PY'
+    EVENT_JSON=$(python3 - "$TIMESTAMP" "$EVENT_TYPE" "$TASK_ID" "$ALIAS" "$BRANCH_NAME" "$SERVICES_CSV" "$SUMMARY" "$FINDINGS" "${AGENT_ID:-$SESSION_ID}" "$TO_ALIAS" "$TO_AGENT" <<'PY'
 import json, sys
-ts, event, task_id, alias, branch, services, summary, findings = sys.argv[1:]
+ts, event, task_id, alias, branch, services, summary, findings, agent_id, to_alias, to_agent = sys.argv[1:]
 row = {"timestamp": int(ts), "event": event, "alias": alias}
 if task_id:
     row["task_id"] = task_id
@@ -241,6 +249,12 @@ if summary:
     row["summary"] = summary
 if findings:
     row["findings"] = findings
+if agent_id:
+    row["agent_id"] = agent_id
+if to_alias:
+    row["to_alias"] = to_alias
+if to_agent:
+    row["to_agent"] = to_agent
 print(json.dumps(row, ensure_ascii=False))
 PY
 )

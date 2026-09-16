@@ -60,6 +60,17 @@ func TestEventUnmarshalActiveSeconds(t *testing.T) {
 	}
 }
 
+func TestEventUnmarshalHandoff(t *testing.T) {
+	raw := `{"timestamp": 1, "event": "handoff", "task_id": "T1", "alias": "EK", "to_alias": "AS", "agent_id": "sess-1", "to_agent": "sess-2", "service": "Core"}`
+	var ev model.Event
+	if err := json.Unmarshal([]byte(raw), &ev); err != nil {
+		t.Fatal(err)
+	}
+	if ev.ToAlias != "AS" || ev.AgentID != "sess-1" || ev.ToAgent != "sess-2" {
+		t.Fatalf("got %+v", ev)
+	}
+}
+
 func TestEventUnmarshalActivityWindows(t *testing.T) {
 	raw := `{"timestamp": 1, "event": "task_completed", "task_id": "T1", "activity_windows": [{"started_at": "2026-09-14T10:00:00Z", "ended_at": "2026-09-14T10:20:00Z"}]}`
 	var ev model.Event

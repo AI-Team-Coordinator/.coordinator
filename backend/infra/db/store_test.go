@@ -21,6 +21,7 @@ func TestStoreRebuildsFromJSONL(t *testing.T) {
 	year := time.Now().Year()
 	payload := `{"timestamp": 100, "event": "task_started", "task_id": "T1", "branch": "feat/x"}
 {"timestamp": 200, "event": "deploy_finished", "task_id": "T1", "service": "Core", "status": "finished", "alias": "EK"}
+{"timestamp": 250, "event": "handoff", "task_id": "T1", "alias": "EK", "to_alias": "AS", "service": "Core/billing", "summary": "passing billing", "agent_id": "sess-1"}
 {"timestamp": 300, "event": "task_completed", "task_id": "T1", "alias": "EK", "cost_usd": 1.5, "budget_usd": 4.5, "cursor_models_pct": 0.4, "usage_plan": "ultra", "spend_kind": "infra", "activity_windows": [{"started_at": "2026-09-14T10:00:00Z", "ended_at": "2026-09-14T10:20:00Z"}]}
 `
 	if err := os.WriteFile(filepath.Join(yearDir, itoa(year)+".jsonl"), []byte(payload), 0o644); err != nil {
@@ -42,7 +43,7 @@ func TestStoreRebuildsFromJSONL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if total != 4 || len(items) != 4 {
+	if total != 5 || len(items) != 5 {
 		t.Fatalf("total=%d len=%d", total, len(items))
 	}
 	if items[0].Timestamp != 300 || items[0].CostUSD == nil || *items[0].CostUSD != 1.5 {
@@ -57,11 +58,14 @@ func TestStoreRebuildsFromJSONL(t *testing.T) {
 	if len(items[0].ActivityWindows) != 1 {
 		t.Fatalf("activity_windows: %+v", items[0].ActivityWindows)
 	}
-	if items[1].Timestamp != 200 || items[1].Service != "Core" {
-		t.Fatalf("deploy: %+v", items[1])
+	if items[2].Timestamp != 200 || items[2].Service != "Core" {
+		t.Fatalf("deploy: %+v", items[2])
 	}
-	if items[3].Alias != "EK" {
-		t.Fatalf("alias filled from folder: %+v", items[3])
+	if items[1].Event != "handoff" || items[1].ToAlias != "AS" || items[1].AgentID != "sess-1" {
+		t.Fatalf("handoff: %+v", items[1])
+	}
+	if items[4].Alias != "EK" {
+		t.Fatalf("alias filled from folder: %+v", items[4])
 	}
 
 	filtered, n, err := store.List(ctx, model.EventQuery{Alias: "AB", Limit: 10})
@@ -70,6 +74,14 @@ func TestStoreRebuildsFromJSONL(t *testing.T) {
 	}
 	if n != 1 || len(filtered) != 1 || filtered[0].TaskID != "T2" {
 		t.Fatalf("alias filter: n=%d items=%+v", n, filtered)
+	}
+
+	byZone, zoneN, err := store.List(ctx, model.EventQuery{Service: "Core", Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if zoneN != 2 {
+		t.Fatalf("core zone filter n=%d items=%+v", zoneN, byZone)
 	}
 
 	_ = store.Close()
@@ -99,7 +111,7 @@ func TestStoreRebuildsFromJSONL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if total3 != 4 || len(all) != 4 {
+	if total3 != 5 || len(all) != 5 {
 		t.Fatalf("rebuild from jsonl: total=%d", total3)
 	}
 }

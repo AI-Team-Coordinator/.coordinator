@@ -56,8 +56,8 @@ func TestSpendKind(t *testing.T) {
 	if SpendKind([]string{".cursor", "common"}) != "infra" {
 		t.Fatal("both")
 	}
-	if SpendKind([]string{".coordinator"}) != "infra" {
-		t.Fatal("coordinator")
+	if SpendKind([]string{".coordinator/domain"}) != "infra" {
+		t.Fatal("nested coordinator")
 	}
 	if SpendKind([]string{"Core"}) != "product" {
 		t.Fatal("core")

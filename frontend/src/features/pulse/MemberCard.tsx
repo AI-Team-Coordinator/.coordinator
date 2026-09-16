@@ -7,7 +7,7 @@ import { formatDuration } from '../../shared/lib/formatters'
 import { hasUsageSpend, SharedQuotaIcon, UsageSpend } from '../../shared/ui/UsageSpend'
 import { TaskDocLink } from '../docs/TaskDocLink'
 import { ChatTabs } from './ChatTabs'
-import type { MemberState, MemberTaskState } from '../../shared/types/api'
+import type { ChatTab, MemberState, MemberTaskState } from '../../shared/types/api'
 
 interface MemberCardProps {
   member: MemberState
@@ -29,11 +29,11 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
   const roleLabel = member.role ? t(`pulse.roles.${member.role}`, { defaultValue: member.role }) : ''
   const accessLabel = member.access === 'admin' ? t('setup.accessAdmin') : ''
   const claimed = (fromTask ? task?.services : member.services) || []
+  const claimedLabels = claimed.map((id) => ({ id, label: claimBadge(id, serviceNames) }))
   const repos = (fromTask ? task?.repos : member.repos) || []
   const workspaceRepos = repos.filter((repo) => repo.kind === 'workspace')
   const productRepos = repos.filter((repo) => repo.kind !== 'workspace')
   const showInfraHint = productRepos.length === 0 && (workspaceRepos.length > 0 || (isActive && claimed.length > 0))
-  const claimedLabels = claimed.map((id) => serviceNames[id] || id)
   const taskTitle = fromTask
     ? task?.task_title || task?.task_id || ''
     : member.task_title || member.task_id || ''
@@ -112,7 +112,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
 
       {isActive ? (
         <div className="mt-3">
-          <ChatTabs chats={task?.chats} />
+          <ChatTabs chats={taskChats(task)} />
         </div>
       ) : null}
 
@@ -161,8 +161,8 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
             <div className="text-[11px] text-slate-500 dark:text-slate-400">{t('pulse.infraHint')}</div>
           )}
           <div className="flex flex-wrap gap-1">
-            {claimedLabels.map((label) => (
-              <Badge key={label} variant="neutral" className="text-[10px] font-medium">
+            {claimedLabels.map(({ id, label }) => (
+              <Badge key={id} variant="neutral" className="text-[10px] font-medium">
                 {label}
               </Badge>
             ))}
@@ -248,4 +248,23 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
       ) : null}
     </Card>
   )
+}
+
+function taskChats(task?: MemberTaskState): ChatTab[] | undefined {
+  if (task?.chats && task.chats.length > 0) {
+    return task.chats
+  }
+  if (!task?.agents || task.agents.length === 0) {
+    return undefined
+  }
+  return task.agents.map((agent) => ({
+    title: agent.title || agent.id,
+    session_id: agent.id,
+  }))
+}
+
+function claimBadge(raw: string, serviceNames: Record<string, string>): string {
+  const [head, ...rest] = raw.split('/')
+  const name = serviceNames[head] || serviceNames[head.replace(/^\./, '')] || serviceNames[raw] || head
+  return rest.length > 0 ? `${name}/${rest.join('/')}` : name
 }

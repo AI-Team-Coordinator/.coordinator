@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"coordinator/domain/coordination"
 	"coordinator/model"
 )
 
@@ -162,24 +163,17 @@ func matchClaimedServices(services []model.ServiceNode, claimed []string) []mode
 }
 
 func serviceLabelMatches(label string, svc model.ServiceNode) bool {
-	n := normServiceLabel(label)
-	if n == "" {
+	want := coordination.Parse(label)
+	if want.IsZero() {
 		return false
 	}
 	for _, key := range []string{svc.ID, svc.Name, svc.Repo, svc.GitHubRepo} {
-		if normServiceLabel(key) == n {
+		got := coordination.Parse(key)
+		if got.Key == want.Key {
 			return true
 		}
 	}
 	return false
-}
-
-func normServiceLabel(s string) string {
-	s = strings.ToLower(strings.TrimSpace(s))
-	s = strings.TrimPrefix(s, ".")
-	s = strings.ReplaceAll(s, "-", "_")
-	s = strings.ReplaceAll(s, " ", "_")
-	return s
 }
 
 func isWorkspaceService(svc model.ServiceNode) bool {

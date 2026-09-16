@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"coordinator/domain/coordination"
+	"coordinator/domain/identity"
 	"coordinator/model"
 )
 
@@ -765,10 +767,65 @@ func detectConflicts(members []model.Member) []model.Conflict {
 		})
 	}
 
-	conflicts = append(conflicts, selfScopeConflicts(members)...)
-	conflicts = append(conflicts, peerScopeConflicts(members)...)
+	claims := claimsFromMembers(members)
+	conflicts = append(conflicts, overlapsAsConflicts(coordination.SelfOverlaps(claims))...)
+	conflicts = append(conflicts, overlapsAsConflicts(coordination.PeerOverlaps(claims))...)
 
 	return conflicts
+}
+
+func claimsFromMembers(members []model.Member) []coordination.Claim {
+	out := make([]coordination.Claim, 0)
+	for _, m := range members {
+		for _, slot := range m.Slots() {
+			title := strings.TrimSpace(slot.Title)
+			if title == "" {
+				title = strings.TrimSpace(slot.Summary)
+			}
+			if title == "" {
+				title = slot.TaskID
+			}
+			out = append(out, coordination.ParseClaims(m.Alias, slot.TaskID, title, slot.Branch, slot.Services, agentsOfSlot(m.Alias, slot))...)
+		}
+	}
+	return out
+}
+
+func agentsOfSlot(person string, slot model.MemberTask) []identity.Agent {
+	ids := append([]string(nil), slot.SessionIDs...)
+	titles := make(map[string]string, len(slot.Chats))
+	for _, chat := range slot.Chats {
+		id := strings.TrimSpace(chat.SessionID)
+		if id == "" {
+			continue
+		}
+		titles[id] = strings.TrimSpace(chat.Title)
+		found := false
+		for _, existing := range ids {
+			if existing == id {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ids = append(ids, id)
+		}
+	}
+	return identity.WithChatTitles(identity.CursorChats(person, ids), titles)
+}
+
+func overlapsAsConflicts(xs []coordination.Overlap) []model.Conflict {
+	out := make([]model.Conflict, 0, len(xs))
+	for _, x := range xs {
+		out = append(out, model.Conflict{
+			Severity:        x.Severity,
+			Title:           x.Title,
+			Description:     x.Description,
+			AffectedAliases: x.Aliases,
+			Service:         x.Service,
+		})
+	}
+	return out
 }
 
 func taskTopicKey(taskID string) string {
@@ -821,131 +878,3 @@ func aliasesShareExactTask(members []model.Member, aliases []string) bool {
 	return false
 }
 
-func selfScopeConflicts(members []model.Member) []model.Conflict {
-	out := make([]model.Conflict, 0)
-	for _, m := range members {
-		slots := m.Slots()
-		if len(slots) < 2 {
-			continue
-		}
-		for i := 0; i < len(slots); i++ {
-			for j := i + 1; j < len(slots); j++ {
-				if overlap, label := slotScopeOverlap(slots[i].Services, slots[j].Services); overlap {
-					out = append(out, model.Conflict{
-						Severity:        "critical",
-						Title:           "Parallel Slot Overlap",
-						Description:     m.Alias + " has two in-progress tasks claiming " + label,
-						AffectedAliases: []string{m.Alias},
-						Service:         strings.TrimSpace(label),
-					})
-				}
-			}
-		}
-	}
-	return out
-}
-
-type peerClaim struct {
-	alias, taskID, title, branch, service, serviceKey string
-}
-
-func peerScopeConflicts(members []model.Member) []model.Conflict {
-	claims := make([]peerClaim, 0)
-	for _, m := range members {
-		for _, slot := range m.Slots() {
-			title := strings.TrimSpace(slot.Title)
-			if title == "" {
-				title = strings.TrimSpace(slot.Summary)
-			}
-			if title == "" {
-				title = slot.TaskID
-			}
-			for _, raw := range slot.Services {
-				key, kind := scopeKey(raw)
-				if kind != "product" {
-					continue
-				}
-				claims = append(claims, peerClaim{
-					alias:      m.Alias,
-					taskID:     slot.TaskID,
-					title:      title,
-					branch:     slot.Branch,
-					service:    strings.TrimSpace(raw),
-					serviceKey: key,
-				})
-			}
-		}
-	}
-	out := make([]model.Conflict, 0)
-	seen := make(map[string]struct{})
-	for i := 0; i < len(claims); i++ {
-		for j := i + 1; j < len(claims); j++ {
-			a, b := claims[i], claims[j]
-			if a.alias == b.alias || a.serviceKey != b.serviceKey {
-				continue
-			}
-			fp := peerPairKey(a, b)
-			if _, ok := seen[fp]; ok {
-				continue
-			}
-			seen[fp] = struct{}{}
-			aliases := []string{a.alias, b.alias}
-			sort.Strings(aliases)
-			out = append(out, model.Conflict{
-				Severity:        "warning",
-				Title:           "Peer Scope Overlap",
-				Description:     a.alias + " «" + a.title + "» and " + b.alias + " «" + b.title + "» both claim " + a.service,
-				AffectedAliases: aliases,
-				Service:         a.service,
-			})
-		}
-	}
-	return out
-}
-
-func peerPairKey(a, b peerClaim) string {
-	left, right := a, b
-	if a.alias > b.alias || (a.alias == b.alias && a.taskID > b.taskID) {
-		left, right = b, a
-	}
-	return strings.ToLower(left.alias + ":" + left.taskID + "|" + right.alias + ":" + right.taskID + "|" + left.serviceKey)
-}
-
-func slotScopeOverlap(a, b []string) (bool, string) {
-	seen := make(map[string]string)
-	for _, raw := range a {
-		key, kind := scopeKey(raw)
-		if key == "" || kind == "bus" {
-			continue
-		}
-		seen[key] = kind
-	}
-	for _, raw := range b {
-		key, kind := scopeKey(raw)
-		if key == "" || kind == "bus" {
-			continue
-		}
-		if prev, ok := seen[key]; ok && (kind == "product" || prev == "product" || kind == "workspace") {
-			return true, raw
-		}
-	}
-	return false, ""
-}
-
-func scopeKey(raw string) (key, kind string) {
-	n := strings.ToLower(strings.TrimSpace(raw))
-	n = strings.TrimPrefix(n, ".")
-	n = strings.ReplaceAll(n, "-", "_")
-	n = strings.ReplaceAll(n, " ", "_")
-	if n == "" {
-		return "", ""
-	}
-	switch n {
-	case "common":
-		return n, "bus"
-	case "cursor", "coordinator":
-		return n, "workspace"
-	default:
-		return n, "product"
-	}
-}

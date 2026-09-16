@@ -119,6 +119,16 @@ func TestComputeTasksStatusAndFilters(t *testing.T) {
 	}
 }
 
+func TestAgentsOfSlotFromSessionsAndChats(t *testing.T) {
+	got := agentsOfSlot("EK", model.MemberTask{
+		SessionIDs: []string{"sess-1"},
+		Chats:      []model.ChatTab{{SessionID: "sess-1", Title: "Domain model"}, {SessionID: "sess-2", Title: "Extra tab"}},
+	})
+	if len(got) != 2 || got[0].ID != "sess-1" || got[0].Title != "Domain model" || got[1].ID != "sess-2" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
 func TestDetectConflictsParallelSlotOverlap(t *testing.T) {
 	got := detectConflicts([]model.Member{
 		{
@@ -323,6 +333,28 @@ func TestDetectConflictsPeerProductOverlap(t *testing.T) {
 		},
 	})
 	if len(got) != 1 || got[0].Title != "Peer Scope Overlap" || got[0].Severity != "warning" || got[0].Service != "LLM" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestDetectConflictsPeerPrefixPath(t *testing.T) {
+	got := detectConflicts([]model.Member{
+		{
+			Alias:  "EK",
+			Status: "in_progress",
+			Tasks: []model.MemberTask{
+				{TaskID: "T-PAY", Title: "Payments", Services: []string{"billing"}},
+			},
+		},
+		{
+			Alias:  "AS",
+			Status: "in_progress",
+			Tasks: []model.MemberTask{
+				{TaskID: "T-INV", Title: "Invoices", Services: []string{"billing/invoices"}},
+			},
+		},
+	})
+	if len(got) != 1 || got[0].Title != "Peer Scope Overlap" || got[0].Severity != "warning" {
 		t.Fatalf("got %+v", got)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"coordinator/domain/coordination"
 	"coordinator/model"
 )
 
@@ -127,9 +128,9 @@ func gitReportItems(report *model.GitReport) []model.GitReportRepo {
 }
 
 func reportRepoKey(id, repo string) string {
-	k := normServiceLabel(id)
+	k := coordination.Parse(id).Key
 	if k == "" {
-		k = normServiceLabel(repo)
+		k = coordination.Parse(repo).Key
 	}
 	return k
 }

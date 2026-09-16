@@ -62,6 +62,9 @@ func SpendKind(services []string) string {
 func isInfraService(label string) bool {
 	key := strings.ToLower(strings.TrimSpace(label))
 	key = strings.TrimPrefix(key, ".")
+	if i := strings.IndexByte(key, '/'); i >= 0 {
+		key = key[:i]
+	}
 	key = strings.ReplaceAll(key, "-", "_")
 	key = strings.ReplaceAll(key, " ", "_")
 	return key == "common" || key == "cursor" || key == "coordinator"

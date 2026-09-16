@@ -5,12 +5,13 @@ import (
 	"strings"
 	"time"
 
+	"coordinator/domain/timeline"
 	"coordinator/model"
 )
 
 const (
-	eventCoordinatorWarning = "coordinator_warning"
-	eventCoordinatorStop    = "coordinator_stop"
+	eventCoordinatorWarning = timeline.KindWarning
+	eventCoordinatorStop    = timeline.KindStop
 )
 
 func noticeEventName(severity string) string {

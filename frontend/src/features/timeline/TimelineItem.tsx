@@ -17,10 +17,12 @@ export function TimelineItem({ event }: TimelineItemProps) {
   const isResearch = event.event.startsWith('research_')
   const isWarning = event.event === 'coordinator_warning'
   const isStop = event.event === 'coordinator_stop'
+  const isHandoff = event.event === 'handoff'
+  const isDecision = event.event === 'decision'
   const eventLabel = t(`timeline.events.${event.event}`, { defaultValue: event.event })
   const badgeVariant = isStart
     ? 'success'
-    : isDeploy || isWarning
+    : isDeploy || isWarning || isHandoff
       ? 'warning'
       : isStop
         ? 'critical'
@@ -31,11 +33,15 @@ export function TimelineItem({ event }: TimelineItemProps) {
       ? 'bg-rose-500'
       : isDeploy || isWarning
         ? 'bg-amber-500'
-        : isMerged
+        : isHandoff
           ? 'bg-sky-500'
-          : isResearch
+          : isDecision
             ? 'bg-violet-500'
-            : 'bg-indigo-500'
+            : isMerged
+              ? 'bg-sky-500'
+              : isResearch
+                ? 'bg-violet-500'
+                : 'bg-indigo-500'
 
   return (
     <div className="py-3 flex items-center justify-between gap-4 text-xs">
@@ -53,12 +59,20 @@ export function TimelineItem({ event }: TimelineItemProps) {
         {event.service && (
           <span className="text-slate-600 dark:text-slate-300 font-medium">{event.service}</span>
         )}
-        {event.summary && (!event.task_id || isWarning || isStop) && (
+        {event.to_alias && (
+          <span className="text-slate-500 dark:text-slate-400 font-mono">→ @{event.to_alias}</span>
+        )}
+        {event.summary && (!event.task_id || isWarning || isStop || isHandoff || isDecision) && (
           <span className="text-slate-600 dark:text-slate-300 truncate max-w-[18rem]" title={event.summary}>
             {event.summary}
           </span>
         )}
-        {event.findings && !isWarning && !isStop && (
+        {event.findings && isDecision && (
+          <span className="text-slate-500 dark:text-slate-400 truncate max-w-[22rem]" title={event.findings}>
+            {t('timeline.rejected')}: {event.findings}
+          </span>
+        )}
+        {event.findings && !isWarning && !isStop && !isDecision && (
           <span className="text-slate-500 dark:text-slate-400 truncate max-w-[22rem]" title={event.findings}>
             {event.findings}
           </span>

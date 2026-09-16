@@ -234,7 +234,9 @@ INFRA_SERVICE_KEYS = frozenset({"common", "cursor", "coordinator"})
 
 
 def normalize_service_key(label: str) -> str:
-    text = (label or "").strip().lower().replace("-", "_").replace(" ", "_")
+    text = (label or "").strip().lower()
+    text = text.split("/", 1)[0]
+    text = text.replace("-", "_").replace(" ", "_")
     return text.lstrip(".")
 
 

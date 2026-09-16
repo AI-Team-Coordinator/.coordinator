@@ -220,6 +220,7 @@
     "meter": "od {{amount}}",
     "onDemand": "od {{amount}}",
     "infra": "инфра",
+    "rejected": "не",
     "events": {
       "task_started": "Старт",
       "task_completed": "Завершено",
@@ -230,7 +231,9 @@
       "research_started": "Ресёрч",
       "research_completed": "Ресёрч закончен",
       "coordinator_warning": "Предупреждение",
-      "coordinator_stop": "Стоп"
+      "coordinator_stop": "Стоп",
+      "handoff": "Передача",
+      "decision": "Решение"
     }
   },
   "docs": {

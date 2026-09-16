@@ -19,6 +19,9 @@ type EventResponse struct {
 	SpendKind       string   `json:"spend_kind,omitempty"`
 	Summary         string   `json:"summary,omitempty"`
 	Findings        string   `json:"findings,omitempty"`
+	AgentID         string   `json:"agent_id,omitempty"`
+	ToAlias         string   `json:"to_alias,omitempty"`
+	ToAgent         string   `json:"to_agent,omitempty"`
 }
 
 type EventsResponse struct {

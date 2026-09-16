@@ -10,15 +10,18 @@ import (
 	"strings"
 	"sync"
 
+	"coordinator/domain/coordination"
 	"coordinator/model"
 
 	_ "modernc.org/sqlite"
 )
 
 const (
-	schemaVersion = "7"
+	schemaVersion = "8"
 	hotYearSpan   = 3
 	dbFileName    = "coordinator.sqlite"
+	// eventServiceKeySQL mirrors coordination.Parse: strip leading dots, kebab→snake, lowercase.
+	eventServiceKeySQL = "lower(replace(replace(ltrim(trim(service), '.'), '-', '_'), ' ', '_'))"
 )
 
 // Store is a local SQLite cache of coordinator events. jsonl on disk remains
@@ -78,7 +81,7 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		return nil, 0, err
 	}
 
-	listQ := "SELECT timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings, active_seconds, activity_windows FROM events" + where + " ORDER BY timestamp DESC"
+	listQ := "SELECT timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings, agent_id, to_alias, to_agent, active_seconds, activity_windows FROM events" + where + " ORDER BY timestamp DESC"
 	if q.Limit > 0 {
 		listQ += " LIMIT ?"
 		args = append(args, q.Limit)
@@ -102,7 +105,7 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		var windows string
 		if err := rows.Scan(
 			&ev.Timestamp, &ev.Event, &ev.TaskID, &ev.Branch, &ev.Alias, &ev.Repo, &ev.Service, &ev.Status,
-			&cost, &budget, &ondemand, &cursorPct, &otherPct, &ev.UsagePlan, &planPrice, &ev.SpendKind, &ev.Summary, &ev.Findings, &active, &windows,
+			&cost, &budget, &ondemand, &cursorPct, &otherPct, &ev.UsagePlan, &planPrice, &ev.SpendKind, &ev.Summary, &ev.Findings, &ev.AgentID, &ev.ToAlias, &ev.ToAgent, &active, &windows,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -131,8 +134,14 @@ func eventFilters(q model.EventQuery) (string, []any) {
 		args = append(args, q.Event)
 	}
 	if q.Service != "" {
-		clauses = append(clauses, "service = ?")
-		args = append(args, q.Service)
+		key := coordination.Parse(q.Service).Key
+		if key == "" {
+			clauses = append(clauses, "service = ?")
+			args = append(args, q.Service)
+		} else {
+			clauses = append(clauses, "("+eventServiceKeySQL+" = ? OR "+eventServiceKeySQL+" LIKE ?)")
+			args = append(args, key, key+"/%")
+		}
 	}
 	if q.TaskID != "" {
 		clauses = append(clauses, "task_id = ?")

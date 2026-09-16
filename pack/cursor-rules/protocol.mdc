@@ -113,7 +113,7 @@ Offer the same four choices (in `chat_language`):
 When the user asks to start, resume, or switch to a task (e.g., "Start task [ID]", "Work on [DOC_NAME]"):
 
 1. **Identify Author:** Read `<ALIAS>` from `DATA_DIR/.current_author`.
-2. **Read Task Document:** Find the specification in `DOCS_DIR` and extract `Branch: ...` and `Services: ...` from its header.
+2. **Read Task Document:** Find the specification in `DOCS_DIR` and extract `Branch: ...` and `Services: ...` from its header. `Services:` may be a repo (`LLM`) or a zone (`LLM/stt`) — `coordinator/claims.mdc`.
 3. **Unclosed work:** Apply **§1.1** and `coordinator/parallel.mdc`. Do not continue until the user chooses if the new slot is blocked.
 4. **Sync the bus:** If `collaboration` is `team` (`coordinator/collaboration.mdc`), on `main` in `BUS_DIR` run `git pull --rebase origin main`. If `solo`, skip the pull and read `DATA_DIR/progress/` on disk.
 5. **Collisions:** Follow `coordinator/parallel.mdc` against **every** open slot (own `tasks[]` and every other alias). **Stop** if product services overlap or the meaning clashes.

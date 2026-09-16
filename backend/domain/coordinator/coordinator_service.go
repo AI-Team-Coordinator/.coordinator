@@ -11,6 +11,7 @@ import (
 
 	"coordinator/domain/coordinator/dto"
 	"coordinator/domain/coordinator/repository"
+	"coordinator/domain/identity"
 	"coordinator/model"
 )
 
@@ -652,6 +653,9 @@ func (s *Service) GetEvents(ctx context.Context, query dto.EventsQuery) (*dto.Ev
 			SpendKind:       ev.SpendKind,
 			Summary:         ev.Summary,
 			Findings:        ev.Findings,
+			AgentID:         ev.AgentID,
+			ToAlias:         ev.ToAlias,
+			ToAgent:         ev.ToAgent,
 		})
 	}
 
@@ -693,7 +697,7 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 			SpendShared:     m.SpendShared,
 		}
 		if len(m.Tasks) > 0 {
-			item.Tasks = mapMemberTasks(m.Tasks)
+			item.Tasks = mapMemberTasks(m.Alias, m.Tasks)
 			newest := m.Tasks[len(m.Tasks)-1]
 			item.DurationSeconds = newest.DurationSeconds
 			item.ClockPaused = newest.ClockPaused
@@ -730,7 +734,7 @@ func (s *Service) overlayRepoFacts(ctx context.Context, members []model.Member) 
 	}
 }
 
-func mapMemberTasks(tasks []model.MemberTask) []dto.MemberTaskResponse {
+func mapMemberTasks(alias string, tasks []model.MemberTask) []dto.MemberTaskResponse {
 	out := make([]dto.MemberTaskResponse, 0, len(tasks))
 	for _, task := range tasks {
 		services := task.Services
@@ -756,7 +760,22 @@ func mapMemberTasks(tasks []model.MemberTask) []dto.MemberTaskResponse {
 			SpendKind:       task.SpendKind,
 			SpendShared:     task.SpendShared,
 			Chats:           mapChats(task.Chats),
+			Agents:          mapAgents(agentsOfSlot(alias, task)),
 		})
+	}
+	return out
+}
+
+func mapAgents(agents []identity.Agent) []dto.AgentResponse {
+	if len(agents) == 0 {
+		return nil
+	}
+	out := make([]dto.AgentResponse, 0, len(agents))
+	for _, a := range agents {
+		if a.IsZero() {
+			continue
+		}
+		out = append(out, dto.AgentResponse{ID: a.ID, Kind: a.Kind, Title: a.Title})
 	}
 	return out
 }

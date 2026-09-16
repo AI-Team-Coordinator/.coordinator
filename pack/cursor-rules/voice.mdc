@@ -23,6 +23,9 @@ Three people in the chat: the **human**, the **agent** (this Cursor), and the **
 | **Pulse** | The live board: which slots and research are active. |
 | **Hotfix** | Fast task with no doc: `FIX-…`, branch `fix/…`, `summary` required. |
 | **Conflict** | Overlap of scope, meaning, branch, or session. Own working tree: Coordinator **stops**. Teammate on another branch of the same product repo: Coordinator **warns** and logs. |
+| **Claim** | Declared zone for this task (`Services:` / `LLM/stt`). Intent, not a file lock. |
+| **Handoff** | Passing a zone to someone else without closing the task. Event `handoff`. |
+| **Decision** | A fork we chose and what we rejected. Event `decision`. The Activity Log keeps it. |
 
 ## Who does what
 

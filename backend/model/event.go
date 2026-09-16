@@ -14,6 +14,9 @@ type Event struct {
 	Repo            string   `json:"repo,omitempty"`
 	Service         string   `json:"service,omitempty"`
 	Status          string   `json:"status,omitempty"`
+	AgentID         string   `json:"agent_id,omitempty"`
+	ToAlias         string   `json:"to_alias,omitempty"`
+	ToAgent         string   `json:"to_agent,omitempty"`
 	CostUSD         *float64 `json:"cost_usd,omitempty"`
 	BudgetUSD       *float64 `json:"budget_usd,omitempty"`
 	OnDemandUSD     *float64 `json:"ondemand_usd,omitempty"`

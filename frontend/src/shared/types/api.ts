@@ -50,6 +50,13 @@ export interface MemberTaskState {
   spend_kind?: string
   spend_shared?: boolean
   chats?: ChatTab[]
+  agents?: AgentState[]
+}
+
+export interface AgentState {
+  id: string
+  kind: string
+  title?: string
 }
 
 export interface ChatTab {
@@ -227,6 +234,9 @@ export interface EventItem {
   spend_kind?: 'infra' | 'product' | 'research' | string
   summary?: string
   findings?: string
+  agent_id?: string
+  to_alias?: string
+  to_agent?: string
 }
 
 export interface ProjectMeta {

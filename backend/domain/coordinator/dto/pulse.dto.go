@@ -49,6 +49,13 @@ type MemberTaskResponse struct {
 	SpendKind       string             `json:"spend_kind,omitempty"`
 	SpendShared     bool               `json:"spend_shared,omitempty"`
 	Chats           []ChatTabResponse  `json:"chats,omitempty"`
+	Agents          []AgentResponse    `json:"agents,omitempty"`
+}
+
+type AgentResponse struct {
+	ID    string `json:"id"`
+	Kind  string `json:"kind"`
+	Title string `json:"title,omitempty"`
 }
 
 type ChatTabResponse struct {

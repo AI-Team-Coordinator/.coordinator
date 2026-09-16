@@ -220,6 +220,7 @@
     "meter": "od {{amount}}",
     "onDemand": "od {{amount}}",
     "infra": "infra",
+    "rejected": "not",
     "events": {
       "task_started": "Started",
       "task_completed": "Completed",
@@ -230,7 +231,9 @@
       "research_started": "Research",
       "research_completed": "Research done",
       "coordinator_warning": "Warning",
-      "coordinator_stop": "Stop"
+      "coordinator_stop": "Stop",
+      "handoff": "Handoff",
+      "decision": "Decision"
     }
   },
   "docs": {

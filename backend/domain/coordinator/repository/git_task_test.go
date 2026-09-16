@@ -121,6 +121,13 @@ func TestServiceLabelMatchesCursorDot(t *testing.T) {
 	}
 }
 
+func TestServiceLabelMatchesNestedPath(t *testing.T) {
+	core := sampleServices()[0]
+	if !serviceLabelMatches("Core/billing", core) {
+		t.Fatal("nested path should still match the service repo")
+	}
+}
+
 func initProductRepo(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()

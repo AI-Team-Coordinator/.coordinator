@@ -1,0 +1,53 @@
+---
+description: Claims are zones of intent; write handoff and decision into the event log
+alwaysApply: true
+---
+
+# Claims, handoff, decision
+
+A **claim** is a declared zone for this task: “I intend to work here.” Not a git lock. Not a file.
+
+## Services header — zones, not only repos
+
+`Services:` may be a whole repo or a path under it:
+
+```text
+Services: LLM, WebChat
+Services: LLM/stt, WebChat/widget
+```
+
+The first segment is the git repo (same matching as today: `LLM`, `.cursor`, `InboxPanelWeb`). After `/` is the zone inside it. `LLM` and `LLM/stt` overlap. `LLM/stt` and `LLM/tts` do not.
+
+Do not claim individual files. Do not invent a path when the whole service is the work.
+
+Hotfix on one service with no neighbor on that repo: keep the bare service name.
+
+When adding a zone mid-task, update the doc header and this slot’s `services[]` the same way as §2.2 (`coordinator/protocol.mdc`).
+
+## Decision — a fork that will be asked later
+
+When you choose and reject an alternative (architecture, approach, “not X”), write one jsonl line. Not every small call.
+
+```bash
+./.coordinator/utils/sync_event.sh <ALIAS> decision <TASK_ID> <BRANCH> [ServiceOrZone] summary="<what we chose>" findings="<what we rejected>" session_id=<id>
+```
+
+`summary` = the choice. `findings` = the rejected option. One or two sentences. The task doc stays prose; this is the fact for the Activity Log.
+
+Do not log style nits, typo fixes, or “we used the existing helper.”
+
+## Handoff — transfer a zone without closing the task
+
+When another person or chat takes a zone you still hold, and the task stays open, write `handoff`. Closing the task is not a handoff — that drops claims.
+
+```bash
+./.coordinator/utils/sync_event.sh <ALIAS> handoff <TASK_ID> <BRANCH> <ServiceOrZone> to_alias=<WHO> summary="<what you are passing>" session_id=<id>
+```
+
+Optional `to_agent=<session_id>` if you know the receiving tab. Then update this slot’s `services[]` (drop or narrow the zone) and the doc header.
+
+Do not use handoff for “I finished.” Do not use it instead of `coordinator_warning` when a peer merely overlaps.
+
+## Journal
+
+`handoff` and `decision` are first-class timeline events. After writing one, the board at [Coordinator](http://localhost:5175) shows it — do not skip the log because “it is only coordination.”
