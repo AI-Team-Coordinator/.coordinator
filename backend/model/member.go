@@ -28,13 +28,14 @@ type Member struct {
 	OtherModelsPct  *float64
 	SpendKind       string
 	SpendShared     bool
-	Research *Research
-	Tasks    []MemberTask
+	Research        *Research
+	Tasks           []MemberTask
 }
 
-// MemberTask is one in-progress slot on a developer's snapshot.
+// MemberTask is one open slot on a developer's snapshot (in progress or parked).
 type MemberTask struct {
 	TaskID          string
+	Status          string
 	Title           string
 	Doc             string
 	Summary         string
@@ -43,6 +44,7 @@ type MemberTask struct {
 	StartedAt       time.Time
 	UpdatedAt       time.Time
 	LastActivityAt  time.Time
+	ParkedAt        time.Time
 	ActivityWindows []ActivityWindow
 	DurationSeconds int64
 	ClockPaused     bool
@@ -59,6 +61,11 @@ type MemberTask struct {
 	Chats           []ChatTab
 }
 
+// IsParked is a live task whose branch is set aside so another slot can take the repo.
+func (t MemberTask) IsParked() bool {
+	return t.Status == "parked"
+}
+
 // ChatTab is a Cursor Composer chat bound to a task or research.
 type ChatTab struct {
 	Title     string
@@ -70,9 +77,10 @@ func (m Member) Slots() []MemberTask {
 	if len(m.Tasks) > 0 {
 		return m.Tasks
 	}
-	if m.Status == "in_progress" && m.TaskID != "" {
+	if (m.Status == "in_progress" || m.Status == "parked") && m.TaskID != "" {
 		return []MemberTask{{
 			TaskID:          m.TaskID,
+			Status:          m.Status,
 			Title:           m.TaskTitle,
 			Doc:             m.TaskDoc,
 			Summary:         m.TaskSummary,
@@ -92,6 +100,18 @@ func (m Member) Slots() []MemberTask {
 		}}
 	}
 	return nil
+}
+
+// ActiveSlots are in-progress claims. Parked slots stay on Pulse but do not exclusive-claim a repo.
+func (m Member) ActiveSlots() []MemberTask {
+	out := make([]MemberTask, 0)
+	for _, slot := range m.Slots() {
+		if slot.IsParked() {
+			continue
+		}
+		out = append(out, slot)
+	}
+	return out
 }
 
 // Research is an off-task Cursor chat running in parallel with (or without) a task.

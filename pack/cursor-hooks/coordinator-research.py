@@ -229,6 +229,8 @@ def bump_slot_activity(snap: dict, alias: str, sid: str, now: datetime) -> None:
                 continue
             if sid not in slot_session_ids(slot):
                 continue
+            if (slot.get("status") or "in_progress") == "parked":
+                continue
             if ping_slot:
                 ping_slot(slot, now)
             else:

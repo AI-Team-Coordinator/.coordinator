@@ -14,7 +14,7 @@ function memberTasks(member: MemberState): MemberTaskState[] {
   if (member.tasks && member.tasks.length > 0) {
     return member.tasks
   }
-  if (member.status === 'in_progress' && member.task_id) {
+  if ((member.status === 'in_progress' || member.status === 'parked') && member.task_id) {
     return [
       {
         task_id: member.task_id,

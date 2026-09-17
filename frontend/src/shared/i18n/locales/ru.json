@@ -85,9 +85,11 @@
     "empty": "Задач пока нет.",
     "started": "старт",
     "finished": "закрыта",
+    "parkedWhen": "отложена",
     "status": {
       "all": "Все",
       "in_progress": "В работе",
+      "parked": "Отложено",
       "completed": "Завершено"
     },
     "columns": {
@@ -104,11 +106,13 @@
     "title": "Пульс команды",
     "trackedCount": "участников: {{count}}",
     "inProgress": "В РАБОТЕ",
+    "parked": "ОТЛОЖЕНО",
     "research": "РЕСЁРЧ",
     "idle": "СВОБОДЕН",
     "duration": "В работе",
     "clockPaused": "часы стоят",
     "branch": "Активная ветка",
+    "parkedBranch": "Отложенная ветка",
     "task": "Задача",
     "fix": "Фикс",
     "feature": "Фича",
@@ -119,7 +123,7 @@
     "researchNoBranch": "Ресёрч не привязан к ветке — может идти параллельно с задачей.",
     "strayTitle": "Вне задач",
     "strayBadge": "остаток",
-    "straySubtitle": "Ветки feat/fix, которые сейчас ни у кого не числятся как задача in-progress.",
+    "straySubtitle": "Ветки feat/fix, которые сейчас ни у кого не числятся как задача (в работе или отложена).",
     "notDeployed": "не задеплоено",
     "dirty": "есть правки",
     "infra": "Инфраструктура",
@@ -224,6 +228,7 @@
     "events": {
       "task_started": "Старт",
       "task_completed": "Завершено",
+      "task_parked": "Отложено",
       "repo_merged": "Влит в main",
       "deploy_started": "Деплой начат",
       "deploy_finished": "Задеплоено",

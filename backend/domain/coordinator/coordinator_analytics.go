@@ -17,9 +17,8 @@ func computeStats(events []model.Event, members []model.Member) model.Stats {
 func countActiveNow(members []model.Member) int {
 	n := 0
 	for _, m := range members {
-		slots := m.Slots()
-		n += len(slots)
-		if len(slots) == 0 && m.Status == "in_progress" {
+		n += len(m.ActiveSlots())
+		if len(m.Slots()) == 0 && m.Status == "in_progress" {
 			n++
 		}
 		if m.Research != nil && m.Research.Status == "active" {
@@ -297,7 +296,7 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 		if ev.TaskID == "" {
 			continue
 		}
-		if ev.Event != "task_started" && ev.Event != "task_completed" {
+		if ev.Event != "task_started" && ev.Event != "task_completed" && ev.Event != "task_parked" {
 			continue
 		}
 		t := ensure(ev.TaskID)
@@ -325,6 +324,16 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 			}
 			if t.CompletedAt == 0 {
 				t.Status = "in_progress"
+				t.ClockPaused = false
+			}
+		case "task_parked":
+			if t.CompletedAt == 0 || ev.Timestamp >= t.CompletedAt {
+				t.CompletedAt = 0
+				t.Status = "parked"
+				t.ClockPaused = true
+			}
+			if t.StartedAt == 0 {
+				t.StartedAt = ev.Timestamp
 			}
 		case "task_completed":
 			t.CompletedAt = ev.Timestamp
@@ -348,7 +357,11 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 	for _, m := range members {
 		for _, slot := range m.Slots() {
 			t := ensure(slot.TaskID)
-			t.Status = "in_progress"
+			status := slot.Status
+			if status == "" {
+				status = "in_progress"
+			}
+			t.Status = status
 			t.CompletedAt = 0
 			t.Alias = m.Alias
 			if slot.Branch != "" {
@@ -381,7 +394,10 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 			}
 			d, paused := model.ActiveDuration(slot.ActivityWindows, slot.StartedAt, last, now)
 			t.DurationSeconds = d
-			t.ClockPaused = paused
+			t.ClockPaused = paused || slot.IsParked()
+			if slot.IsParked() {
+				t.ClockPaused = true
+			}
 		}
 	}
 
@@ -398,6 +414,11 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 			if t.StartedAt > 0 && end >= t.StartedAt {
 				t.DurationSeconds = end - t.StartedAt
 			}
+		} else if t.Status == "parked" {
+			t.ClockPaused = true
+			if t.ActiveSeconds != nil {
+				t.DurationSeconds = *t.ActiveSeconds
+			}
 		} else if t.Status == "completed" {
 			if t.ActiveSeconds != nil {
 				t.DurationSeconds = *t.ActiveSeconds
@@ -410,11 +431,11 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 
 	sort.Slice(out, func(i, j int) bool {
 		a, b := out[i], out[j]
-		if a.Status != b.Status {
-			return a.Status == "in_progress"
+		if ra, rb := taskStatusRank(a.Status), taskStatusRank(b.Status); ra != rb {
+			return ra < rb
 		}
 		keyA, keyB := a.CompletedAt, b.CompletedAt
-		if a.Status == "in_progress" {
+		if a.Status == "in_progress" || a.Status == "parked" {
 			keyA, keyB = a.StartedAt, b.StartedAt
 		}
 		if keyA != keyB {
@@ -423,6 +444,17 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 		return a.TaskID > b.TaskID
 	})
 	return out
+}
+
+func taskStatusRank(status string) int {
+	switch status {
+	case "in_progress":
+		return 0
+	case "parked":
+		return 1
+	default:
+		return 2
+	}
 }
 
 func filterTasks(tasks []model.Task, q model.TaskQuery) []model.Task {
@@ -733,7 +765,7 @@ func detectConflicts(members []model.Member) []model.Conflict {
 	topicOwners := make(map[string][]string)
 	summaryOwners := make(map[string][]string)
 	for _, m := range members {
-		for _, slot := range m.Slots() {
+		for _, slot := range m.ActiveSlots() {
 			if topic := taskTopicKey(slot.TaskID); topic != "" {
 				topicOwners[topic] = appendUniqueAlias(topicOwners[topic], m.Alias)
 			}
@@ -777,7 +809,7 @@ func detectConflicts(members []model.Member) []model.Conflict {
 func claimsFromMembers(members []model.Member) []coordination.Claim {
 	out := make([]coordination.Claim, 0)
 	for _, m := range members {
-		for _, slot := range m.Slots() {
+		for _, slot := range m.ActiveSlots() {
 			title := strings.TrimSpace(slot.Title)
 			if title == "" {
 				title = strings.TrimSpace(slot.Summary)
@@ -877,4 +909,3 @@ func aliasesShareExactTask(members []model.Member, aliases []string) bool {
 	}
 	return false
 }
-

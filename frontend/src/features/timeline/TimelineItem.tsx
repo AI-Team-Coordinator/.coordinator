@@ -19,10 +19,11 @@ export function TimelineItem({ event }: TimelineItemProps) {
   const isStop = event.event === 'coordinator_stop'
   const isHandoff = event.event === 'handoff'
   const isDecision = event.event === 'decision'
+  const isParked = event.event === 'task_parked'
   const eventLabel = t(`timeline.events.${event.event}`, { defaultValue: event.event })
   const badgeVariant = isStart
     ? 'success'
-    : isDeploy || isWarning || isHandoff
+    : isParked || isDeploy || isWarning || isHandoff
       ? 'warning'
       : isStop
         ? 'critical'
@@ -31,7 +32,7 @@ export function TimelineItem({ event }: TimelineItemProps) {
     ? 'bg-emerald-500'
     : isStop
       ? 'bg-rose-500'
-      : isDeploy || isWarning
+      : isParked || isDeploy || isWarning
         ? 'bg-amber-500'
         : isHandoff
           ? 'bg-sky-500'

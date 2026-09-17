@@ -7,12 +7,12 @@ alwaysApply: true
 
 One chat = one task. One person = **several** `in_progress` slots if the scopes do not fight. Research **never** takes part in this check and does not block `task_started`.
 
-Slot source: `DATA_DIR/progress/.current_task_*` — `tasks[]`. If there is no array, root `task_id` / `branch` / `services` with `status: in_progress` is one slot.
+Slot source: `DATA_DIR/progress/.current_task_*` — `tasks[]`. If there is no array, root `task_id` / `branch` / `services` with `status: in_progress` is one slot. A slot with `"status": "parked"` is still on Pulse but **does not exclusive-claim** a product repo. Parked is **this author’s** snapshot (`.current_task_<ALIAS>`), not a team-wide lock.
 
 Before any `task_started` (including hotfixes and work only in `.coordinator` / `.cursor` / the bus):
 
 1. If `collaboration` is `team` (`coordinator/collaboration.mdc`), `git pull --rebase origin main` in `BUS_DIR`. If `solo`, skip the pull and read disk.
-2. Read **all** `.current_task_*`. Collect open slots: yours and others’.
+2. Read **all** `.current_task_*`. Collect open slots: yours and others’. For **service collision** count only `in_progress`. Parked slots stay visible; they do not refuse a new task on the same product repo. Same `task_id` or the same product branch still stops even if the other slot is parked.
 3. New scope: `Services:` from the document (or the hotfix list) + `summary`/`doc` + branch. A zone `LLM/stt` overlaps `LLM` and another `LLM/…` on the same first segment; it does not overlap `WebChat`.
 4. **Ignore research.** Do not call `research_completed` unless this *is* the tab that is leaving research and becoming a task.
 5. Scope collision:
@@ -28,7 +28,7 @@ Before any `task_started` (including hotfixes and work only in `.coordinator` / 
 8. Clean-main (`coordinator/protocol.mdc` §1.1) only for **new** product repos of this slot. Do not require `main` of a repo another of your slots already holds.
 9. This tab binds to the new `task_id`. The neighboring tab stays on its own. You may edit only **this** slot’s repos, on **its** branch.
 
-`task_started` **appends** a slot to `tasks[]`; it does not wipe the others. `task_completed <TASK_ID>` drops one slot; `idle` only when `tasks` is empty.
+`task_started` **appends** a slot to `tasks[]`; it does not wipe the others. `task_completed <TASK_ID>` drops one slot; `task_parked <TASK_ID>` keeps it with `status: parked` and drops the exclusive claim. `idle` only when `tasks` is empty. Resume a parked slot with `task_started` for the same `task_id`.
 
 If the check fails — do not call `task_started` and do not check out branches “just in case”.
 

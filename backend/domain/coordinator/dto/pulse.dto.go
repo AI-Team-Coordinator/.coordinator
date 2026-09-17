@@ -40,6 +40,7 @@ type MemberTaskResponse struct {
 	StartedAt       time.Time          `json:"started_at,omitempty"`
 	DurationSeconds int64              `json:"duration_seconds,omitempty"`
 	ClockPaused     bool               `json:"clock_paused,omitempty"`
+	Status          string             `json:"status,omitempty"`
 	Repos           []RepoWorkResponse `json:"repos,omitempty"`
 	CostUSD         *float64           `json:"cost_usd,omitempty"`
 	BudgetUSD       *float64           `json:"budget_usd,omitempty"`

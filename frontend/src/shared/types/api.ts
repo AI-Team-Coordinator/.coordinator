@@ -10,7 +10,7 @@ export interface MemberState {
   access?: 'admin' | 'member' | string
   focus?: string[]
   services?: string[]
-  status: 'in_progress' | 'idle'
+  status: 'in_progress' | 'idle' | 'parked'
   task_id?: string
   task_title?: string
   task_doc?: string
@@ -41,6 +41,7 @@ export interface MemberTaskState {
   started_at?: string
   duration_seconds?: number
   clock_paused?: boolean
+  status?: 'in_progress' | 'parked' | string
   repos?: RepoWork[]
   cost_usd?: number
   budget_usd?: number

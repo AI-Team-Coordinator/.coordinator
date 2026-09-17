@@ -26,6 +26,7 @@ type KindFilter = 'all' | 'features' | 'fixes'
 const EVENT_TYPES = [
   'task_started',
   'task_completed',
+  'task_parked',
   'repo_merged',
   'deploy_started',
   'deploy_finished',

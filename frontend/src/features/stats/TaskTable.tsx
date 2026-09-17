@@ -10,7 +10,7 @@ import { TaskDocLink } from '../docs/TaskDocLink'
 import type { MemberState, TaskItem } from '../../shared/types/api'
 
 export interface TasksFilter {
-  status: '' | 'in_progress' | 'completed'
+  status: '' | 'in_progress' | 'parked' | 'completed'
   alias: string
   kind: '' | 'feature' | 'fix'
 }
@@ -27,7 +27,7 @@ interface TaskTableProps {
 const selectClass =
   'px-2 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-200'
 
-const STATUS_MODES = ['all', 'in_progress', 'completed'] as const
+const STATUS_MODES = ['all', 'in_progress', 'parked', 'completed'] as const
 
 export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoadMore }: TaskTableProps) {
   const { t, i18n } = useTranslation()
@@ -138,11 +138,13 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
             ) : (
               tasks.map((task) => {
                 const open = task.status === 'in_progress'
-                const whenTs = open ? task.started_at : task.completed_at || task.started_at
+                const parked = task.status === 'parked'
+                const whenTs = open || parked ? task.started_at : task.completed_at || task.started_at
+                const whenLabel = open ? t('tasks.started') : parked ? t('tasks.parkedWhen') : t('tasks.finished')
                 return (
                   <tr key={`${task.task_id}-${task.status}-${task.started_at}`} className="align-top">
                     <td className="py-3 pr-3 whitespace-nowrap">
-                      <Badge variant={open ? 'success' : 'default'} className="text-[10px] uppercase">
+                      <Badge variant={open ? 'success' : parked ? 'warning' : 'default'} className="text-[10px] uppercase">
                         {t(`tasks.status.${task.status}`)}
                       </Badge>
                       {task.kind === 'fix' && (
@@ -177,7 +179,7 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
                           <div>
                             {formatDate(whenTs, i18n.language)} {formatTime(whenTs)}
                           </div>
-                          {open ? t('tasks.started') : t('tasks.finished')}
+                          {whenLabel}
                         </>
                       ) : (
                         '—'

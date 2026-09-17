@@ -78,6 +78,8 @@ def bind_target(snap: dict[str, Any] | None, session_id: str) -> tuple[str, str,
                 ids.update(str(item or "").strip() for item in raw)
             if sid not in ids:
                 continue
+            if str(slot.get("status") or "").strip() == "parked":
+                continue
             tid = str(slot.get("task_id") or "").strip()
             title = str(slot.get("summary") or slot.get("doc") or tid).strip()
             return tid, "task", title

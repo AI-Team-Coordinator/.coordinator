@@ -155,3 +155,20 @@ func allReposDeployed(member model.Member) bool {
 	}
 	return true
 }
+
+func slotReposDeployed(slot model.MemberTask) bool {
+	if slot.IsParked() || len(slot.Repos) == 0 {
+		return false
+	}
+	product := 0
+	for _, repo := range slot.Repos {
+		if repo.Kind == "workspace" {
+			continue
+		}
+		product++
+		if repo.State != "merged" || !repo.Deployed {
+			return false
+		}
+	}
+	return product > 0
+}

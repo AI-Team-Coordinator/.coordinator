@@ -23,6 +23,14 @@ class BindTargetTests(unittest.TestCase):
     def test_unbound(self):
         self.assertEqual(bind_target({"tasks": []}, "x"), ("", "", ""))
 
+    def test_parked_not_bound(self):
+        snap = {
+            "tasks": [
+                {"task_id": "T1", "status": "parked", "session_ids": ["a"], "summary": "voice"},
+            ]
+        }
+        self.assertEqual(bind_target(snap, "a"), ("", "", ""))
+
 
 if __name__ == "__main__":
     unittest.main()

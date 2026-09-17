@@ -75,6 +75,8 @@ def slots(snap: dict) -> list[dict]:
 
 
 def claims(task: dict, repo: str) -> bool:
+    if (task.get("status") or "in_progress") == "parked":
+        return False
     svcs = task.get("services") or []
     if not svcs:
         return True

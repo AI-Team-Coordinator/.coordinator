@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"coordinator/domain/coordination"
 	"coordinator/model"
 )
 
@@ -310,7 +311,7 @@ func TestComputeTasksWindowsSkipIdle(t *testing.T) {
 	if len(tasks) != 1 {
 		t.Fatalf("len=%d", len(tasks))
 	}
-	if !tasks[0].ClockPaused || tasks[0].DurationSeconds != int64((3 * time.Hour).Seconds()) {
+	if !tasks[0].ClockPaused || tasks[0].DurationSeconds != int64((3*time.Hour).Seconds()) {
 		t.Fatalf("got %+v", tasks[0])
 	}
 }
@@ -407,5 +408,61 @@ func TestPendingNoticesDedupeByFingerprint(t *testing.T) {
 	}}, nil)
 	if len(stop) != 1 || stop[0].Event != "coordinator_stop" {
 		t.Fatalf("stop=%+v", stop)
+	}
+}
+
+func TestComputeTasksParkedFromEventsAndSnapshot(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	tasks := computeTasks([]model.Event{
+		{Event: "task_started", TaskID: "VOICE", Alias: "EK", Branch: "feat/voice", Timestamp: now.Unix() - 3600},
+		{Event: "task_parked", TaskID: "VOICE", Alias: "EK", Branch: "feat/voice", Timestamp: now.Unix() - 120},
+		{Event: "task_started", TaskID: "TRANSLATE", Alias: "EK", Branch: "feat/tr", Timestamp: now.Unix() - 60},
+	}, []model.Member{{
+		Alias: "EK",
+		Tasks: []model.MemberTask{
+			{TaskID: "VOICE", Status: "parked", Branch: "feat/voice", Services: []string{"LLM", "WebChat"}},
+			{TaskID: "TRANSLATE", Status: "in_progress", Branch: "feat/tr", Services: []string{"LLM", "Core"}, StartedAt: now.Add(-time.Minute)},
+		},
+	}}, now)
+	if len(tasks) != 2 {
+		t.Fatalf("tasks=%d", len(tasks))
+	}
+	if tasks[0].TaskID != "TRANSLATE" || tasks[0].Status != "in_progress" {
+		t.Fatalf("first=%+v", tasks[0])
+	}
+	if tasks[1].TaskID != "VOICE" || tasks[1].Status != "parked" || !tasks[1].ClockPaused {
+		t.Fatalf("parked=%+v", tasks[1])
+	}
+	parked := filterTasks(tasks, model.TaskQuery{Status: "parked"})
+	if len(parked) != 1 || parked[0].TaskID != "VOICE" {
+		t.Fatalf("filter parked=%v", parked)
+	}
+}
+
+func TestParkedSlotDoesNotSelfOverlap(t *testing.T) {
+	got := detectConflicts([]model.Member{{
+		Alias: "EK",
+		Tasks: []model.MemberTask{
+			{TaskID: "VOICE", Status: "parked", Title: "Web voice", Branch: "feat/web-voice-mvp", Services: []string{"LLM", "WebChat"}},
+			{TaskID: "TRANSLATE", Status: "in_progress", Title: "Translate", Branch: "feat/inbox-message-translation", Services: []string{"LLM", "Core"}},
+		},
+	}})
+	for _, c := range got {
+		if c.Title == coordination.TitleSelfOverlap {
+			t.Fatalf("parked LLM must not exclusive-claim: %+v", got)
+		}
+	}
+}
+
+func TestCountActiveNowSkipsParked(t *testing.T) {
+	n := countActiveNow([]model.Member{{
+		Alias: "EK",
+		Tasks: []model.MemberTask{
+			{TaskID: "VOICE", Status: "parked"},
+			{TaskID: "TRANSLATE", Status: "in_progress"},
+		},
+	}})
+	if n != 1 {
+		t.Fatalf("active=%d", n)
 	}
 }

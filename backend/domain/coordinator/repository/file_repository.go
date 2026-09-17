@@ -406,7 +406,18 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 			Tasks:       r.parseSnapshotTasks(raw, now),
 		}
 		if len(member.Tasks) > 0 {
-			member.Status = "in_progress"
+			hasActive := false
+			for _, slot := range member.Tasks {
+				if !slot.IsParked() {
+					hasActive = true
+					break
+				}
+			}
+			if hasActive {
+				member.Status = "in_progress"
+			} else {
+				member.Status = "parked"
+			}
 			newest := member.Tasks[len(member.Tasks)-1]
 			if member.TaskID == "" {
 				member.TaskID = newest.TaskID
@@ -529,6 +540,7 @@ type snapshotWindow struct {
 
 type snapshotTask struct {
 	TaskID          string             `json:"task_id"`
+	Status          string             `json:"status"`
 	Branch          string             `json:"branch"`
 	Services        []string           `json:"services"`
 	Doc             string             `json:"doc"`
@@ -536,6 +548,7 @@ type snapshotTask struct {
 	StartedAt       string             `json:"started_at"`
 	UpdatedAt       string             `json:"updated_at"`
 	LastActivityAt  string             `json:"last_activity_at"`
+	ParkedAt        string             `json:"parked_at"`
 	ActivityWindows []snapshotWindow   `json:"activity_windows"`
 	CursorUsage     *model.CursorUsage `json:"cursor_usage"`
 	SessionID       string             `json:"session_id"`
@@ -569,9 +582,10 @@ type snapshotResearch struct {
 
 func (r *FileRepository) parseSnapshotTasks(raw snapshotFile, now time.Time) []model.MemberTask {
 	rows := raw.Tasks
-	if len(rows) == 0 && raw.Status == "in_progress" && raw.TaskID != "" {
+	if len(rows) == 0 && (raw.Status == "in_progress" || raw.Status == "parked") && raw.TaskID != "" {
 		rows = []snapshotTask{{
 			TaskID:      raw.TaskID,
+			Status:      raw.Status,
 			Branch:      raw.Branch,
 			Services:    raw.Services,
 			Doc:         raw.Doc,
@@ -589,10 +603,19 @@ func (r *FileRepository) parseSnapshotTasks(raw snapshotFile, now time.Time) []m
 		started := parseSnapshotTime(row.StartedAt, now)
 		updated := parseSnapshotTime(row.UpdatedAt, started)
 		last := parseSnapshotTime(row.LastActivityAt, updated)
+		parkedAt := parseSnapshotTime(row.ParkedAt, time.Time{})
 		windows := parseActivityWindows(row.ActivityWindows, started)
 		d, paused := model.ActiveDuration(windows, started, last, now)
+		status := strings.TrimSpace(row.Status)
+		if status == "" {
+			status = "in_progress"
+		}
+		if status == "parked" {
+			paused = true
+		}
 		out = append(out, model.MemberTask{
 			TaskID:          row.TaskID,
+			Status:          status,
 			Title:           r.taskTitle(row.TaskID),
 			Doc:             row.Doc,
 			Summary:         row.Summary,
@@ -601,6 +624,7 @@ func (r *FileRepository) parseSnapshotTasks(raw snapshotFile, now time.Time) []m
 			StartedAt:       started,
 			UpdatedAt:       updated,
 			LastActivityAt:  last,
+			ParkedAt:        parkedAt,
 			ActivityWindows: windows,
 			DurationSeconds: d,
 			ClockPaused:     paused,

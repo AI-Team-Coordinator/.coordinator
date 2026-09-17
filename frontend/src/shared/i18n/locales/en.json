@@ -85,9 +85,11 @@
     "empty": "No tasks yet.",
     "started": "started",
     "finished": "closed",
+    "parkedWhen": "parked",
     "status": {
       "all": "All",
       "in_progress": "In progress",
+      "parked": "Parked",
       "completed": "Completed"
     },
     "columns": {
@@ -104,11 +106,13 @@
     "title": "Team Pulse",
     "trackedCount": "{{count}} members tracked",
     "inProgress": "IN PROGRESS",
+    "parked": "PARKED",
     "research": "RESEARCH",
     "idle": "IDLE",
     "duration": "Duration",
     "clockPaused": "clock paused",
     "branch": "Active Branch",
+    "parkedBranch": "Parked branch",
     "task": "Task",
     "fix": "Fix",
     "feature": "Feature",
@@ -119,7 +123,7 @@
     "researchNoBranch": "Research is not tied to a branch — it can run next to a task.",
     "strayTitle": "Outside any task",
     "strayBadge": "leftover",
-    "straySubtitle": "feat/fix branches that nobody currently has as their in-progress task.",
+    "straySubtitle": "feat/fix branches that nobody currently has as an in-progress or parked task.",
     "notDeployed": "not deployed",
     "dirty": "uncommitted",
     "infra": "Infrastructure",
@@ -224,6 +228,7 @@
     "events": {
       "task_started": "Started",
       "task_completed": "Completed",
+      "task_parked": "Parked",
       "repo_merged": "Merged",
       "deploy_started": "Deploy started",
       "deploy_finished": "Deployed",

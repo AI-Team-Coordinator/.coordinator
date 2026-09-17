@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check, Clock, GitBranch } from 'lucide-react'
+import { Copy, Check, Clock, GitBranch, Pause } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
@@ -19,9 +19,10 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
-  const isActive = Boolean(task) || (!task && member.status === 'in_progress')
-  const isBusy = isActive
   const fromTask = Boolean(task)
+  const isParked = fromTask ? task?.status === 'parked' : member.status === 'parked'
+  const isActive = Boolean(task) || (!task && (member.status === 'in_progress' || member.status === 'parked'))
+  const isBusy = isActive
   const taskId = fromTask ? task?.task_id : member.task_id
   const branch = fromTask ? task?.branch : member.branch
   const summary = fromTask ? task?.task_summary : member.task_summary
@@ -57,9 +58,11 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
   return (
     <Card
       className={`p-5 transition-all duration-200 ${
-        isBusy
-          ? 'border-indigo-400/60 dark:border-indigo-500/40 bg-white/90 dark:bg-slate-900/90 shadow-md shadow-indigo-500/5'
-          : 'bg-slate-50/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800/60 opacity-80 hover:opacity-100'
+        isParked
+          ? 'border-amber-400/70 dark:border-amber-500/40 bg-white/80 dark:bg-slate-900/80 shadow-md shadow-amber-500/5 opacity-90'
+          : isBusy
+            ? 'border-indigo-400/60 dark:border-indigo-500/40 bg-white/90 dark:bg-slate-900/90 shadow-md shadow-indigo-500/5'
+            : 'bg-slate-50/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800/60 opacity-80 hover:opacity-100'
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -78,7 +81,12 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
           ) : null}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {isActive ? (
+          {isParked ? (
+            <Badge variant="warning" className="font-bold text-[10px]">
+              <Pause className="w-3 h-3 mr-1" />
+              {t('pulse.parked')}
+            </Badge>
+          ) : isActive ? (
             <Badge variant="success" className="font-bold text-[10px]">
               ● {t('pulse.inProgress')}
             </Badge>
@@ -206,7 +214,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
           <div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
               <GitBranch className="w-3 h-3" />
-              <span>{t('pulse.branch')}:</span>
+              <span>{t(isParked ? 'pulse.parkedBranch' : 'pulse.branch')}:</span>
             </div>
             <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-950 px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-slate-800 group">
               <span className="font-mono text-xs text-indigo-700 dark:text-indigo-300 truncate select-all">

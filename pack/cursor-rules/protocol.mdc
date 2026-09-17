@@ -103,7 +103,7 @@ Offer the same four choices (in `chat_language`):
 
 1. **Finish that one** — commit, merge, push `main`, deploy (or skip); Pulse closes (`after-ship.mdc`); then start the new task.
 2. **Continue that one** — do not start the new task.
-3. **Park it** — commit on its branch, leave the slot `in_progress`; do not delete the branch. Start the new slot only if `coordinator/parallel.mdc` still allows it and every *new* repo is clean `main`.
+3. **Park it** — commit on its branch, then `task_parked <TASK_ID>` (not `task_completed`). The slot stays on Pulse as parked; the exclusive claim is released. Do not delete the branch. Then start the new slot if every *new* repo is clean `main`. **This is the usual path** when the unfinished task is not ready to ship and a new one needs the same product repo — after the human agrees.
 4. **Discard uncommitted work** — only if the human explicitly confirms. Never drop commits unless they ask.
 
 ---
@@ -157,7 +157,7 @@ When the user asks to quickly fix a bug, regression, or apply an urgent hotfix:
 If during work it becomes clear that **another** service must change (not listed in this slot’s `Services:` yet):
 
 1. **Do not edit that repo yet.**
-2. If another **open slot** (yours or a teammate’s) already claims that product repo — stop (`coordinator/parallel.mdc`).
+2. If another **in_progress** slot (yours or a teammate’s) already claims that product repo — stop (`coordinator/parallel.mdc`). A parked slot on that repo does not block.
 3. Run the **§1.1 clean-main gate** on it. If it is on another branch, dirty, or behind origin — stop and ask.
 4. Only if it is ready: from up-to-date `main`, checkout the **same** `<BRANCH_NAME>` as **this** slot.
 5. **Update the task record:**
@@ -175,9 +175,10 @@ Before generating or modifying **product** code (anything the branch hook would 
 1. Perform the **Pre-flight check** so this chat, **this slot**, and the git branch of the repo you are editing still match.
 2. If `collaboration` is `team`, run `git pull --rebase origin main` in `BUS_DIR` so teammate snapshots are current. If `solo`, skip the pull.
 3. Read **all** `DATA_DIR/progress/.current_task_*` files.
-4. For every *other* open slot:
+4. For every *other* **in_progress** slot:
    - If `doc` is set, read that file (path relative to `DOCS_DIR` or the bus root, as stored).
    - Else read `summary`. Also use `task_id`, `branch`, and `services`.
+   Parked slots are not a service clash. Same `task_id` / same product branch still stops.
 5. **Own clash** (your other slot, or same `task_id` / same product branch as anyone) — **stop**.
    > Coordinator found a conflict: [<ALIAS>] has task “…” open (`<TASK_ID>`, branch `<BRANCH>`, services `<…>`). Finish that one, continue it, or park it?
 6. **Peer product repo**, different branches — **warn and continue**. Log `coordinator_warning`.

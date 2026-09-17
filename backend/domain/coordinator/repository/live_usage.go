@@ -46,6 +46,9 @@ func (r *FileRepository) attachLiveUsage(members []model.Member) {
 		}
 		slots := members[i].Slots()
 		for si := range slots {
+			if slots[si].IsParked() {
+				continue
+			}
 			wins := model.AttributionWindows(slots[si].ActivityWindows, slots[si].StartedAt, slots[si].LastActivityAt, slots[si].UpdatedAt, now)
 			delta := model.SumUsageInWindows(samples, wins)
 			if delta == nil {

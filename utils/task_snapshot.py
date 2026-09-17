@@ -39,6 +39,10 @@ def main() -> None:
         _, _, path, events_file, alias, task_id, ts, iso, coord_dir = sys.argv[:9]
         sys.path.insert(0, coord_dir)
         raise SystemExit(complete_once(path, events_file, alias, task_id, ts, iso))
+    if action == "park":
+        _, _, path, events_file, alias, task_id, ts, iso, coord_dir = sys.argv[:9]
+        sys.path.insert(0, coord_dir)
+        raise SystemExit(park_once(path, events_file, alias, task_id, ts, iso))
     raise SystemExit(1)
 
 
@@ -132,14 +136,35 @@ def usage_delta(start, end, coord_dir: str):
         return None
 
 
+def slot_status(slot: dict | None) -> str:
+    raw = str((slot or {}).get("status") or "").strip()
+    if raw == "parked":
+        return "parked"
+    return "in_progress"
+
+
+def is_parked(slot: dict | None) -> bool:
+    return slot_status(slot) == "parked"
+
+
+def pick_root(slots: list[dict]) -> tuple[dict | None, str]:
+    active = [s for s in slots if not is_parked(s)]
+    if active:
+        return active[-1], "in_progress"
+    if slots:
+        return slots[-1], "parked"
+    return None, "idle"
+
+
 def legacy_slot(snap: dict) -> dict | None:
-    if snap.get("status") != "in_progress":
+    if snap.get("status") not in ("in_progress", "parked"):
         return None
     tid = snap.get("task_id")
     if not tid:
         return None
     slot = {
         "task_id": tid,
+        "status": slot_status(snap),
         "branch": snap.get("branch"),
         "services": snap.get("services") or [],
         "updated_at": snap.get("updated_at") or "",
@@ -167,7 +192,7 @@ def slots_from(snap: dict) -> list[dict]:
     return [one] if one else []
 
 
-def mirror_root(snap: dict, slot: dict | None, iso: str) -> None:
+def mirror_root(snap: dict, slot: dict | None, iso: str, root_status: str | None = None) -> None:
     snap["updated_at"] = iso
     if not slot:
         snap["status"] = "idle"
@@ -179,7 +204,7 @@ def mirror_root(snap: dict, slot: dict | None, iso: str) -> None:
         snap.pop("cursor_usage", None)
         snap["tasks"] = []
         return
-    snap["status"] = "in_progress"
+    snap["status"] = root_status or slot_status(slot)
     snap["task_id"] = slot.get("task_id")
     snap["branch"] = slot.get("branch")
     snap["services"] = slot.get("services") or []
@@ -224,6 +249,7 @@ def upsert_started(
 
     slot = {
         "task_id": task_id,
+        "status": "in_progress",
         "branch": branch or None,
         "services": services,
         "started_at": iso,
@@ -268,7 +294,8 @@ def upsert_started(
         out["research"] = research
     if git_report is not None:
         out["git_report"] = git_report
-    mirror_root(out, slot, iso)
+    root, root_status = pick_root(slots)
+    mirror_root(out, root, iso, root_status)
     write_snap(path, out)
 
 
@@ -327,7 +354,8 @@ def complete_once(path: str, events_file: str, alias: str, task_id: str, ts: str
             out["research"] = research
         if git_report is not None and remain:
             out["git_report"] = git_report
-        mirror_root(out, remain[-1] if remain else None, iso)
+        root, root_status = pick_root(remain)
+        mirror_root(out, root, iso, root_status)
         write_snap(path, out)
 
         skipped = already_completed(events_file, task_id)
@@ -360,6 +388,100 @@ def complete_once(path: str, events_file: str, alias: str, task_id: str, ts: str
         delta = usage_delta(start_usage, end_usage, coord_dir)
         if delta:
             row.update(delta)
+        with open(events_file, "a") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        return 0
+    finally:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+        lock.close()
+
+
+def already_parked(events_file: str, task_id: str) -> bool:
+    if not os.path.isfile(events_file):
+        return False
+    for raw in reversed(open(events_file).read().splitlines()):
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            row = json.loads(raw)
+        except Exception:
+            continue
+        if row.get("task_id") != task_id:
+            continue
+        if row.get("event") == "task_parked":
+            return True
+        if row.get("event") in ("task_started", "task_completed"):
+            return False
+    return False
+
+
+def park_once(path: str, events_file: str, alias: str, task_id: str, ts: str, iso: str) -> int:
+    coord_dir = os.path.dirname(os.path.abspath(__file__))
+    os.makedirs(os.path.dirname(events_file), exist_ok=True)
+    lock_path = events_file + ".lock"
+    lock = open(lock_path, "a+")
+    fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+    try:
+        snap = load_snap(path)
+        slots = slots_from(snap)
+        research = snap.get("research") if isinstance(snap.get("research"), dict) else None
+        git_report = snap.get("git_report")
+        found = None
+        for slot in slots:
+            if slot.get("task_id") == task_id:
+                found = slot
+                break
+        if found is None and snap.get("task_id") == task_id:
+            found = legacy_slot(snap) or {"task_id": task_id, "services": snap.get("services") or []}
+            slots = [found]
+        if found is None:
+            return 1
+        if is_parked(found) and already_parked(events_file, task_id):
+            return 2
+
+        found["status"] = "parked"
+        found["parked_at"] = iso
+        found["updated_at"] = iso
+
+        out = {"alias": alias, "tasks": slots}
+        if snap.get("last_task_id"):
+            out["last_task_id"] = snap["last_task_id"]
+        if snap.get("last_branch"):
+            out["last_branch"] = snap["last_branch"]
+        if isinstance(research, dict) and research.get("status") == "active":
+            out["research"] = research
+        if git_report is not None:
+            out["git_report"] = git_report
+        root, root_status = pick_root(slots)
+        mirror_root(out, root, iso, root_status)
+        write_snap(path, out)
+
+        if already_parked(events_file, task_id):
+            return 2
+        row = {
+            "timestamp": int(ts),
+            "event": "task_parked",
+            "task_id": task_id,
+            "alias": alias,
+        }
+        services = found.get("services") or []
+        kind = spend_kind(services, coord_dir)
+        if kind:
+            row["spend_kind"] = kind
+        if services:
+            row["services"] = services
+        branch = found.get("branch")
+        if branch:
+            row["branch"] = branch
+        try:
+            import activity_clock
+
+            row["active_seconds"] = activity_clock.frozen_active_seconds(found)
+            if isinstance(found.get("activity_windows"), list) and found["activity_windows"]:
+                row["activity_windows"] = found["activity_windows"]
+        except Exception:
+            pass
         with open(events_file, "a") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
         return 0

@@ -16,7 +16,7 @@ Three people in the chat: the **human**, the **agent** (this Cursor), and the **
 | **Human / author** | Developer from `DATA_DIR/.current_author`. |
 | **Agent** | This Cursor chat: code, bugs, commits. |
 | **Task** | A unit of work: `task_id`, branch, services, `doc` and/or `summary`. One chat = one task. |
-| **Slot** | Pulse/dashboard term: one open task card (`in_progress` row in `tasks[]`). Not research. Not a word to use instead of **task** when talking to the human. |
+| **Slot** | Pulse/dashboard term: one open task card in `tasks[]` (`in_progress` or `parked`). Not research. Not a word to use instead of **task** when talking to the human. |
 | **Research** | Off-task reconnaissance: “how / why / where”, no code edits. Not a slot, no branch, does not block tasks. |
 | **Tab** | One Cursor session, bound to either a task or research. |
 | **Bus** | `BUS_DIR` on `main`: `DATA_DIR` (people, status) and `DOCS_DIR` (task specs). Not a product service. |
@@ -36,6 +36,8 @@ He **intervenes** on risk: unfinished **own** task on the same repo, same module
 He **briefs** open tasks when it helps. He **asks** whether to close the author’s quiet tasks — and names the bound Cursor tab when it is known.
 
 He **advises**: finish, continue, park, do not start, this is still research, this is already a task, deploy after push. After a ship he **closes** Pulse (`after-ship.mdc`) and classifies this tab’s next ask — reopen, new fix, or research.
+
+When a **new** task needs a product repo that this author already holds `in_progress`, he **asks** and the usual path after a yes is **park** (`task_parked`), then start. He does not `task_completed` unfinished work just to free the repo. Parked is this person’s snapshot, not a team lock.
 
 The agent **does not** impersonate the Coordinator (“I looked at git”). Coordinator line first, then the agent’s work.
 
@@ -63,7 +65,7 @@ Skip if the only open task is the one this chat is on.
 
 **Quiet own tasks** — ask, do not close. A task is quiet when it is **not** this chat’s task and there has been no activity for **more than 24 hours**: slot `updated_at` (or `started_at` if that is all there is), and if a Cursor tab is bound — no `afterAgentResponse` on that `session_id` in `DATA_DIR/.cache/composer_sessions.json`. Extra signal: the slot’s feature branch has no new commits in that time.
 
-Ask **once per conversation**, not every reply. Never `task_completed` a **quiet other** task, never delete its branch, unless the human says yes. Offer: close it / keep it / park it (commit on the branch, leave the slot). Auto-close of **this** slot after it ships is `after-ship.mdc`, not a quiet-task close.
+Ask **once per conversation**, not every reply. Never `task_completed` a **quiet other** task, never delete its branch, unless the human says yes. Offer: close it / keep it / park it (`task_parked`, leave the slot, do not `task_completed`). Auto-close of **this** slot after it ships is `after-ship.mdc`, not a quiet-task close.
 
 **Bound Cursor tab** — a slot may have `session_id` and `session_ids[]` (passed on `task_started`, same id as in `sessionStart`). A later `task_started` for the **same** task with a **new** `session_id` **appends** another tab. The dashboard Pulse card lists those chat **titles**. The agent **cannot** switch Composer tabs. When asking about a quiet task:
 
@@ -81,6 +83,10 @@ Checked, can continue:
 Scope conflict (own slot / same branch / same task):
 
 > Coordinator found a conflict: the billing-API task already holds the API. I am not starting this edit there. Finish that one, continue it, or park it?
+
+When the human needs to start something else in the same repo, prefer park (after they agree):
+
+> Coordinator: the “web voice MVP” task still holds the API and is not done. Park it and start the next task?
 
 Peer product repo (warn, start, log):
 

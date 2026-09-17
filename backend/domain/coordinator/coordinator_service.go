@@ -19,7 +19,7 @@ var (
 	ErrInvalidDays   = errors.New("days must be >= 0")
 	ErrInvalidLimit  = errors.New("limit must be >= 0")
 	ErrInvalidOffset = errors.New("offset must be >= 0")
-	ErrInvalidStatus = errors.New("status must be all, in_progress, or completed")
+	ErrInvalidStatus = errors.New("status must be all, in_progress, parked, or completed")
 	ErrInvalidKind   = errors.New("kind must be feature or fix")
 	ErrInvalidTaskID = errors.New("invalid task id")
 	ErrDocNotFound   = errors.New("document not found")
@@ -419,13 +419,15 @@ func (s *Service) maybeCompleteDeployed(ctx context.Context) bool {
 		if member.Alias != alias {
 			continue
 		}
-		if !allReposDeployed(member) {
-			return false
+		for _, slot := range member.ActiveSlots() {
+			if !slotReposDeployed(slot) {
+				continue
+			}
+			if err := s.repo.CompleteTask(ctx, member.Alias, slot.TaskID); err != nil {
+				return false
+			}
+			return true
 		}
-		if err := s.repo.CompleteTask(ctx, member.Alias, member.TaskID); err != nil {
-			return false
-		}
-		return true
 	}
 	return false
 }
@@ -550,7 +552,7 @@ func (s *Service) GetTasks(ctx context.Context, query dto.TasksQuery) (*dto.Task
 	if status == "" {
 		status = "all"
 	}
-	if status != "all" && status != "in_progress" && status != "completed" {
+	if status != "all" && status != "in_progress" && status != "parked" && status != "completed" {
 		return nil, ErrInvalidStatus
 	}
 	kind := strings.TrimSpace(query.Kind)
@@ -751,6 +753,7 @@ func mapMemberTasks(alias string, tasks []model.MemberTask) []dto.MemberTaskResp
 			StartedAt:       task.StartedAt,
 			DurationSeconds: task.DurationSeconds,
 			ClockPaused:     task.ClockPaused,
+			Status:          task.Status,
 			Repos:           mapRepos(task.Repos),
 			CostUSD:         task.CostUSD,
 			BudgetUSD:       task.BudgetUSD,

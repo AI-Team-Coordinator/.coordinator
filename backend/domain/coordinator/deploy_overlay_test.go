@@ -85,3 +85,17 @@ func TestAllReposDeployed(t *testing.T) {
 		t.Fatal("workspace-only task is not a product deploy")
 	}
 }
+
+func TestSlotReposDeployedSkipsParked(t *testing.T) {
+	slot := model.MemberTask{
+		Status: "parked",
+		Repos:  []model.RepoWork{{State: "merged", Deployed: true}},
+	}
+	if slotReposDeployed(slot) {
+		t.Fatal("parked slot must not auto-complete")
+	}
+	slot.Status = "in_progress"
+	if !slotReposDeployed(slot) {
+		t.Fatal("in_progress deployed")
+	}
+}

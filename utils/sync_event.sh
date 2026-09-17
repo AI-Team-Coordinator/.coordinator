@@ -5,7 +5,7 @@
 # Usage: ./sync_event.sh <ALIAS> <EVENT_TYPE> [TASK_ID] [BRANCH_NAME] [Service1,Service2] [doc=...] [summary=...]
 # Example: ./sync_event.sh EK task_started 20260907-1756 feature/auth Core,InboxPanelWeb
 # Example: ./sync_event.sh EK task_started FIX-... fix/avatar Website summary="Restore dark header avatar"
-# Example: ./sync_event.sh EK task_completed 20260907-1756
+# Example: ./sync_event.sh EK task_parked 20260907-1756
 # Example: ./sync_event.sh EK research_started summary="How coordinator logs off-task chats"
 # Example: ./sync_event.sh EK research_completed
 # Example: ./sync_event.sh EK coordinator_warning TASK_ID feat/x Core summary="AS has «filter» on Core" findings="peer-scope:as:core"
@@ -201,6 +201,10 @@ append_completed_once() {
     python3 "$COORD_DIR/task_snapshot.py" complete "$CURRENT_TASK_FILE" "$EVENTS_FILE" "$ALIAS" "$TASK_ID" "$TIMESTAMP" "$ISO_DATE" "$COORD_DIR"
 }
 
+append_parked_once() {
+    python3 "$COORD_DIR/task_snapshot.py" park "$CURRENT_TASK_FILE" "$EVENTS_FILE" "$ALIAS" "$TASK_ID" "$TIMESTAMP" "$ISO_DATE" "$COORD_DIR"
+}
+
 # 1. Update local state files immediately (<10ms, synchronous)
 if [ "$EVENT_TYPE" = "research_started" ] || [ "$EVENT_TYPE" = "research_completed" ]; then
     action="start"
@@ -224,6 +228,18 @@ elif [ "$EVENT_TYPE" = "task_started" ]; then
 elif [ "$EVENT_TYPE" = "task_completed" ]; then
     set +e
     append_completed_once
+    rc=$?
+    set -e
+    if [ "$rc" -eq 2 ]; then
+        exit 0
+    fi
+    if [ "$rc" -ne 0 ]; then
+        exit "$rc"
+    fi
+    EVENT_JSON=""
+elif [ "$EVENT_TYPE" = "task_parked" ]; then
+    set +e
+    append_parked_once
     rc=$?
     set -e
     if [ "$rc" -eq 2 ]; then
