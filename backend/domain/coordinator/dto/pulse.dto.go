@@ -51,6 +51,8 @@ type MemberTaskResponse struct {
 	SpendShared     bool               `json:"spend_shared,omitempty"`
 	Chats           []ChatTabResponse  `json:"chats,omitempty"`
 	Agents          []AgentResponse    `json:"agents,omitempty"`
+	RelatedTasks    []string           `json:"related_tasks,omitempty"`
+	RelatedDocs     []string           `json:"related_docs,omitempty"`
 }
 
 type AgentResponse struct {

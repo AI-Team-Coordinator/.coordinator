@@ -22,6 +22,8 @@ type Task struct {
 	SpendKind       string
 	SpendShared     bool
 	ActivityWindows []ActivityWindow
+	RelatedTasks    []string
+	RelatedDocs     []string
 }
 
 // TaskQuery filters the aggregated task list. Limit 0 means no page cap.

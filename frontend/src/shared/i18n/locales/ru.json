@@ -100,7 +100,10 @@
       "duration": "Длительность",
       "plan": "Доля подписки",
       "ondemand": "On-demand"
-    }
+    },
+    "evolution": "Эволюция",
+    "evolutionHint": "Фикс указывает связанные задачи — из этих рёбер собирается дерево. Reopen той же фичи остаётся одной карточкой.",
+    "related": "Связано"
   },
   "pulse": {
     "title": "Пульс команды",
@@ -116,6 +119,7 @@
     "task": "Задача",
     "fix": "Фикс",
     "feature": "Фича",
+    "related": "Связано",
     "planShare": "Доля подписки",
     "meter": "On-demand",
     "onDemand": "on-demand",

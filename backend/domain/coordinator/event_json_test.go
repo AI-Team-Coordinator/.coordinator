@@ -84,3 +84,17 @@ func TestEventUnmarshalActivityWindows(t *testing.T) {
 		t.Fatalf("started=%v", ev.ActivityWindows[0].StartedAt)
 	}
 }
+
+func TestEventUnmarshalRelated(t *testing.T) {
+	raw := `{"timestamp": 1, "event": "task_started", "task_id": "FIX-1", "related_tasks": ["T-PARENT"], "related_docs": ["docs/T-PARENT.md"]}`
+	var ev model.Event
+	if err := json.Unmarshal([]byte(raw), &ev); err != nil {
+		t.Fatal(err)
+	}
+	if len(ev.RelatedTasks) != 1 || ev.RelatedTasks[0] != "T-PARENT" {
+		t.Fatalf("tasks=%v", ev.RelatedTasks)
+	}
+	if len(ev.RelatedDocs) != 1 || ev.RelatedDocs[0] != "docs/T-PARENT.md" {
+		t.Fatalf("docs=%v", ev.RelatedDocs)
+	}
+}

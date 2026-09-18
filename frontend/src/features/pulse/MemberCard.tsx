@@ -6,6 +6,7 @@ import { Badge } from '../../shared/ui/Badge'
 import { formatDuration } from '../../shared/lib/formatters'
 import { hasUsageSpend, SharedQuotaIcon, UsageSpend } from '../../shared/ui/UsageSpend'
 import { TaskDocLink } from '../docs/TaskDocLink'
+import { RelatedLinks } from '../docs/RelatedLinks'
 import { ChatTabs } from './ChatTabs'
 import type { ChatTab, MemberState, MemberTaskState } from '../../shared/types/api'
 
@@ -78,6 +79,12 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug line-clamp-2" title={summary}>
               {summary}
             </p>
+          ) : null}
+          {isActive && ((task?.related_tasks && task.related_tasks.length > 0) || (task?.related_docs && task.related_docs.length > 0)) ? (
+            <div className="mt-1">
+              <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t('pulse.related')}</div>
+              <RelatedLinks taskIds={task?.related_tasks} docs={task?.related_docs} />
+            </div>
           ) : null}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">

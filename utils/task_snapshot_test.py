@@ -83,5 +83,53 @@ class ParkSlotTests(unittest.TestCase):
         self.assertEqual(len(lines), 1)
 
 
+class RelatedSlotTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.snap = Path(self.tmp.name) / "current.json"
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_stores_related_and_keeps_on_empty_resume(self) -> None:
+        ts.upsert_started(
+            str(self.snap),
+            "EK",
+            "2026-09-18T00:00:00Z",
+            "FIX-1",
+            "fix/x",
+            "Core",
+            "",
+            "",
+            "broken translate",
+            "",
+            "20260917-2037-EK-INBOX_MESSAGE_TRANSLATION,FIX-1",
+            "docs/20260917-2037-EK-INBOX_MESSAGE_TRANSLATION.md,Common/docs/README.md",
+        )
+        slot = json.loads(self.snap.read_text())["tasks"][0]
+        self.assertEqual(slot["related_tasks"], ["20260917-2037-EK-INBOX_MESSAGE_TRANSLATION"])
+        self.assertEqual(
+            slot["related_docs"],
+            ["docs/20260917-2037-EK-INBOX_MESSAGE_TRANSLATION.md", "docs/README.md"],
+        )
+        ts.upsert_started(
+            str(self.snap),
+            "EK",
+            "2026-09-18T00:01:00Z",
+            "FIX-1",
+            "fix/x",
+            "Core",
+            "",
+            "",
+            "broken translate",
+            "",
+            "",
+            "",
+        )
+        slot = json.loads(self.snap.read_text())["tasks"][0]
+        self.assertEqual(slot["related_tasks"], ["20260917-2037-EK-INBOX_MESSAGE_TRANSLATION"])
+        self.assertEqual(slot["started_at"], "2026-09-18T00:00:00Z")
+
+
 if __name__ == "__main__":
     unittest.main()

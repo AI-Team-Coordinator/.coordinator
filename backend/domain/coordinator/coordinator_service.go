@@ -602,6 +602,8 @@ func (s *Service) GetTasks(ctx context.Context, query dto.TasksQuery) (*dto.Task
 			OtherModelsPct:  t.OtherModelsPct,
 			SpendKind:       t.SpendKind,
 			SpendShared:     t.SpendShared,
+			RelatedTasks:    t.RelatedTasks,
+			RelatedDocs:     t.RelatedDocs,
 		})
 	}
 	return &dto.TasksResponse{Tasks: out, Total: len(filtered), Offset: query.Offset, Limit: query.Limit}, nil
@@ -764,6 +766,8 @@ func mapMemberTasks(alias string, tasks []model.MemberTask) []dto.MemberTaskResp
 			SpendShared:     task.SpendShared,
 			Chats:           mapChats(task.Chats),
 			Agents:          mapAgents(agentsOfSlot(alias, task)),
+			RelatedTasks:    task.RelatedTasks,
+			RelatedDocs:     task.RelatedDocs,
 		})
 	}
 	return out

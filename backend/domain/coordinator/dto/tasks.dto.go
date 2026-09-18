@@ -19,6 +19,8 @@ type TaskResponse struct {
 	OtherModelsPct  *float64 `json:"other_models_pct,omitempty"`
 	SpendKind       string   `json:"spend_kind,omitempty"`
 	SpendShared     bool     `json:"spend_shared,omitempty"`
+	RelatedTasks    []string `json:"related_tasks,omitempty"`
+	RelatedDocs     []string `json:"related_docs,omitempty"`
 }
 
 type TasksResponse struct {

@@ -27,7 +27,7 @@ Ship and the next request may be one message. After `task_completed`, classify t
 |---|---|
 | Thanks / “да” / “закрой” / no new work | Stay closed. One Coordinator line. Name other own live tasks if any. |
 | More work on **this** shipped feature (missed bit, tweak) | **Reopen:** `task_started` with the **same** `task_id`, branch, services. Parallel check. If product repos sit on `main` and the feature branch is gone, recreate it from up-to-date `main`. |
-| Explicit new bug / hotfix of something else | New FIX (`protocol.mdc` §2.1). Not the same `task_id`. |
+| Explicit new bug / hotfix of something else | New FIX (`protocol.mdc` §2.1). Not the same `task_id`. Link `related_tasks` / `related_docs` to the work it actually continues. |
 | New planned work with a doc | Start per §2. |
 | How / why / where, no edits | `research_started` (`research.mdc`). This tab is off-task after close. |
 | Unclear | Ask. Do not start a slot or research. |

@@ -7,6 +7,8 @@ import { Button } from '../../shared/ui/Button'
 import { formatDate, formatDuration, formatTime, formatUSD } from '../../shared/lib/formatters'
 import { SharedQuotaIcon, UsageSpend } from '../../shared/ui/UsageSpend'
 import { TaskDocLink } from '../docs/TaskDocLink'
+import { RelatedLinks } from '../docs/RelatedLinks'
+import { EvolutionForest } from './EvolutionForest'
 import type { MemberState, TaskItem } from '../../shared/types/api'
 
 export interface TasksFilter {
@@ -55,6 +57,14 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
       return left.localeCompare(right)
     })
   }, [members, tasks, namesByAlias])
+
+  const titlesById = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const task of tasks) {
+      if (task.task_id) map[task.task_id] = task.title || task.task_id
+    }
+    return map
+  }, [tasks])
 
   const personName = (alias?: string) => {
     if (!alias) return ''
@@ -169,6 +179,13 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
                           {task.branch}
                         </div>
                       )}
+                      {((task.related_tasks && task.related_tasks.length > 0) || (task.related_docs && task.related_docs.length > 0)) ? (
+                        <RelatedLinks
+                          taskIds={task.related_tasks}
+                          docs={task.related_docs}
+                          titles={titlesById}
+                        />
+                      ) : null}
                     </td>
                     <td className="py-3 pr-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">
                       {task.alias ? personName(task.alias) : '—'}
@@ -222,6 +239,8 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
           </tbody>
         </table>
       </div>
+
+      <EvolutionForest tasks={tasks} />
 
       {tasks.length < total && (
         <div className="pt-2">

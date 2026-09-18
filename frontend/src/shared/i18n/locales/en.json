@@ -100,7 +100,10 @@
       "duration": "Duration",
       "plan": "Share of plan",
       "ondemand": "On-demand"
-    }
+    },
+    "evolution": "Evolution",
+    "evolutionHint": "A fix lists related tasks; those edges make the tree. Reopening the same feature keeps one card.",
+    "related": "Related"
   },
   "pulse": {
     "title": "Team Pulse",
@@ -116,6 +119,7 @@
     "task": "Task",
     "fix": "Fix",
     "feature": "Feature",
+    "related": "Related",
     "planShare": "Share of plan",
     "meter": "On-demand",
     "onDemand": "on-demand",

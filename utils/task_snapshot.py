@@ -30,9 +30,22 @@ def main() -> None:
             summary,
         ) = sys.argv[:12]
         session_id = sys.argv[12] if len(sys.argv) > 12 else ""
+        related_tasks = sys.argv[13] if len(sys.argv) > 13 else ""
+        related_docs = sys.argv[14] if len(sys.argv) > 14 else ""
         sys.path.insert(0, coord_dir)
         upsert_started(
-            path, alias, iso, task_id, branch, services_csv, common_root, doc_path, summary, session_id
+            path,
+            alias,
+            iso,
+            task_id,
+            branch,
+            services_csv,
+            common_root,
+            doc_path,
+            summary,
+            session_id,
+            related_tasks,
+            related_docs,
         )
         return
     if action == "complete":
@@ -104,6 +117,66 @@ def clip(text: str, n: int = 280) -> str:
     if len(text) > n:
         return text[: n - 3].rstrip() + "..."
     return text
+
+
+def split_csv(raw: str) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for part in (raw or "").split(","):
+        item = part.strip()
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
+
+
+def normalize_related_tasks(raw, self_id: str) -> list[str]:
+    items = raw if isinstance(raw, list) else split_csv(str(raw or ""))
+    self_id = (self_id or "").strip()
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        tid = str(item or "").strip()
+        if not tid or tid == self_id or tid in seen:
+            continue
+        seen.add(tid)
+        out.append(tid)
+    return out
+
+
+def normalize_related_docs(raw) -> list[str]:
+    items = raw if isinstance(raw, list) else split_csv(str(raw or ""))
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        path = str(item or "").strip().replace("\\", "/")
+        if path.startswith("./"):
+            path = path[2:]
+        if path.startswith("Common/"):
+            path = path[len("Common/") :]
+        if path.startswith("/"):
+            continue
+        if path and not path.startswith("docs/"):
+            path = "docs/" + path.lstrip("/")
+        if not path or path in seen:
+            continue
+        seen.add(path)
+        out.append(path)
+    return out
+
+
+def copy_related(slot: dict, existing: dict | None, task_id: str, related_tasks: str, related_docs: str) -> None:
+    tasks = normalize_related_tasks(related_tasks, task_id)
+    docs = normalize_related_docs(related_docs)
+    if not tasks and isinstance(existing, dict):
+        tasks = normalize_related_tasks(existing.get("related_tasks") or [], task_id)
+    if not docs and isinstance(existing, dict):
+        docs = normalize_related_docs(existing.get("related_docs") or [])
+    if tasks:
+        slot["related_tasks"] = tasks
+    if docs:
+        slot["related_docs"] = docs
 
 
 def take_usage(coord_dir: str):
@@ -233,6 +306,8 @@ def upsert_started(
     doc_path: str,
     summary: str,
     session_id: str = "",
+    related_tasks: str = "",
+    related_docs: str = "",
 ) -> None:
     coord_dir = os.path.dirname(os.path.abspath(__file__))
     snap = load_snap(path)
@@ -272,6 +347,7 @@ def upsert_started(
                 slot["activity_windows"] = existing["activity_windows"]
             if existing.get("last_activity_at"):
                 slot["last_activity_at"] = existing["last_activity_at"]
+            copy_related(slot, existing, task_id, related_tasks, related_docs)
             ids = merge_session_ids(existing, sid)
             if ids:
                 slot["session_ids"] = ids
@@ -280,6 +356,7 @@ def upsert_started(
             replaced = True
             break
     if not replaced:
+        copy_related(slot, None, task_id, related_tasks, related_docs)
         if sid:
             slot["session_id"] = sid
             slot["session_ids"] = [sid]

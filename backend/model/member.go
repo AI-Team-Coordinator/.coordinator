@@ -59,6 +59,8 @@ type MemberTask struct {
 	SpendShared     bool
 	SessionIDs      []string
 	Chats           []ChatTab
+	RelatedTasks    []string
+	RelatedDocs     []string
 }
 
 // IsParked is a live task whose branch is set aside so another slot can take the repo.

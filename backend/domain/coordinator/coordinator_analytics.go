@@ -326,6 +326,14 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 				t.Status = "in_progress"
 				t.ClockPaused = false
 			}
+			relatedTasks := model.NormalizeRelatedTasks(ev.RelatedTasks, ev.TaskID)
+			relatedDocs := model.NormalizeRelatedDocs(ev.RelatedDocs)
+			if len(relatedTasks) > 0 {
+				t.RelatedTasks = relatedTasks
+			}
+			if len(relatedDocs) > 0 {
+				t.RelatedDocs = relatedDocs
+			}
 		case "task_parked":
 			if t.CompletedAt == 0 || ev.Timestamp >= t.CompletedAt {
 				t.CompletedAt = 0
@@ -387,6 +395,12 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 			}
 			if t.StartedAt == 0 && !slot.UpdatedAt.IsZero() {
 				t.StartedAt = slot.UpdatedAt.Unix()
+			}
+			if related := model.NormalizeRelatedTasks(slot.RelatedTasks, slot.TaskID); len(related) > 0 {
+				t.RelatedTasks = related
+			}
+			if docs := model.NormalizeRelatedDocs(slot.RelatedDocs); len(docs) > 0 {
+				t.RelatedDocs = docs
 			}
 			last := slot.LastActivityAt
 			if last.IsZero() {

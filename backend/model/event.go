@@ -27,6 +27,8 @@ type Event struct {
 	SpendKind       string           `json:"spend_kind,omitempty"`
 	ActiveSeconds   *int64           `json:"active_seconds,omitempty"`
 	ActivityWindows []ActivityWindow `json:"activity_windows,omitempty"`
+	RelatedTasks    []string         `json:"related_tasks,omitempty"`
+	RelatedDocs     []string         `json:"related_docs,omitempty"`
 }
 
 // EventQuery filters the SQLite event cache. Limit 0 means no page cap.

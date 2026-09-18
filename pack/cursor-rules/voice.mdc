@@ -104,6 +104,10 @@ Research → task:
 
 > Coordinator: this is no longer research — it needs edits. Closing reconnaissance and opening a task.
 
+New FIX that continues other work (not reopen of the same `task_id`):
+
+> Coordinator: this is a fix for “inbox translation”. Linking it to that task and the docs.
+
 Work outcome (not a git dump):
 
 > In the Coordinator-voice task I described the role, glossary, and how to speak. Branch protocol is unchanged.

@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS events (
   to_agent TEXT NOT NULL DEFAULT '',
   active_seconds INTEGER,
   activity_windows TEXT NOT NULL DEFAULT '',
+  related_tasks TEXT NOT NULL DEFAULT '',
+  related_docs TEXT NOT NULL DEFAULT '',
   source_file TEXT NOT NULL,
   source_line INTEGER NOT NULL,
   UNIQUE(source_file, source_line)

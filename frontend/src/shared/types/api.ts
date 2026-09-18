@@ -52,6 +52,8 @@ export interface MemberTaskState {
   spend_shared?: boolean
   chats?: ChatTab[]
   agents?: AgentState[]
+  related_tasks?: string[]
+  related_docs?: string[]
 }
 
 export interface AgentState {
@@ -214,6 +216,8 @@ export interface TaskItem {
   other_models_pct?: number
   spend_kind?: 'infra' | 'product' | string
   spend_shared?: boolean
+  related_tasks?: string[]
+  related_docs?: string[]
 }
 
 export interface EventItem {

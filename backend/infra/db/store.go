@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	schemaVersion = "8"
+	schemaVersion = "9"
 	hotYearSpan   = 3
 	dbFileName    = "coordinator.sqlite"
 	// eventServiceKeySQL mirrors coordination.Parse: strip leading dots, kebab→snake, lowercase.
@@ -81,7 +81,7 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		return nil, 0, err
 	}
 
-	listQ := "SELECT timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings, agent_id, to_alias, to_agent, active_seconds, activity_windows FROM events" + where + " ORDER BY timestamp DESC"
+	listQ := "SELECT timestamp, event, task_id, branch, alias, repo, service, status, cost_usd, budget_usd, ondemand_usd, cursor_models_pct, other_models_pct, usage_plan, plan_price_usd, spend_kind, summary, findings, agent_id, to_alias, to_agent, active_seconds, activity_windows, related_tasks, related_docs FROM events" + where + " ORDER BY timestamp DESC"
 	if q.Limit > 0 {
 		listQ += " LIMIT ?"
 		args = append(args, q.Limit)
@@ -102,10 +102,10 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		var ev model.Event
 		var cost, budget, ondemand, cursorPct, otherPct, planPrice sql.NullFloat64
 		var active sql.NullInt64
-		var windows string
+		var windows, relatedTasks, relatedDocs string
 		if err := rows.Scan(
 			&ev.Timestamp, &ev.Event, &ev.TaskID, &ev.Branch, &ev.Alias, &ev.Repo, &ev.Service, &ev.Status,
-			&cost, &budget, &ondemand, &cursorPct, &otherPct, &ev.UsagePlan, &planPrice, &ev.SpendKind, &ev.Summary, &ev.Findings, &ev.AgentID, &ev.ToAlias, &ev.ToAgent, &active, &windows,
+			&cost, &budget, &ondemand, &cursorPct, &otherPct, &ev.UsagePlan, &planPrice, &ev.SpendKind, &ev.Summary, &ev.Findings, &ev.AgentID, &ev.ToAlias, &ev.ToAgent, &active, &windows, &relatedTasks, &relatedDocs,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -117,6 +117,8 @@ func (s *Store) List(ctx context.Context, q model.EventQuery) ([]model.Event, in
 		ev.PlanPriceUSD = nullFloatPtr(planPrice)
 		ev.ActiveSeconds = nullInt64Ptr(active)
 		ev.ActivityWindows = parseActivityWindowsJSON(windows)
+		ev.RelatedTasks = parseStringSliceJSON(relatedTasks)
+		ev.RelatedDocs = parseStringSliceJSON(relatedDocs)
 		items = append(items, ev)
 	}
 	return items, total, rows.Err()
@@ -208,6 +210,29 @@ func marshalActivityWindows(windows []model.ActivityWindow) string {
 		return ""
 	}
 	raw, err := json.Marshal(windows)
+	if err != nil {
+		return ""
+	}
+	return string(raw)
+}
+
+func parseStringSliceJSON(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var out []string
+	if json.Unmarshal([]byte(raw), &out) != nil || len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func marshalStringSlice(items []string) string {
+	if len(items) == 0 {
+		return ""
+	}
+	raw, err := json.Marshal(items)
 	if err != nil {
 		return ""
 	}

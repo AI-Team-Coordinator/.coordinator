@@ -4,7 +4,7 @@
 # push snapshots to origin/coordinator-state (not Common main).
 # Usage: ./sync_event.sh <ALIAS> <EVENT_TYPE> [TASK_ID] [BRANCH_NAME] [Service1,Service2] [doc=...] [summary=...]
 # Example: ./sync_event.sh EK task_started 20260907-1756 feature/auth Core,InboxPanelWeb
-# Example: ./sync_event.sh EK task_started FIX-... fix/avatar Website summary="Restore dark header avatar"
+# Example: ./sync_event.sh EK task_started FIX-... fix/avatar Website summary="Restore dark header avatar" related_tasks=20260917-2037-EK-INBOX_MESSAGE_TRANSLATION related_docs=docs/20260917-2037-EK-INBOX_MESSAGE_TRANSLATION.md
 # Example: ./sync_event.sh EK task_parked 20260907-1756
 # Example: ./sync_event.sh EK research_started summary="How coordinator logs off-task chats"
 # Example: ./sync_event.sh EK research_completed
@@ -23,6 +23,8 @@ FINDINGS=""
 TO_ALIAS=""
 TO_AGENT=""
 AGENT_ID=""
+RELATED_TASKS=""
+RELATED_DOCS=""
 POS=()
 
 if [ -z "$ALIAS" ] || [ -z "$EVENT_TYPE" ]; then
@@ -33,7 +35,7 @@ fi
 shift 2
 for arg in "$@"; do
     case "$arg" in
-        doc=*|summary=*|session_id=*|findings=*|to_alias=*|to_agent=*|agent_id=*)
+        doc=*|summary=*|session_id=*|findings=*|to_alias=*|to_agent=*|agent_id=*|related_tasks=*|related_docs=*)
             key=${arg%%=*}
             val=${arg#*=}
             case "$key" in
@@ -44,6 +46,8 @@ for arg in "$@"; do
                 to_alias) TO_ALIAS=$val ;;
                 to_agent) TO_AGENT=$val ;;
                 agent_id) AGENT_ID=$val ;;
+                related_tasks) RELATED_TASKS=$val ;;
+                related_docs) RELATED_DOCS=$val ;;
             esac
             ;;
         *)
@@ -66,7 +70,7 @@ TIMESTAMP=$(date +%s)
 ISO_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 write_current_task() {
-    python3 "$COORD_DIR/task_snapshot.py" start "$CURRENT_TASK_FILE" "$ALIAS" "$ISO_DATE" "$TASK_ID" "$BRANCH_NAME" "$SERVICES_CSV" "$COORD_DIR" "$COMMON_ROOT" "$DOC_PATH" "$SUMMARY" "$SESSION_ID"
+    python3 "$COORD_DIR/task_snapshot.py" start "$CURRENT_TASK_FILE" "$ALIAS" "$ISO_DATE" "$TASK_ID" "$BRANCH_NAME" "$SERVICES_CSV" "$COORD_DIR" "$COMMON_ROOT" "$DOC_PATH" "$SUMMARY" "$SESSION_ID" "$RELATED_TASKS" "$RELATED_DOCS"
 }
 
 # Nested .research on the snapshot — does not replace in_progress / idle task fields.
@@ -224,7 +228,23 @@ if [ "$EVENT_TYPE" = "research_started" ] || [ "$EVENT_TYPE" = "research_complet
     EVENT_JSON=""
 elif [ "$EVENT_TYPE" = "task_started" ]; then
     write_current_task
-    EVENT_JSON="{\"timestamp\": $TIMESTAMP, \"event\": \"task_started\", \"task_id\": \"$TASK_ID\", \"branch\": \"$BRANCH_NAME\", \"alias\": \"$ALIAS\"}"
+    EVENT_JSON=$(python3 - "$COORD_DIR" "$TIMESTAMP" "$TASK_ID" "$ALIAS" "$BRANCH_NAME" "$RELATED_TASKS" "$RELATED_DOCS" <<'PY'
+import json, sys
+coord_dir, ts, task_id, alias, branch, related_tasks, related_docs = sys.argv[1:]
+sys.path.insert(0, coord_dir)
+import task_snapshot as snap
+row = {"timestamp": int(ts), "event": "task_started", "task_id": task_id, "alias": alias}
+if branch:
+    row["branch"] = branch
+tasks = snap.normalize_related_tasks(related_tasks, task_id)
+docs = snap.normalize_related_docs(related_docs)
+if tasks:
+    row["related_tasks"] = tasks
+if docs:
+    row["related_docs"] = docs
+print(json.dumps(row, ensure_ascii=False))
+PY
+)
 elif [ "$EVENT_TYPE" = "task_completed" ]; then
     set +e
     append_completed_once

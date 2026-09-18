@@ -553,6 +553,8 @@ type snapshotTask struct {
 	CursorUsage     *model.CursorUsage `json:"cursor_usage"`
 	SessionID       string             `json:"session_id"`
 	SessionIDs      []string           `json:"session_ids"`
+	RelatedTasks    []string           `json:"related_tasks"`
+	RelatedDocs     []string           `json:"related_docs"`
 }
 
 type snapshotFile struct {
@@ -631,6 +633,8 @@ func (r *FileRepository) parseSnapshotTasks(raw snapshotFile, now time.Time) []m
 			CursorUsage:     row.CursorUsage,
 			SpendKind:       model.SpendKind(row.Services),
 			SessionIDs:      collectSessionIDs(row.SessionID, row.SessionIDs),
+			RelatedTasks:    model.NormalizeRelatedTasks(row.RelatedTasks, row.TaskID),
+			RelatedDocs:     model.NormalizeRelatedDocs(row.RelatedDocs),
 		})
 	}
 	return out

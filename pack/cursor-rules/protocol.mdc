@@ -140,8 +140,9 @@ When the user asks to quickly fix a bug, regression, or apply an urgent hotfix:
    - Task ID: `FIX-<YYYYMMDD-HHMM>-<ALIAS>-<UPPER_SNAKE_SLUG>`
    - Branch Name: `fix/<short-slug>`
 4. **Activate Coordinator State:** Always pass a short `summary=` of what is being fixed (no task doc). Apply `coordinator/parallel.mdc` before `task_started`. Close research only if *this* tab is converting from research to the fix.
+   Scan the docs registry and Pulse/events for related work (`./.coordinator/utils/suggest_related.py "<words>"` is a candidate list). Pass every real parent — many tasks and many docs are allowed. Empty is better than noise. Reopening the **same** shipped feature is still the same `task_id`, not a FIX.
    ```bash
-   ./.coordinator/utils/sync_event.sh <ALIAS> task_started <TASK_ID> <BRANCH_NAME> <Service> summary="<one line: what we are fixing>" session_id=<id>
+   ./.coordinator/utils/sync_event.sh <ALIAS> task_started <TASK_ID> <BRANCH_NAME> <Service> summary="<one line: what we are fixing>" related_tasks=<TASK_ID>[,<TASK_ID>] related_docs=docs/<FILE>.md[,docs/<FILE>.md] session_id=<id>
    ```
 5. **Create & Switch Branch in Target Service:**
    ```bash

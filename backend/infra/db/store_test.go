@@ -19,7 +19,7 @@ func TestStoreRebuildsFromJSONL(t *testing.T) {
 	}
 
 	year := time.Now().Year()
-	payload := `{"timestamp": 100, "event": "task_started", "task_id": "T1", "branch": "feat/x"}
+	payload := `{"timestamp": 100, "event": "task_started", "task_id": "T1", "branch": "feat/x", "related_tasks": ["T0"], "related_docs": ["docs/T0.md"]}
 {"timestamp": 200, "event": "deploy_finished", "task_id": "T1", "service": "Core", "status": "finished", "alias": "EK"}
 {"timestamp": 250, "event": "handoff", "task_id": "T1", "alias": "EK", "to_alias": "AS", "service": "Core/billing", "summary": "passing billing", "agent_id": "sess-1"}
 {"timestamp": 300, "event": "task_completed", "task_id": "T1", "alias": "EK", "cost_usd": 1.5, "budget_usd": 4.5, "cursor_models_pct": 0.4, "usage_plan": "ultra", "spend_kind": "infra", "activity_windows": [{"started_at": "2026-09-14T10:00:00Z", "ended_at": "2026-09-14T10:20:00Z"}]}
@@ -66,6 +66,9 @@ func TestStoreRebuildsFromJSONL(t *testing.T) {
 	}
 	if items[4].Alias != "EK" {
 		t.Fatalf("alias filled from folder: %+v", items[4])
+	}
+	if len(items[4].RelatedTasks) != 1 || items[4].RelatedTasks[0] != "T0" || items[4].RelatedDocs[0] != "docs/T0.md" {
+		t.Fatalf("related: %+v", items[4])
 	}
 
 	filtered, n, err := store.List(ctx, model.EventQuery{Alias: "AB", Limit: 10})

@@ -466,3 +466,41 @@ func TestCountActiveNowSkipsParked(t *testing.T) {
 		t.Fatalf("active=%d", n)
 	}
 }
+
+func TestComputeTasksCopiesRelated(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	parent := "20260917-2037-EK-INBOX_MESSAGE_TRANSLATION"
+	fix := "FIX-20260918-0043-EK-TRANSLATE_REGRESSION"
+	tasks := computeTasks([]model.Event{
+		{Event: "task_started", TaskID: parent, Alias: "EK", Timestamp: now.Unix() - 400},
+		{Event: "task_completed", TaskID: parent, Alias: "EK", Timestamp: now.Unix() - 200},
+		{
+			Event:        "task_started",
+			TaskID:       fix,
+			Alias:        "EK",
+			Branch:       "fix/translate",
+			Timestamp:    now.Unix() - 60,
+			RelatedTasks: []string{parent, fix},
+			RelatedDocs:  []string{"Common/docs/" + parent + ".md"},
+		},
+	}, nil, now)
+	var child *model.Task
+	for i := range tasks {
+		if tasks[i].TaskID == fix {
+			child = &tasks[i]
+			break
+		}
+	}
+	if child == nil {
+		t.Fatalf("missing fix: %+v", tasks)
+	}
+	if child.Kind != "fix" {
+		t.Fatalf("kind=%q", child.Kind)
+	}
+	if len(child.RelatedTasks) != 1 || child.RelatedTasks[0] != parent {
+		t.Fatalf("related_tasks=%v", child.RelatedTasks)
+	}
+	if len(child.RelatedDocs) != 1 || child.RelatedDocs[0] != "docs/"+parent+".md" {
+		t.Fatalf("related_docs=%v", child.RelatedDocs)
+	}
+}
