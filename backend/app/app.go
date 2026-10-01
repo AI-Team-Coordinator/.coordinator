@@ -85,7 +85,7 @@ func (a *App) pullCommonLoop() {
 	if a.repo == nil {
 		return
 	}
-	infra.LogInfo("common origin pull every %s", commonPullInterval)
+	infra.LogInfo("common docs sync every %s", commonPullInterval)
 	a.pullCommonOnce()
 	ticker := time.NewTicker(commonPullInterval)
 	defer ticker.Stop()
@@ -98,11 +98,11 @@ func (a *App) pullCommonOnce() {
 	if a.repo != nil && a.repo.Collaboration() == model.CollaborationSolo {
 		return
 	}
-	updated, err := a.repo.PullCommonOrigin(context.Background())
+	synced, err := a.repo.SyncCommonDocs(context.Background())
 	if err != nil {
-		infra.LogWarn("common pull origin/main: %v", err)
-	} else if updated {
-		infra.LogInfo("common pulled origin/main")
+		infra.LogWarn("common docs sync: %v", err)
+	} else if synced.Committed || synced.Pulled || synced.Pushed {
+		infra.LogInfo("common docs sync committed=%t pulled=%t pushed=%t", synced.Committed, synced.Pulled, synced.Pushed)
 	}
 	if err := a.repo.PullCoordinatorState(context.Background()); err != nil {
 		infra.LogWarn("coordinator-state pull: %v", err)

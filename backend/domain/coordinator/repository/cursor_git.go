@@ -188,6 +188,10 @@ func (r *FileRepository) stagedWhitelistFiles(ctx context.Context) ([]string, er
 }
 
 func (r *FileRepository) gitOutput(ctx context.Context, timeout time.Duration, args ...string) (string, error) {
+	return r.gitOutputEnv(ctx, timeout, nil, args...)
+}
+
+func (r *FileRepository) gitOutputEnv(ctx context.Context, timeout time.Duration, extraEnv []string, args ...string) (string, error) {
 	if timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)
@@ -195,6 +199,9 @@ func (r *FileRepository) gitOutput(ctx context.Context, timeout time.Duration, a
 	}
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = r.busPath
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

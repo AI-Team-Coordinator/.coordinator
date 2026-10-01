@@ -43,3 +43,7 @@ Created: 2026-09-11 19:30
 ```
 
 Name is the `name` field from `team.json`, same `alias` as in the filename. `Created` matches the `YYYYMMDD-HHMM` stamp (local time).
+
+## Commit / push
+
+Any bus commit that touches documentation must include **every** new and modified file under `DOCS_DIR` — see `docs-commit.mdc`. Do not leave another task’s markdown untracked.

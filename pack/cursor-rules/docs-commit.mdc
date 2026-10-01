@@ -1,0 +1,15 @@
+---
+description: Always commit every new/changed bus doc — not only this task’s markdown
+alwaysApply: true
+---
+
+# Committing bus docs
+
+When you commit or push the bus, take **all** new and modified files under `DOCS_DIR` — not only the document for this chat’s task. Untracked task markdown still belongs on `origin/main`: Pulse and the next agent read the git bus, not a dirty working tree.
+
+In **team** mode the Coordinator dashboard does this itself every 15 seconds for files under `DOCS_DIR` that have not changed for 30 seconds: commit, fast-forward or rebase `main`, push (`collaboration.mdc`). A manual commit still includes every docs file. Do not ask the human to push those docs.
+
+- Do not ask whether another doc is out of scope.
+- A dirty docs tree is not a reason to skip those files or to block a `main` push: include them in the same commit (or the same push).
+- Still do not commit secrets, `.env`, or `.current_author`.
+- This is **`DOCS_DIR` only**. Do not sweep unrelated `DATA_DIR` snapshots or settings into the commit unless that was the task.
