@@ -4,7 +4,7 @@ Author: **Evgeny KOSIVTSOV** (`EK`)
 Created: 2026-09-10 11:11  
 Status: **Agreed / Implementation plan**  
 
-Связанные документы: [коммерческая концепция](./COMMERCIAL_CONCEPT.md), [онбординг фаундера (устарел как UX беты)](../../../Common/docs/20260908-0839-EK-COORDINATOR_FOUNDER_ONBOARDING.md), [шина статусов](../../../Common/docs/20260910-0732-EK-COORDINATOR_STATUS_BUS_ALTERNATIVES.md).
+Связанные документы: [коммерческая концепция](./COMMERCIAL_CONCEPT.md), [онбординг фаундера (устарел как UX беты)](../../../Common/docs/20260908-0839-EK-COORDINATOR_FOUNDER_ONBOARDING.md), [шина статусов](./20260910-0732-EK-COORDINATOR_STATUS_BUS_ALTERNATIVES.md).
 
 Публичные MD (`docs/INSTALL.md`, `ONBOARDING.md`, `DEPENDENCIES.md`, корневой `README.md`) — **English**. Агент говорит с человеком на его языке. Этот план и концепция — internal, русский.
 
