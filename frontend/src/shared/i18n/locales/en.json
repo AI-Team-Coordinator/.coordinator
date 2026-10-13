@@ -9,6 +9,7 @@
   "sections": {
     "overview": "Overview",
     "team": "Team",
+    "organization": "Organization",
     "project": "Project",
     "stats": "Stats"
   },
@@ -209,7 +210,40 @@
     "remove": "Remove",
     "savedPushed": "Saved and pushed to Common.",
     "savedLocal": "Saved locally, push failed: {{warning}}",
-    "saveFailed": "Could not save team"
+    "saveFailed": "Could not save team",
+    "crews": "Crews",
+    "primaryCrew": "Primary crew",
+    "pulseScope": "Pulse view",
+    "pulseScopeMember": "Member (grouped)",
+    "pulseScopeExecutive": "Executive (org-wide)"
+  },
+  "org": {
+    "title": "Organization",
+    "subtitle": "Crews and crew links. Saved to org_topology.json in Common.",
+    "save": "Save",
+    "crews": "Crews",
+    "addCrew": "Add crew",
+    "crewId": "Crew id",
+    "labelRu": "Label (RU)",
+    "labelEn": "Label (EN)",
+    "kind": "Kind",
+    "kinds": {
+      "internal": "Internal",
+      "affiliated": "Affiliated",
+      "external": "External"
+    },
+    "interestBrief": "Interest brief",
+    "connectors": "Crew links",
+    "addConnector": "Add link",
+    "connectorId": "Link id",
+    "fromCrew": "From (observer)",
+    "toCrew": "To (subject)",
+    "summary": "Summary",
+    "interestTitle": "Interest title",
+    "interestDetail": "Detail",
+    "savedPushed": "Saved and pushed to Common.",
+    "savedLocal": "Saved locally, push failed: {{warning}}",
+    "saveFailed": "Could not save organization"
   },
   "timeline": {
     "title": "Activity Log",

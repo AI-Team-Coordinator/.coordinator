@@ -141,7 +141,7 @@ func (s *Service) CompleteSetup(ctx context.Context, req dto.CompleteSetupReques
 		Role:   role,
 		Access: "admin",
 	}
-	members, err := normalizeAndValidateTeam([]model.TeamPerson{installer}, nil)
+	members, err := normalizeAndValidateTeam([]model.TeamPerson{installer}, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (s *Service) CompleteSetup(ctx context.Context, req dto.CompleteSetupReques
 		return nil, err
 	}
 	merged := mergeInstallerIntoTeam(existing, members[0])
-	merged, err = normalizeAndValidateTeam(merged, nil)
+	merged, err = normalizeAndValidateTeam(merged, nil, nil)
 	if err != nil {
 		return nil, err
 	}

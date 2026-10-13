@@ -10,6 +10,7 @@ import { SpendBreakdown } from '../features/stats/SpendBreakdown'
 import { HourlySpendChart, padTodayHours } from '../features/stats/HourlySpendChart'
 import { ServiceMap } from '../features/project/ServiceMap'
 import { TeamRosterSection } from '../features/team/TeamRosterSection'
+import { OrgTopologySection } from '../features/org/OrgTopologySection'
 import { SectionNav } from '../features/nav/SectionNav'
 import { parseSection, type SectionId } from '../features/nav/sections'
 import { SetupScreen } from '../features/setup/SetupScreen'
@@ -425,6 +426,10 @@ export function App() {
               onChanged={loadAll}
               onDirtyChange={onDirtyChange}
             />
+          </div>
+
+          <div className={section === 'organization' ? 'block' : 'hidden'}>
+            <OrgTopologySection onChanged={loadAll} onDirtyChange={onDirtyChange} />
           </div>
 
           {section === 'project' && <ServiceMap profile={profile} onCreated={loadAll} />}

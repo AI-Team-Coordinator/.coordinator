@@ -9,6 +9,8 @@ export interface MemberState {
   role?: string
   access?: 'admin' | 'member' | string
   focus?: string[]
+  crews?: string[]
+  pulse_scope?: 'member' | 'executive' | string
   services?: string[]
   status: 'in_progress' | 'idle' | 'parked'
   task_id?: string
@@ -304,6 +306,38 @@ export interface TeamPerson {
   role?: string
   access?: 'admin' | 'member' | string
   focus?: string[]
+  crews?: string[]
+  primary_crew?: string
+  pulse_scope?: 'member' | 'executive' | string
+}
+
+export interface Crew {
+  id: string
+  label: LocalizedText
+  kind: string
+  interest_brief?: string
+  notes?: string
+}
+
+export interface CrewConnectorItem {
+  title: string
+  detail?: string
+  tags?: string[]
+}
+
+export interface CrewConnector {
+  id: string
+  from_crew_id: string
+  to_crew_id: string
+  summary?: string
+  notes?: string
+  interests: CrewConnectorItem[]
+}
+
+export interface OrgTopology {
+  version: number
+  crews: Crew[]
+  crew_connectors: CrewConnector[]
 }
 
 export type CollaborationMode = 'solo' | 'team'

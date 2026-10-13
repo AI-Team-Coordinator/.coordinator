@@ -6,7 +6,7 @@ import { parseJSON } from '../../shared/api/http'
 import { Button } from '../../shared/ui/Button'
 import { Card } from '../../shared/ui/Card'
 import { aliasFromName, sanitizeAlias } from '../../shared/lib/aliasFromName'
-import type { ServiceNode, TeamPerson } from '../../shared/types/api'
+import type { Crew, ServiceNode, TeamPerson } from '../../shared/types/api'
 
 const ROLES = ['founder', 'engineer'] as const
 
@@ -17,6 +17,9 @@ type DraftMember = {
   role: string
   access: string
   focus: string[]
+  crews: string[]
+  primaryCrew: string
+  pulseScope: string
 }
 
 interface TeamRosterSectionProps {
@@ -29,13 +32,16 @@ export function TeamRosterSection({ services, onChanged, onDirtyChange }: TeamRo
   const { t } = useTranslation()
   const [draft, setDraft] = useState<DraftMember[]>([])
   const [saved, setSaved] = useState<DraftMember[]>([])
+  const [crewOptions, setCrewOptions] = useState<Crew[]>([])
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const load = async () => {
-    const teamRes = await fetch(api.team)
+    const [teamRes, orgRes] = await Promise.all([fetch(api.team), fetch(api.orgTopology)])
     const team = await parseJSON<{ members: TeamPerson[] }>(teamRes)
+    const org = await parseJSON<{ crews: Crew[] }>(orgRes)
+    setCrewOptions(org.crews || [])
     const next = (team.members || []).map(toDraft)
     setDraft(next)
     setSaved(next)
@@ -60,7 +66,17 @@ export function TeamRosterSection({ services, onChanged, onDirtyChange }: TeamRo
   const addMember = () => {
     setDraft((prev) => [
       ...prev,
-      { key: `new-${Date.now()}`, alias: '', name: '', role: '', access: 'member', focus: [] },
+      {
+        key: `new-${Date.now()}`,
+        alias: '',
+        name: '',
+        role: '',
+        access: 'member',
+        focus: [],
+        crews: [],
+        primaryCrew: '',
+        pulseScope: 'member',
+      },
     ])
     setMessage(null)
   }
@@ -100,6 +116,9 @@ export function TeamRosterSection({ services, onChanged, onDirtyChange }: TeamRo
             role: m.role,
             access: m.access,
             focus: m.focus,
+            crews: m.crews,
+            primary_crew: m.primaryCrew,
+            pulse_scope: m.pulseScope,
           })),
         }),
       })
@@ -220,6 +239,73 @@ export function TeamRosterSection({ services, onChanged, onDirtyChange }: TeamRo
               </div>
             </div>
 
+            {crewOptions.length > 0 && (
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1.5">
+                    {t('team.crews')}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {crewOptions.map((crew) => {
+                      const active = member.crews.includes(crew.id)
+                      return (
+                        <button
+                          key={crew.id}
+                          type="button"
+                          onClick={() => {
+                            updateMember(member.key, {
+                              crews: active
+                                ? member.crews.filter((id) => id !== crew.id)
+                                : [...member.crews, crew.id],
+                            })
+                          }}
+                          className={`text-[11px] px-2 py-1 rounded-full border transition ${
+                            active
+                              ? 'bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800'
+                              : 'bg-transparent text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                          }`}
+                        >
+                          {crew.label.ru || crew.label.en || crew.id}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label className="block">
+                    <span className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      {t('team.primaryCrew')}
+                    </span>
+                    <select
+                      value={member.primaryCrew}
+                      onChange={(e) => updateMember(member.key, { primaryCrew: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-sm"
+                    >
+                      <option value="">{t('team.roleNone')}</option>
+                      {crewOptions.map((crew) => (
+                        <option key={crew.id} value={crew.id}>
+                          {crew.label.ru || crew.label.en || crew.id}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      {t('team.pulseScope')}
+                    </span>
+                    <select
+                      value={member.pulseScope || 'member'}
+                      onChange={(e) => updateMember(member.key, { pulseScope: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-sm"
+                    >
+                      <option value="member">{t('team.pulseScopeMember')}</option>
+                      <option value="executive">{t('team.pulseScopeExecutive')}</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            )}
+
             <div className="mt-3">
               <div className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1.5">
                 {t('team.focus')}
@@ -259,5 +345,8 @@ function toDraft(person: TeamPerson): DraftMember {
     role: person.role || '',
     access: person.access || '',
     focus: person.focus || [],
+    crews: person.crews || [],
+    primaryCrew: person.primary_crew || '',
+    pulseScope: person.pulse_scope || 'member',
   }
 }

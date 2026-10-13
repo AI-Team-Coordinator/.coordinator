@@ -8,6 +8,8 @@ type MemberResponse struct {
 	Role            string               `json:"role,omitempty"`
 	Access          string               `json:"access,omitempty"`
 	Focus           []string             `json:"focus,omitempty"`
+	Crews           []string             `json:"crews,omitempty"`
+	PulseScope      string               `json:"pulse_scope,omitempty"`
 	Services        []string             `json:"services,omitempty"`
 	Status          string               `json:"status"`
 	TaskID          string               `json:"task_id,omitempty"`

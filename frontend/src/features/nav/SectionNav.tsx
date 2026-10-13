@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, LayoutDashboard, Users } from 'lucide-react'
+import { BarChart3, Boxes, Building2, LayoutDashboard, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CoordinatorLogo } from '../../shared/ui/Logo'
 import { cn } from '../../shared/lib/utils'
@@ -7,6 +7,7 @@ import { SECTIONS, type SectionId } from './sections'
 const ICONS = {
   overview: LayoutDashboard,
   team: Users,
+  organization: Building2,
   project: Boxes,
   stats: BarChart3,
 } as const
@@ -42,7 +43,7 @@ export function SectionNav({ section, onChange, teamDirty }: SectionNavProps) {
           >
             <Icon className="w-5 h-5" strokeWidth={1.75} />
             <span className="text-[10px] leading-none font-medium">{t(`sections.${id}`)}</span>
-            {id === 'team' && teamDirty && (
+            {(id === 'team' || id === 'organization') && teamDirty && (
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-400" />
             )}
           </button>

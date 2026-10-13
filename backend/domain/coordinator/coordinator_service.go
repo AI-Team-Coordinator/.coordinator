@@ -76,18 +76,27 @@ func (s *Service) SaveTeam(ctx context.Context, req dto.SaveTeamRequest) (*dto.T
 	}
 	previousAccess := teamAccessByAlias(previous)
 
+	topology, err := s.repo.GetOrgTopology(ctx)
+	if err != nil {
+		return nil, err
+	}
+	crewIDs := crewIDSet(topology)
+
 	raw := make([]model.TeamPerson, 0, len(req.Members))
 	for _, person := range req.Members {
 		raw = append(raw, model.TeamPerson{
-			Alias:  person.Alias,
-			Name:   person.Name,
-			Role:   person.Role,
-			Access: person.Access,
-			Focus:  person.Focus,
+			Alias:       person.Alias,
+			Name:        person.Name,
+			Role:        person.Role,
+			Access:      person.Access,
+			Focus:       person.Focus,
+			Crews:       person.Crews,
+			PrimaryCrew: person.PrimaryCrew,
+			PulseScope:  person.PulseScope,
 		})
 	}
 
-	members, err := normalizeAndValidateTeam(raw, serviceIDs)
+	members, err := normalizeAndValidateTeam(raw, serviceIDs, crewIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -252,15 +261,128 @@ func (s *Service) GetTeam(ctx context.Context) (*dto.TeamResponse, error) {
 		if focus == nil {
 			focus = []string{}
 		}
+		crews := person.Crews
+		if crews == nil {
+			crews = []string{}
+		}
 		members = append(members, dto.TeamPersonResponse{
-			Alias:  person.Alias,
-			Name:   person.Name,
-			Role:   person.Role,
-			Access: person.Access,
-			Focus:  focus,
+			Alias:       person.Alias,
+			Name:        person.Name,
+			Role:        person.Role,
+			Access:      person.Access,
+			Focus:       focus,
+			Crews:       crews,
+			PrimaryCrew: person.PrimaryCrew,
+			PulseScope:  person.PulseScope,
 		})
 	}
 	return &dto.TeamResponse{Members: members}, nil
+}
+
+func (s *Service) GetOrgTopology(ctx context.Context) (*dto.OrgTopologyResponse, error) {
+	topology, err := s.repo.GetOrgTopology(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return mapOrgTopologyResponse(topology), nil
+}
+
+func (s *Service) SaveOrgTopology(ctx context.Context, req dto.SaveOrgTopologyRequest) (*dto.OrgTopologyResponse, error) {
+	raw := model.OrgTopology{
+		Version:        req.Version,
+		Crews:          make([]model.Crew, 0, len(req.Crews)),
+		CrewConnectors: make([]model.CrewConnector, 0, len(req.CrewConnectors)),
+	}
+	for _, c := range req.Crews {
+		raw.Crews = append(raw.Crews, model.Crew{
+			ID:            c.ID,
+			Label:         model.LocalizedText{EN: c.Label.EN, RU: c.Label.RU},
+			Kind:          c.Kind,
+			InterestBrief: c.InterestBrief,
+			Notes:         c.Notes,
+		})
+	}
+	for _, link := range req.CrewConnectors {
+		interests := make([]model.CrewConnectorItem, 0, len(link.Interests))
+		for _, item := range link.Interests {
+			interests = append(interests, model.CrewConnectorItem{
+				Title:  item.Title,
+				Detail: item.Detail,
+				Tags:   item.Tags,
+			})
+		}
+		raw.CrewConnectors = append(raw.CrewConnectors, model.CrewConnector{
+			ID:         link.ID,
+			FromCrewID: link.FromCrewID,
+			ToCrewID:   link.ToCrewID,
+			Summary:    link.Summary,
+			Notes:      link.Notes,
+			Interests:  interests,
+		})
+	}
+
+	topology, err := normalizeAndValidateOrgTopology(raw)
+	if err != nil {
+		return nil, err
+	}
+	team, err := s.repo.GetTeam(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateTopologyAgainstTeam(topology, team); err != nil {
+		return nil, err
+	}
+	if err := s.repo.SaveOrgTopology(ctx, topology); err != nil {
+		return nil, err
+	}
+	out := mapOrgTopologyResponse(topology)
+	if warn := s.settingsPushWarning(ctx); warn != "" {
+		out.Warning = warn
+	} else {
+		out.Pushed = true
+	}
+	return out, nil
+}
+
+func mapOrgTopologyResponse(topology model.OrgTopology) *dto.OrgTopologyResponse {
+	crews := make([]dto.CrewResponse, 0, len(topology.Crews))
+	for _, c := range topology.Crews {
+		crews = append(crews, dto.CrewResponse{
+			ID:            c.ID,
+			Label:         dto.LocalizedText{EN: c.Label.EN, RU: c.Label.RU},
+			Kind:          c.Kind,
+			InterestBrief: c.InterestBrief,
+			Notes:         c.Notes,
+		})
+	}
+	connectors := make([]dto.CrewConnectorResponse, 0, len(topology.CrewConnectors))
+	for _, link := range topology.CrewConnectors {
+		interests := make([]dto.CrewConnectorItemResponse, 0, len(link.Interests))
+		for _, item := range link.Interests {
+			tags := item.Tags
+			if tags == nil {
+				tags = []string{}
+			}
+			interests = append(interests, dto.CrewConnectorItemResponse{
+				Title:  item.Title,
+				Detail: item.Detail,
+				Tags:   tags,
+			})
+		}
+		connectors = append(connectors, dto.CrewConnectorResponse{
+			ID:         link.ID,
+			FromCrewID: link.FromCrewID,
+			ToCrewID:   link.ToCrewID,
+			Summary:    link.Summary,
+			Notes:      link.Notes,
+			Interests:  interests,
+		})
+	}
+	return &dto.OrgTopologyResponse{
+		Version:        topology.Version,
+		Crews:          crews,
+		CrewConnectors: connectors,
+	}
 }
 
 func (s *Service) GetProject(ctx context.Context) (*dto.ProjectResponse, error) {
@@ -677,12 +799,18 @@ func mapMembers(members []model.Member) []dto.MemberResponse {
 		if services == nil {
 			services = []string{}
 		}
+		crews := m.Crews
+		if crews == nil {
+			crews = []string{}
+		}
 		item := dto.MemberResponse{
 			Alias:           m.Alias,
 			Name:            m.Name,
 			Role:            m.Role,
 			Access:          m.Access,
 			Focus:           focus,
+			Crews:           crews,
+			PulseScope:      m.PulseScope,
 			Services:        services,
 			Status:          m.Status,
 			TaskID:          m.TaskID,

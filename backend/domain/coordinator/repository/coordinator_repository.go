@@ -13,6 +13,8 @@ type CoordinatorRepository interface {
 	GetAuthors(ctx context.Context) (map[string]string, error)
 	GetTeam(ctx context.Context) ([]model.TeamPerson, error)
 	SaveTeam(ctx context.Context, members []model.TeamPerson) error
+	GetOrgTopology(ctx context.Context) (model.OrgTopology, error)
+	SaveOrgTopology(ctx context.Context, topology model.OrgTopology) error
 	GetProject(ctx context.Context) (*model.ProjectProfile, error)
 	SaveProject(ctx context.Context, profile *model.ProjectProfile) error
 	WorkspaceDir() string

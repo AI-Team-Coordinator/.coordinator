@@ -9,6 +9,8 @@ type Member struct {
 	Role        string
 	Access      string
 	Focus       []string
+	Crews       []string
+	PulseScope  string
 	Services    []string
 	Status      string
 	TaskID      string

@@ -9,11 +9,16 @@ import (
 )
 
 var (
-	aliasPattern = regexp.MustCompile(`^[A-Z]{2,4}$`)
-	rolePattern  = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
+	aliasPattern   = regexp.MustCompile(`^[A-Z]{2,4}$`)
+	rolePattern    = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
+	slugIDPattern  = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,63}$`)
+	pulseScopeAllowed = map[string]struct{}{
+		"member":    {},
+		"executive": {},
+	}
 )
 
-func normalizeAndValidateTeam(members []model.TeamPerson, serviceIDs map[string]struct{}) ([]model.TeamPerson, error) {
+func normalizeAndValidateTeam(members []model.TeamPerson, serviceIDs map[string]struct{}, crewIDs map[string]struct{}) ([]model.TeamPerson, error) {
 	if len(members) == 0 {
 		return nil, &ValidationError{Msg: "team must have at least one member"}
 	}
@@ -64,12 +69,54 @@ func normalizeAndValidateTeam(members []model.TeamPerson, serviceIDs map[string]
 			focus = append(focus, id)
 		}
 
+		crews := make([]string, 0, len(raw.Crews))
+		crewSeen := make(map[string]struct{})
+		for _, id := range raw.Crews {
+			id = strings.ToLower(strings.TrimSpace(id))
+			if id == "" {
+				continue
+			}
+			if crewIDs != nil {
+				if _, ok := crewIDs[id]; !ok {
+					return nil, &ValidationError{Msg: fmt.Sprintf("member %s: unknown crew %s", alias, id)}
+				}
+			}
+			if _, ok := crewSeen[id]; ok {
+				continue
+			}
+			crewSeen[id] = struct{}{}
+			crews = append(crews, id)
+		}
+
+		primaryCrew := strings.ToLower(strings.TrimSpace(raw.PrimaryCrew))
+		if primaryCrew != "" {
+			if crewIDs != nil {
+				if _, ok := crewIDs[primaryCrew]; !ok {
+					return nil, &ValidationError{Msg: fmt.Sprintf("member %s: unknown primary_crew %s", alias, primaryCrew)}
+				}
+			}
+			if _, ok := crewSeen[primaryCrew]; !ok {
+				crews = append(crews, primaryCrew)
+			}
+		}
+
+		pulseScope := strings.ToLower(strings.TrimSpace(raw.PulseScope))
+		if pulseScope == "" {
+			pulseScope = "member"
+		}
+		if _, ok := pulseScopeAllowed[pulseScope]; !ok {
+			return nil, &ValidationError{Msg: fmt.Sprintf("member %s: pulse_scope must be member or executive", alias)}
+		}
+
 		out = append(out, model.TeamPerson{
-			Alias:  alias,
-			Name:   name,
-			Role:   role,
-			Access: access,
-			Focus:  focus,
+			Alias:       alias,
+			Name:        name,
+			Role:        role,
+			Access:      access,
+			Focus:       focus,
+			Crews:       crews,
+			PrimaryCrew: primaryCrew,
+			PulseScope:  pulseScope,
 		})
 	}
 

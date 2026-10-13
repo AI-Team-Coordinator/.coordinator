@@ -17,6 +17,8 @@ func (a *App) SetupRoutes() {
 	mux.HandleFunc("GET "+api+"/pulse", a.CoordinatorController.GetPulse)
 	mux.HandleFunc("GET "+api+"/team", a.CoordinatorController.GetTeam)
 	mux.HandleFunc("PUT "+api+"/team", a.CoordinatorController.PutTeam)
+	mux.HandleFunc("GET "+api+"/org-topology", a.CoordinatorController.GetOrgTopology)
+	mux.HandleFunc("PUT "+api+"/org-topology", a.CoordinatorController.PutOrgTopology)
 	mux.HandleFunc("GET "+api+"/project", a.CoordinatorController.GetProject)
 	mux.HandleFunc("GET "+api+"/setup", a.CoordinatorController.GetSetup)
 	mux.HandleFunc("POST "+api+"/setup", a.CoordinatorController.PostSetup)

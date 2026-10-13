@@ -9,6 +9,7 @@
   "sections": {
     "overview": "Обзор",
     "team": "Команда",
+    "organization": "Организация",
     "project": "Проект",
     "stats": "Статистика"
   },
@@ -209,7 +210,40 @@
     "remove": "Удалить",
     "savedPushed": "Сохранено и запушено в Common.",
     "savedLocal": "Сохранено локально, пуш не удался: {{warning}}",
-    "saveFailed": "Не удалось сохранить команду"
+    "saveFailed": "Не удалось сохранить команду",
+    "crews": "Команды (crew)",
+    "primaryCrew": "Основная crew",
+    "pulseScope": "Вид Pulse",
+    "pulseScopeMember": "Участник (по crew)",
+    "pulseScopeExecutive": "Руководитель (вся орг.)"
+  },
+  "org": {
+    "title": "Организация",
+    "subtitle": "Crew и связи команд. Файл org_topology.json в Common.",
+    "save": "Сохранить",
+    "crews": "Команды",
+    "addCrew": "Добавить crew",
+    "crewId": "Id crew",
+    "labelRu": "Название (RU)",
+    "labelEn": "Название (EN)",
+    "kind": "Тип",
+    "kinds": {
+      "internal": "Внутренняя",
+      "affiliated": "Смежная",
+      "external": "Внешняя"
+    },
+    "interestBrief": "Направление интереса",
+    "connectors": "Связи команд",
+    "addConnector": "Добавить связь",
+    "connectorId": "Id связи",
+    "fromCrew": "От (наблюдатель)",
+    "toCrew": "К (объект)",
+    "summary": "Кратко",
+    "interestTitle": "Заголовок интереса",
+    "interestDetail": "Подробнее",
+    "savedPushed": "Сохранено и запушено в Common.",
+    "savedLocal": "Сохранено локально, пуш не удался: {{warning}}",
+    "saveFailed": "Не удалось сохранить организацию"
   },
   "timeline": {
     "title": "Журнал активности",

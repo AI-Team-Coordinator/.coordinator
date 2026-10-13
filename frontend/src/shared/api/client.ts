@@ -2,6 +2,7 @@ export const api = {
   health: '/api/v1/health',
   pulse: '/api/v1/pulse',
   team: '/api/v1/team',
+  orgTopology: '/api/v1/org-topology',
   project: '/api/v1/project',
   projectServices: '/api/v1/project/services',
   members: '/api/v1/members',
