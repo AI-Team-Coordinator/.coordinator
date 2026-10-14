@@ -115,6 +115,19 @@ export interface Conflict {
   affected_aliases: string[]
 }
 
+export interface BillingPeriod {
+  start_iso: string
+  start_unix: number
+  end_unix: number
+}
+
+export interface StatsEnvelope {
+  stats: Stats
+  billing_periods?: BillingPeriod[]
+  period_from?: number
+  period_to?: number
+}
+
 export interface Stats {
   total_completed: number
   active_now: number

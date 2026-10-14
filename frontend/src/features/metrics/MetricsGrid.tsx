@@ -11,9 +11,11 @@ interface MetricsGridProps {
   onStatusClick?: (status: 'in_progress' | 'completed') => void
   onSpendClick?: () => void
   hideSpend?: boolean
+  /** Shown under feat/fix/research counts (e.g. billing cycle). */
+  countsScopeLabel?: string
 }
 
-export function MetricsGrid({ stats, onStatusClick, onSpendClick, hideSpend }: MetricsGridProps) {
+export function MetricsGrid({ stats, onStatusClick, onSpendClick, hideSpend, countsScopeLabel }: MetricsGridProps) {
   const { t, i18n } = useTranslation()
   const spend = cursorSpendFromStats(stats)
   const cycleLabel = spend.billingCycleStart
@@ -77,23 +79,47 @@ export function MetricsGrid({ stats, onStatusClick, onSpendClick, hideSpend }: M
         </div>
       </Card>
 
-      <Card className="p-4 bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800/80">
-        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
-          {t('metrics.featuresFixesResearch')}
+      <Card className="p-4 bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800/80 min-w-0">
+        <div className="xl:hidden">
+          <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            {t('metrics.featuresFixesResearch')}
+          </div>
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-1.5 gap-y-0 text-2xl md:text-3xl font-extrabold tabular-nums min-w-0">
+            <span className="text-slate-900 dark:text-white">{stats ? stats.features_completed : 0}</span>
+            <span className="text-slate-300 dark:text-slate-600 font-semibold text-xl md:text-2xl">/</span>
+            <span className="text-amber-500 dark:text-amber-400">{stats ? stats.fixes_completed : 0}</span>
+            <span className="text-slate-300 dark:text-slate-600 font-semibold text-xl md:text-2xl">/</span>
+            <span className="text-violet-500 dark:text-violet-400">{stats ? stats.research_completed ?? 0 : 0}</span>
+          </div>
         </div>
-        <div className="mt-2 text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white flex items-baseline gap-2">
-          <span>{stats ? stats.features_completed : 0}</span>
-          <span className="text-slate-400 font-light">/</span>
-          <span className="text-amber-500 dark:text-amber-400">
-            {stats ? stats.fixes_completed : 0}
-          </span>
-          <span className="text-slate-400 font-light">/</span>
-          <span className="text-violet-500 dark:text-violet-400">
-            {stats ? stats.research_completed ?? 0 : 0}
-          </span>
+        <div className="hidden xl:flex flex-col gap-1.5 min-w-0">
+          <div className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0">
+              {t('metrics.featShort')}
+            </span>
+            <span className="text-xl font-extrabold tabular-nums text-slate-900 dark:text-white truncate">
+              {stats ? stats.features_completed : 0}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0">
+              {t('metrics.fixShort')}
+            </span>
+            <span className="text-xl font-extrabold tabular-nums text-amber-500 dark:text-amber-400 truncate">
+              {stats ? stats.fixes_completed : 0}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0">
+              {t('metrics.researchShort')}
+            </span>
+            <span className="text-xl font-extrabold tabular-nums text-violet-500 dark:text-violet-400 truncate">
+              {stats ? stats.research_completed ?? 0 : 0}
+            </span>
+          </div>
         </div>
         <div className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-          {t('metrics.researchThisWeek', { count: stats?.research_completed_week ?? 0 })}
+          {countsScopeLabel || t('metrics.researchThisWeek', { count: stats?.research_completed_week ?? 0 })}
         </div>
       </Card>
 

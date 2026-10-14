@@ -215,6 +215,21 @@ func TestComputeTasksDropsOrphanNotInSnapshot(t *testing.T) {
 	}
 }
 
+func TestFeatFixResearchExcludeBeforeBillingCycle(t *testing.T) {
+	now := time.Now().Unix()
+	cycle := now - 3*86400
+	stats := computeStatsSince([]model.Event{
+		{Event: "task_completed", TaskID: "FEAT-OLD", Timestamp: now - 90*86400},
+		{Event: "task_completed", TaskID: "FIX-OLD", Timestamp: now - 90*86400, Branch: "fix/old"},
+		{Event: "task_completed", TaskID: "FIX-NEW", Timestamp: now - 86400, Branch: "fix/new"},
+		{Event: "research_completed", Timestamp: now - 90*86400},
+		{Event: "research_completed", Timestamp: now - 3600},
+	}, nil, cycle, 0)
+	if stats.FeaturesCompleted != 0 || stats.FixesCompleted != 1 || stats.ResearchCompleted != 1 {
+		t.Fatalf("feat=%d fix=%d research=%d", stats.FeaturesCompleted, stats.FixesCompleted, stats.ResearchCompleted)
+	}
+}
+
 func TestComputeStatsBillingCycle(t *testing.T) {
 	now := time.Now().Unix()
 	old := now - 40*86400
@@ -224,9 +239,12 @@ func TestComputeStatsBillingCycle(t *testing.T) {
 		{Event: "task_completed", TaskID: "NEW", Timestamp: now, BudgetUSD: f64(3), CostUSD: f64(0.5), OnDemandUSD: f64(0.5), SpendKind: "infra"},
 		{Event: "research_completed", Timestamp: old, BudgetUSD: f64(8), CostUSD: f64(2)},
 		{Event: "research_completed", Timestamp: now, BudgetUSD: f64(1), CostUSD: f64(0.2)},
-	}, nil, cycle)
-	if stats.BudgetUSDTotal != 12 || stats.BudgetUSDCycle != 3 {
+	}, nil, cycle, 0)
+	if stats.BudgetUSDTotal != 3 || stats.BudgetUSDCycle != 3 {
 		t.Fatalf("budget total=%v cycle=%v", stats.BudgetUSDTotal, stats.BudgetUSDCycle)
+	}
+	if stats.FeaturesCompleted != 1 || stats.ResearchCompleted != 1 {
+		t.Fatalf("features=%d research=%d", stats.FeaturesCompleted, stats.ResearchCompleted)
 	}
 	if stats.BudgetUSDProductCycle != 0 || stats.BudgetUSDInfraCycle != 3 {
 		t.Fatalf("product=%v infra=%v", stats.BudgetUSDProductCycle, stats.BudgetUSDInfraCycle)

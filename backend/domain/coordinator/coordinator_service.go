@@ -570,7 +570,7 @@ func (s *Service) GetConflicts(ctx context.Context) (*dto.ConflictsResponse, err
 	return &dto.ConflictsResponse{Conflicts: mapConflicts(detectConflicts(members))}, nil
 }
 
-func (s *Service) GetStats(ctx context.Context) (*dto.StatsEnvelope, error) {
+func (s *Service) GetStats(ctx context.Context, query dto.StatsQuery) (*dto.StatsEnvelope, error) {
 	members, err := s.repo.GetMembers(ctx)
 	if err != nil {
 		return nil, err
@@ -579,23 +579,30 @@ func (s *Service) GetStats(ctx context.Context) (*dto.StatsEnvelope, error) {
 	if err != nil {
 		return nil, err
 	}
-	cycleISO, cycleUnix := "", int64(0)
-	if snap := s.repo.CursorUsageSnapshot(); snap != nil {
-		cycleISO = snap.BillingCycleStart
-		cycleUnix = parseBillingCycleUnix(snap.BillingCycleStart)
+	samples := s.repo.LoadUsageSamples()
+	snap := s.repo.CursorUsageSnapshot()
+	cycleISO, cycleUnix := resolveBillingCycleStart(snap, members, samples)
+	periodStart := cycleUnix
+	periodEnd := int64(0)
+	if query.From > 0 {
+		periodStart = query.From
 	}
-	if cycleUnix == 0 {
-		cycleISO, cycleUnix = billingCycleFromMembers(members)
+	if query.To > 0 {
+		periodEnd = query.To
 	}
-	stats := computeStatsSince(events, members, cycleUnix)
+	stats := computeStatsSince(events, members, periodStart, periodEnd)
 	stats.BillingCycleStart = cycleISO
-	if snap := s.repo.CursorUsageSnapshot(); snap != nil && snap.PlanPriceUSD != nil && *snap.PlanPriceUSD > 0 {
+	if snap != nil && snap.PlanPriceUSD != nil && *snap.PlanPriceUSD > 0 {
 		p := *snap.PlanPriceUSD
 		stats.PlanPriceUSD = &p
 	}
 	stats.Hours = s.usageHours(members, events)
-	stats.Days = BuildDailySpend(stats.Hours, time.Now(), dailySpendDays)
+	stats.Days = FilterDaysInPeriod(BuildDailySpend(stats.Hours, time.Now(), dailySpendDays), periodStart, periodEnd)
+	periods := BillingPeriodsFromSamples(samples, time.Now())
 	return &dto.StatsEnvelope{
+		PeriodFrom:     periodStart,
+		PeriodTo:       periodEnd,
+		BillingPeriods: mapBillingPeriods(periods),
 		Stats: dto.StatsResponse{
 			TotalCompleted:               stats.TotalCompleted,
 			ActiveNow:                    stats.ActiveNow,
@@ -661,6 +668,18 @@ func (s *Service) GetStats(ctx context.Context) (*dto.StatsEnvelope, error) {
 			Days:                         mapHours(stats.Days),
 		},
 	}, nil
+}
+
+func mapBillingPeriods(periods []model.BillingPeriod) []dto.BillingPeriodResponse {
+	out := make([]dto.BillingPeriodResponse, 0, len(periods))
+	for _, p := range periods {
+		out = append(out, dto.BillingPeriodResponse{
+			StartISO:  p.StartISO,
+			StartUnix: p.StartUnix,
+			EndUnix:   p.EndUnix,
+		})
+	}
+	return out
 }
 
 func (s *Service) GetTasks(ctx context.Context, query dto.TasksQuery) (*dto.TasksResponse, error) {

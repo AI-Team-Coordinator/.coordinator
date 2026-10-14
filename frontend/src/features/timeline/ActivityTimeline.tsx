@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
+import { Select } from '../../shared/ui/Select'
 import { Button } from '../../shared/ui/Button'
 import { TimelineItem } from './TimelineItem'
 import type { EventItem, MemberState, ServiceNode } from '../../shared/types/api'
@@ -36,9 +37,6 @@ const EVENT_TYPES = [
   'handoff',
   'decision',
 ] as const
-
-const selectClass =
-  'px-2 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-200'
 
 export function ActivityTimeline({
   events,
@@ -114,8 +112,10 @@ export function ActivityTimeline({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <select
-            className={selectClass}
+          <Select
+            density="sm"
+            className="inline-block w-auto"
+            selectClassName="w-auto min-w-[7rem] bg-slate-50 dark:bg-slate-900"
             value={filter.alias}
             onChange={(e) => patch({ alias: e.target.value })}
           >
@@ -125,9 +125,11 @@ export function ActivityTimeline({
                 {alias}
               </option>
             ))}
-          </select>
-          <select
-            className={selectClass}
+          </Select>
+          <Select
+            density="sm"
+            className="inline-block w-auto"
+            selectClassName="w-auto min-w-[7rem] bg-slate-50 dark:bg-slate-900"
             value={filter.event}
             onChange={(e) => patch({ event: e.target.value })}
           >
@@ -137,9 +139,11 @@ export function ActivityTimeline({
                 {t(`timeline.events.${type}`, { defaultValue: type })}
               </option>
             ))}
-          </select>
-          <select
-            className={selectClass}
+          </Select>
+          <Select
+            density="sm"
+            className="inline-block w-auto"
+            selectClassName="w-auto min-w-[7rem] bg-slate-50 dark:bg-slate-900"
             value={filter.service}
             onChange={(e) => patch({ service: e.target.value })}
           >
@@ -149,7 +153,7 @@ export function ActivityTimeline({
                 {svc.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 

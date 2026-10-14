@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Clock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
+import { Select } from '../../shared/ui/Select'
 import { Badge } from '../../shared/ui/Badge'
 import { Button } from '../../shared/ui/Button'
 import { formatDate, formatDuration, formatTime, formatUSD } from '../../shared/lib/formatters'
@@ -25,9 +26,6 @@ interface TaskTableProps {
   onFilterChange: (next: TasksFilter) => void
   onLoadMore: () => void
 }
-
-const selectClass =
-  'px-2 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-200'
 
 const STATUS_MODES = ['all', 'in_progress', 'parked', 'completed'] as const
 
@@ -101,8 +99,10 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <select
-            className={selectClass}
+          <Select
+            density="sm"
+            className="inline-block w-auto"
+            selectClassName="w-auto min-w-[7rem] bg-slate-50 dark:bg-slate-900"
             value={filter.alias}
             onChange={(e) => patch({ alias: e.target.value })}
           >
@@ -112,16 +112,18 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
                 {personName(alias)}
               </option>
             ))}
-          </select>
-          <select
-            className={selectClass}
+          </Select>
+          <Select
+            density="sm"
+            className="inline-block w-auto"
+            selectClassName="w-auto min-w-[7rem] bg-slate-50 dark:bg-slate-900"
             value={filter.kind}
             onChange={(e) => patch({ kind: e.target.value as TasksFilter['kind'] })}
           >
             <option value="">{t('timeline.filterAll')}</option>
             <option value="feature">{t('timeline.filterFeatures')}</option>
             <option value="fix">{t('timeline.filterFixes')}</option>
-          </select>
+          </Select>
         </div>
       </div>
 

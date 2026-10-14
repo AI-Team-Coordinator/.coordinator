@@ -12,5 +12,13 @@ export async function parseJSON<T>(res: Response): Promise<T> {
   if (!res.ok) {
     throw new Error(await readError(res))
   }
-  return (await res.json()) as T
+  const ct = res.headers.get('content-type') || ''
+  if (!ct.includes('application/json')) {
+    const text = (await res.text()).trim()
+    if (text.startsWith('<')) {
+      throw new Error('API returned HTML instead of JSON — restart ./utils/backend.sh (old API or wrong URL)')
+    }
+    throw new Error(text.slice(0, 120) || 'Unexpected response type')
+  }
+  return JSON.parse(await res.text()) as T
 }

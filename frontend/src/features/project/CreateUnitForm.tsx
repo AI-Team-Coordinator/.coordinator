@@ -5,6 +5,7 @@ import { api } from '../../shared/api/client'
 import { parseJSON } from '../../shared/api/http'
 import { Button } from '../../shared/ui/Button'
 import { Card } from '../../shared/ui/Card'
+import { Select } from '../../shared/ui/Select'
 import { localized } from '../../shared/lib/localized'
 import type { ProjectProfile } from '../../shared/types/api'
 
@@ -153,31 +154,31 @@ export function CreateUnitForm({ profile, onCreated }: CreateUnitFormProps) {
             </label>
             <label className="block">
               <span className="text-[11px] uppercase tracking-wide text-slate-500">{t('project.create.group')}</span>
-              <select
+              <Select
+                className="mt-1"
                 value={draft.group}
                 onChange={(e) => update({ group: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-sm"
               >
                 {profile.groups.map((group) => (
                   <option key={group.id} value={group.id}>
                     {localized(group.label, i18n.language)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="text-[11px] uppercase tracking-wide text-slate-500">{t('project.create.kind')}</span>
-              <select
+              <Select
+                className="mt-1"
                 value={draft.kind}
                 onChange={(e) => update({ kind: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-sm"
               >
                 {KINDS.map((kind) => (
                   <option key={kind} value={kind}>
                     {t(`project.kinds.${kind}`)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="text-[11px] uppercase tracking-wide text-slate-500">{t('project.create.id')}</span>
