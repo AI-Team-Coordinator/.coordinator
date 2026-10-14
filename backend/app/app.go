@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"coordinator/domain/coordinator"
-	"coordinator/domain/coordinator/repository"
 	"coordinator/infra"
 	"coordinator/infra/db"
 	"coordinator/model"
+	"coordinator/service"
+	"coordinator/service/repository"
 )
 
 type App struct {
@@ -20,8 +20,8 @@ type App struct {
 	handler               http.Handler
 	eventStore            repository.EventStore
 	repo                  *repository.FileRepository
-	CoordinatorService    *coordinator.Service
-	CoordinatorController *coordinator.Controller
+	CoordinatorService    *service.Service
+	CoordinatorController *service.Controller
 }
 
 func NewApp(config *Config) (*App, error) {
@@ -51,8 +51,8 @@ func NewApp(config *Config) (*App, error) {
 	}
 	infra.LogInfo("event store ready (sqlite cache under data/.cache)")
 
-	svc := coordinator.NewService(repo, store)
-	ctrl := coordinator.NewController(svc)
+	svc := service.NewService(repo, store)
+	ctrl := service.NewController(svc)
 
 	application := &App{
 		config:                config,

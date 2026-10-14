@@ -3,7 +3,7 @@ package timeline
 import (
 	"testing"
 
-	"coordinator/domain/coordination"
+	"coordinator/domain/claims"
 	"coordinator/domain/identity"
 	"coordinator/model"
 )
@@ -17,7 +17,7 @@ func TestHandoffRoundTrip(t *testing.T) {
 		FromAgent:  identity.CursorChat("EK", "sess-1"),
 		ToPerson:   "AS",
 		ToAgent:    identity.CursorChat("AS", "sess-2"),
-		Resource:   coordination.Parse("billing"),
+		Resource:   claims.Parse("billing"),
 		Summary:    "passing billing after checkout",
 	}
 	got, ok := ParseHandoff(h.Event())

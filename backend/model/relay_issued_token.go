@@ -12,6 +12,6 @@ type RelayIssuedToken struct {
 }
 
 type RelayIssuedTokenFile struct {
-	Version int                  `json:"version"`
-	Tokens  []RelayIssuedToken   `json:"tokens"`
+	Version int                `json:"version"`
+	Tokens  []RelayIssuedToken `json:"tokens"`
 }

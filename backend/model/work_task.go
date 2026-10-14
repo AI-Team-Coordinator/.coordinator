@@ -1,28 +1,12 @@
 package model
 
-import "time"
+import (
+	"coordinator/domain/slot"
+	"coordinator/domain/task"
+)
 
-// WorkTask is a coordinator work item (backlog / open / done), separate from a member snapshot slot.
-type WorkTask struct {
-	TaskID       string
-	Summary      string
-	Doc          string
-	Branch       string
-	Services     []string
-	CreatedBy    string
-	Assignee     string
-	Status       string // backlog, open, done
-	RelatedTasks []string
-	RelatedDocs  []string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	CompletedAt  time.Time
-}
+// WorkTask is the snapshot name for a task. The type lives in domain/task.
+type WorkTask = task.Task
 
-// WorkTaskSlot is a live or parked process bound to a work task.
-type WorkTaskSlot struct {
-	Alias    string
-	Status   string
-	Branch   string
-	UpdatedAt time.Time
-}
+// WorkTaskSlot is the snapshot name for a slot linked to a task. The type lives in domain/slot.
+type WorkTaskSlot = slot.Slot

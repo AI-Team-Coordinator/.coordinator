@@ -3,7 +3,7 @@ package timeline
 import (
 	"strings"
 
-	"coordinator/domain/coordination"
+	"coordinator/domain/claims"
 	"coordinator/domain/identity"
 	"coordinator/model"
 )
@@ -18,7 +18,7 @@ type Handoff struct {
 	FromAgent  identity.Agent
 	ToPerson   string
 	ToAgent    identity.Agent
-	Resource   coordination.Resource
+	Resource   claims.Resource
 	Summary    string
 }
 
@@ -52,7 +52,7 @@ func ParseHandoff(ev model.Event) (Handoff, bool) {
 		FromAgent:  identity.CursorChat(ev.Alias, ev.AgentID),
 		ToPerson:   strings.TrimSpace(ev.ToAlias),
 		ToAgent:    identity.CursorChat(ev.ToAlias, ev.ToAgent),
-		Resource:   coordination.Parse(ev.Service),
+		Resource:   claims.Parse(ev.Service),
 		Summary:    ev.Summary,
 	}, true
 }

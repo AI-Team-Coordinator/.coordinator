@@ -10,9 +10,9 @@ import (
 	"strings"
 	"sync"
 
-	"coordinator/domain/coordination"
 	"coordinator/model"
 
+	"coordinator/domain/claims"
 	_ "modernc.org/sqlite"
 )
 
@@ -20,7 +20,7 @@ const (
 	schemaVersion = "9"
 	hotYearSpan   = 3
 	dbFileName    = "coordinator.sqlite"
-	// eventServiceKeySQL mirrors coordination.Parse: strip leading dots, kebab→snake, lowercase.
+	// eventServiceKeySQL mirrors claims.Parse: strip leading dots, kebab→snake, lowercase.
 	eventServiceKeySQL = "lower(replace(replace(ltrim(trim(service), '.'), '-', '_'), ' ', '_'))"
 )
 
@@ -136,7 +136,7 @@ func eventFilters(q model.EventQuery) (string, []any) {
 		args = append(args, q.Event)
 	}
 	if q.Service != "" {
-		key := coordination.Parse(q.Service).Key
+		key := claims.Parse(q.Service).Key
 		if key == "" {
 			clauses = append(clauses, "service = ?")
 			args = append(args, q.Service)
