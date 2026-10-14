@@ -39,12 +39,20 @@ export function formatTime(isoOrTimestamp?: string | number): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
-export function formatDate(isoOrTimestamp?: string | number, locale: string = 'en'): string {
+export function formatDate(
+  isoOrTimestamp?: string | number,
+  locale: string = 'en',
+  withYear = false
+): string {
   if (!isoOrTimestamp) return ''
   const date = typeof isoOrTimestamp === 'number'
     ? new Date(isoOrTimestamp * 1000)
     : new Date(isoOrTimestamp)
-  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
+  return date.toLocaleDateString(locale, {
+    month: 'short',
+    day: 'numeric',
+    ...(withYear ? { year: 'numeric' } : {}),
+  })
 }
 
 export function formatUSD(amount?: number | null): string {

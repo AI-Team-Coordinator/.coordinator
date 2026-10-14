@@ -1,4 +1,4 @@
-export const SECTIONS = ['overview', 'team', 'project', 'stats'] as const
+export const SECTIONS = ['overview', 'team', 'organization', 'project', 'stats'] as const
 
 export type SectionId = (typeof SECTIONS)[number]
 

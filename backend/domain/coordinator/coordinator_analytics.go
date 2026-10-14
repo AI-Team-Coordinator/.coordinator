@@ -11,7 +11,7 @@ import (
 )
 
 func computeStats(events []model.Event, members []model.Member) model.Stats {
-	return computeStatsSince(events, members, billingCycleStartUnix(members))
+	return computeStatsSince(events, members, billingCycleStartUnix(members), 0)
 }
 
 func countActiveNow(members []model.Member) int {
@@ -28,7 +28,7 @@ func countActiveNow(members []model.Member) int {
 	return n
 }
 
-func computeStatsSince(events []model.Event, members []model.Member, cycleStart int64) model.Stats {
+func computeStatsSince(events []model.Event, members []model.Member, periodStart, periodEnd int64) model.Stats {
 	stats := model.Stats{}
 	stats.ActiveNow = countActiveNow(members)
 
@@ -50,7 +50,7 @@ func computeStatsSince(events []model.Event, members []model.Member, cycleStart 
 
 	for _, ev := range events {
 		if ev.Event == "research_completed" {
-			addResearchSpend(&stats, ev, startOfToday, startOfWeek, cycleStart)
+			addResearchSpend(&stats, ev, startOfToday, startOfWeek, periodStart, periodEnd)
 			continue
 		}
 		if ev.Event == "task_started" {
@@ -58,6 +58,17 @@ func computeStatsSince(events []model.Event, members []model.Member, cycleStart 
 			continue
 		}
 		if ev.Event != "task_completed" {
+			continue
+		}
+
+		if ev.Timestamp >= startOfToday {
+			stats.CompletedToday++
+		}
+		if ev.Timestamp >= startOfWeek {
+			stats.CompletedThisWeek++
+		}
+
+		if !statsPeriod(ev.Timestamp, periodStart, periodEnd) {
 			continue
 		}
 
@@ -74,13 +85,7 @@ func computeStatsSince(events []model.Event, members []model.Member, cycleStart 
 		if startTime, ok := starts[ev.TaskID]; ok && ev.Timestamp >= startTime {
 			totalCycleTimeSeconds += ev.Timestamp - startTime
 		}
-		if ev.Timestamp >= startOfToday {
-			stats.CompletedToday++
-		}
-		if ev.Timestamp >= startOfWeek {
-			stats.CompletedThisWeek++
-		}
-		inCycle := inPeriod(ev.Timestamp, cycleStart)
+		inCycle := statsPeriod(ev.Timestamp, periodStart, periodEnd)
 		if ev.CostUSD != nil {
 			cost := *ev.CostUSD
 			stats.CostUSDTotal += cost
@@ -142,7 +147,7 @@ func computeStatsSince(events []model.Event, members []model.Member, cycleStart 
 				stats.OnDemandUSDCycle += od
 			}
 		}
-		addTaskPoolPcts(&stats, ev, startOfToday, cycleStart)
+		addTaskPoolPcts(&stats, ev, startOfToday, periodStart)
 	}
 
 	if completedCount > 0 && totalCycleTimeSeconds > 0 {
@@ -164,9 +169,39 @@ func inPeriod(ts, start int64) bool {
 	return start <= 0 || ts >= start
 }
 
+func statsPeriod(ts, start, end int64) bool {
+	if start > 0 && ts < start {
+		return false
+	}
+	if end > 0 && ts > end {
+		return false
+	}
+	return true
+}
+
 func billingCycleStartUnix(members []model.Member) int64 {
 	_, ts := billingCycleFromMembers(members)
 	return ts
+}
+
+func resolveBillingCycleStart(snap *model.CursorUsage, members []model.Member, samples []model.UsageSample) (string, int64) {
+	if snap != nil {
+		iso := strings.TrimSpace(snap.BillingCycleStart)
+		if ts := parseBillingCycleUnix(iso); ts > 0 {
+			return iso, ts
+		}
+	}
+	iso, ts := billingCycleFromMembers(members)
+	if ts > 0 {
+		return iso, ts
+	}
+	for i := len(samples) - 1; i >= 0; i-- {
+		iso = strings.TrimSpace(samples[i].BillingCycleStart)
+		if ts := parseBillingCycleUnix(iso); ts > 0 {
+			return iso, ts
+		}
+	}
+	return "", 0
 }
 
 func billingCycleFromMembers(members []model.Member) (string, int64) {
@@ -211,15 +246,18 @@ func parseBillingCycleUnix(raw string) int64 {
 	return 0
 }
 
-func addResearchSpend(stats *model.Stats, ev model.Event, startOfToday, startOfWeek, cycleStart int64) {
-	stats.ResearchCompleted++
+func addResearchSpend(stats *model.Stats, ev model.Event, startOfToday, startOfWeek, periodStart, periodEnd int64) {
 	if ev.Timestamp >= startOfToday {
 		stats.ResearchCompletedToday++
 	}
 	if ev.Timestamp >= startOfWeek {
 		stats.ResearchCompletedWeek++
 	}
-	inCycle := inPeriod(ev.Timestamp, cycleStart)
+	if !statsPeriod(ev.Timestamp, periodStart, periodEnd) {
+		return
+	}
+	stats.ResearchCompleted++
+	inCycle := statsPeriod(ev.Timestamp, periodStart, periodEnd)
 	if ev.BudgetUSD != nil {
 		budget := *ev.BudgetUSD
 		if ev.Timestamp >= startOfToday {

@@ -15,6 +15,7 @@ import (
 
 var settingsSyncFiles = []string{
 	"data/settings/team.json",
+	"data/settings/org_topology.json",
 	"data/settings/project_profile.json",
 	"data/settings/author.md",
 }

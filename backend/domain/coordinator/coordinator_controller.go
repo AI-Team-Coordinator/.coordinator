@@ -62,6 +62,37 @@ func (c *Controller) PutTeam(w http.ResponseWriter, r *http.Request) {
 	infra.ReturnJSON(w, http.StatusOK, out)
 }
 
+func (c *Controller) GetOrgTopology(w http.ResponseWriter, r *http.Request) {
+	out, err := c.service.GetOrgTopology(r.Context())
+	if err != nil {
+		infra.LogError("GetOrgTopology failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to load org topology", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) PutOrgTopology(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var req dto.SaveOrgTopologyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		infra.ReturnError(w, "E400", "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	out, err := c.service.SaveOrgTopology(r.Context(), req)
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("PutOrgTopology failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to save org topology", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
 func (c *Controller) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
 	out, err := c.service.GetSyncStatus(r.Context())
 	if err != nil {
@@ -203,13 +234,37 @@ func (c *Controller) GetConflicts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) GetStats(w http.ResponseWriter, r *http.Request) {
-	out, err := c.service.GetStats(r.Context())
+	query, err := parseStatsQuery(r)
+	if err != nil {
+		infra.ReturnError(w, "E400", err.Error(), http.StatusBadRequest)
+		return
+	}
+	out, err := c.service.GetStats(r.Context(), query)
 	if err != nil {
 		infra.LogError("GetStats failed: %v", err)
 		infra.ReturnError(w, "E500", "Failed to load stats", http.StatusInternalServerError)
 		return
 	}
 	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func parseStatsQuery(r *http.Request) (dto.StatsQuery, error) {
+	q := dto.StatsQuery{}
+	if raw := r.URL.Query().Get("from"); raw != "" {
+		v, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			return q, errors.New("from must be a unix timestamp")
+		}
+		q.From = v
+	}
+	if raw := r.URL.Query().Get("to"); raw != "" {
+		v, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			return q, errors.New("to must be a unix timestamp")
+		}
+		q.To = v
+	}
+	return q, nil
 }
 
 func (c *Controller) GetTasks(w http.ResponseWriter, r *http.Request) {

@@ -7,16 +7,39 @@ import { TeamPulseSection } from '../features/pulse/TeamPulseSection'
 import { ActivityTimeline, type EventsFilter } from '../features/timeline/ActivityTimeline'
 import { TaskTable, type TasksFilter } from '../features/stats/TaskTable'
 import { SpendBreakdown } from '../features/stats/SpendBreakdown'
-import { HourlySpendChart, padTodayHours } from '../features/stats/HourlySpendChart'
+import { HourlySpendChart } from '../features/stats/HourlySpendChart'
+import { PersonalConsumptionChart } from '../features/stats/PersonalConsumptionChart'
+import { StatsPeriodToolbar } from '../features/stats/StatsPeriodToolbar'
+import {
+  billingPeriodMarkersOnDays,
+  periodRangeForPreset,
+  statsURL,
+  type StatsPeriodPreset,
+} from '../features/stats/statsPeriod'
+import { cursorSpendFromStats } from '../features/metrics/cursorSpend'
+import { formatDate } from '../shared/lib/formatters'
 import { ServiceMap } from '../features/project/ServiceMap'
 import { TeamRosterSection } from '../features/team/TeamRosterSection'
+import { OrgTopologySection } from '../features/org/OrgTopologySection'
 import { SectionNav } from '../features/nav/SectionNav'
 import { parseSection, type SectionId } from '../features/nav/sections'
 import { SetupScreen } from '../features/setup/SetupScreen'
 import { NextStepCard } from '../features/setup/NextStepCard'
 import { CoordinatorLogo } from '../shared/ui/Logo'
 import { isAlinaAssistProject } from '../shared/lib/alinaAssist'
-import type { Conflict, EventItem, MemberState, ProjectProfile, SetupState, Stats, StrayRepo, SyncStatus, TaskItem } from '../shared/types/api'
+import type {
+  BillingPeriod,
+  Conflict,
+  EventItem,
+  MemberState,
+  ProjectProfile,
+  SetupState,
+  Stats,
+  StatsEnvelope,
+  StrayRepo,
+  SyncStatus,
+  TaskItem,
+} from '../shared/types/api'
 import { api } from '../shared/api/client'
 import i18n from '../shared/i18n/config'
 
@@ -45,6 +68,12 @@ export function App() {
   const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null)
   const [setupPrefill, setSetupPrefill] = useState<SetupState | null>(null)
   const [setupReplay, setSetupReplay] = useState(false)
+  const [statsPeriodPreset, setStatsPeriodPreset] = useState<StatsPeriodPreset>('billing')
+  const [statsCustomFrom, setStatsCustomFrom] = useState('')
+  const [statsCustomTo, setStatsCustomTo] = useState('')
+  const [statsSectionStats, setStatsSectionStats] = useState<Stats | null>(null)
+  const [billingPeriods, setBillingPeriods] = useState<BillingPeriod[]>([])
+  const [statsPeriodFrom, setStatsPeriodFrom] = useState(0)
 
   const serviceNames = useMemo(() => {
     const map: Record<string, string> = {}
@@ -55,6 +84,27 @@ export function App() {
     }
     return map
   }, [profile])
+
+  const overviewCountsScope = useMemo(() => {
+    if (statsPeriodFrom > 0) {
+      return t('metrics.countsSinceCycle', {
+        date: formatDate(statsPeriodFrom, i18n.language, true),
+      })
+    }
+    const spend = cursorSpendFromStats(stats)
+    if (spend.billingCycleStart) {
+      return t('metrics.countsSinceCycle', {
+        date: formatDate(spend.billingCycleStart, i18n.language, true),
+      })
+    }
+    return t('metrics.countsAllTime')
+  }, [stats, statsPeriodFrom, t, i18n.language])
+
+  const statsView = statsSectionStats ?? stats
+  const billingDayMarkers = useMemo(
+    () => billingPeriodMarkersOnDays(statsView?.days ?? [], billingPeriods),
+    [statsView?.days, billingPeriods]
+  )
 
   const currentUser = useMemo(() => {
     const alias = syncStatus?.alias
@@ -124,8 +174,10 @@ export function App() {
           setStray(pulse.stray || [])
         }),
         apply(fetch(api.stats), (data) => {
-          const envelope = data as { stats?: Stats }
+          const envelope = data as StatsEnvelope
           if (envelope.stats) setStats(envelope.stats)
+          if (envelope.billing_periods) setBillingPeriods(envelope.billing_periods)
+          setStatsPeriodFrom(envelope.period_from ?? 0)
         }),
         apply(fetch(eventsURL(eventsFilter)), (data) => {
           applyEventsPayload(data as { events?: EventItem[]; total?: number }, false)
@@ -176,6 +228,27 @@ export function App() {
   const onDirtyChange = useCallback((dirty: boolean) => {
     setFormDirty(dirty)
   }, [])
+
+  useEffect(() => {
+    if (section !== 'stats') return
+    const { from, to } = periodRangeForPreset(
+      statsPeriodPreset,
+      stats?.billing_cycle_start,
+      statsCustomFrom,
+      statsCustomTo
+    )
+    fetch(statsURL(api.stats, from, to))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((envelope: StatsEnvelope | null) => {
+        if (!envelope?.stats) return
+        setStatsSectionStats(envelope.stats)
+        if (envelope.billing_periods) setBillingPeriods(envelope.billing_periods)
+        if (statsPeriodPreset === 'billing' && envelope.period_from) {
+          setStatsPeriodFrom(envelope.period_from)
+        }
+      })
+      .catch(() => {})
+  }, [section, statsPeriodPreset, statsCustomFrom, statsCustomTo, stats?.billing_cycle_start])
 
   const replaySetup = useCallback(() => {
     fetch(api.setup)
@@ -385,15 +458,12 @@ export function App() {
               {quietBoard ? <NextStepCard /> : (
                 <MetricsGrid
                   stats={stats}
+                  countsScopeLabel={overviewCountsScope}
                   onStatusClick={(status) => onTasksFilter({ ...tasksFilter, status })}
                   onSpendClick={() => changeSection('stats')}
                 />
               )}
-              <HourlySpendChart
-                grain="hour"
-                rows={padTodayHours(stats?.hours, currentUser.alias)}
-                title={t('spend.consumptionPersonal')}
-              />
+              <PersonalConsumptionChart stats={stats} alias={currentUser.alias} />
               <TeamPulseSection members={members} stray={stray} serviceNames={serviceNames} />
               {(!quietBoard || tasksTotal > 0) && (
                 <TaskTable
@@ -427,15 +497,41 @@ export function App() {
             />
           </div>
 
+          <div className={section === 'organization' ? 'block' : 'hidden'}>
+            <OrgTopologySection onChanged={loadAll} onDirtyChange={onDirtyChange} />
+          </div>
+
           {section === 'project' && <ServiceMap profile={profile} onCreated={loadAll} />}
 
           {section === 'stats' && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('sections.stats')}</h2>
-              <SpendBreakdown stats={stats} />
-              <HourlySpendChart grain="day" rows={stats?.days ?? []} />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('sections.stats')}</h2>
+                <StatsPeriodToolbar
+                  preset={statsPeriodPreset}
+                  onPresetChange={setStatsPeriodPreset}
+                  customFrom={statsCustomFrom}
+                  customTo={statsCustomTo}
+                  onCustomFromChange={setStatsCustomFrom}
+                  onCustomToChange={setStatsCustomTo}
+                />
+              </div>
+              <SpendBreakdown stats={statsView} />
+              <HourlySpendChart
+                grain="day"
+                rows={statsView?.days ?? []}
+                markerUnix={billingDayMarkers}
+                subtitle={billingDayMarkers.length > 0 ? t('spend.billingPeriodMarkersHint') : undefined}
+              />
               <MetricsGrid
-                stats={stats}
+                stats={statsView}
+                countsScopeLabel={
+                  statsPeriodPreset === 'billing' && statsView?.billing_cycle_start
+                    ? t('metrics.countsSinceCycle', {
+                        date: formatDate(statsView.billing_cycle_start, i18n.language, true),
+                      })
+                    : undefined
+                }
                 onStatusClick={(status) => onTasksFilter({ ...tasksFilter, status })}
                 hideSpend
               />

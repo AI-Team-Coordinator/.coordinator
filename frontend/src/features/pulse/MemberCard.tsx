@@ -124,6 +124,15 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
           {accessLabel ? ` · ${accessLabel}` : ''}
         </div>
       </div>
+      {member.crews && member.crews.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {member.crews.map((id) => (
+            <Badge key={id} variant="neutral" className="text-[10px] font-mono">
+              {id}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
 
       {isActive ? (
         <div className="mt-3">

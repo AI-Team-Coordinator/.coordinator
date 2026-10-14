@@ -9,9 +9,13 @@ interface ConsumptionChartProps {
   grain: 'hour' | 'day'
   rows: HourSpend[]
   title?: string
+  subtitle?: string
+  boundaries?: { startUnix: number; endUnix: number }
+  boundaryHourUnix?: number
+  markerUnix?: number[]
 }
 
-export function HourlySpendChart({ grain, rows, title }: ConsumptionChartProps) {
+export function HourlySpendChart({ grain, rows, title, subtitle, boundaries, boundaryHourUnix, markerUnix }: ConsumptionChartProps) {
   const { t, i18n } = useTranslation()
   const [hover, setHover] = useState<number | null>(null)
 
@@ -31,9 +35,12 @@ export function HourlySpendChart({ grain, rows, title }: ConsumptionChartProps) 
       className="p-4 space-y-3 bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/80"
       onMouseLeave={() => setHover(null)}
     >
-      <h2 className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-        {title || t('spend.consumption')}
-      </h2>
+      <div>
+        <h2 className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+          {title || t('spend.consumption')}
+        </h2>
+        {subtitle ? <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{subtitle}</p> : null}
+      </div>
       <div className="flex items-end gap-px sm:gap-1 min-h-[120px]">
         {rows.map((hour, index) => {
           const total = hour.cursor_models_pct + hour.other_models_pct
@@ -48,6 +55,14 @@ export function HourlySpendChart({ grain, rows, title }: ConsumptionChartProps) 
               : new Date(hour.hour * 1000).toLocaleTimeString([], { hour: '2-digit' })
           const showLabel = grain === 'day' ? index % 2 === 0 || index === rows.length - 1 : hourLabelShown(index)
           const selected = hover === index
+          const isPeriodStart = boundaries && hour.hour === boundaries.startUnix
+          const isPeriodEnd = boundaries && hour.hour === boundaries.endUnix
+          const isCycleStartHour = boundaryHourUnix != null && hour.hour === boundaryHourUnix
+          const isBillingMarker = markerUnix?.includes(hour.hour) ?? false
+          const boundaryRing =
+            isPeriodStart || isPeriodEnd || isCycleStartHour || isBillingMarker
+              ? 'ring-2 ring-amber-400/80 dark:ring-amber-500/60 ring-offset-1 ring-offset-white dark:ring-offset-slate-900'
+              : ''
           return (
             <button
               key={hour.hour}
@@ -60,7 +75,7 @@ export function HourlySpendChart({ grain, rows, title }: ConsumptionChartProps) 
             >
               <div
                 className={`flex flex-col justify-end w-full max-w-[14px] h-24 rounded-sm overflow-hidden bg-slate-100 dark:bg-slate-800/80 ${
-                  selected ? 'ring-2 ring-indigo-400 dark:ring-indigo-300 ring-offset-1 ring-offset-white dark:ring-offset-slate-900' : ''
+                  selected ? 'ring-2 ring-indigo-400 dark:ring-indigo-300 ring-offset-1 ring-offset-white dark:ring-offset-slate-900' : boundaryRing
                 }`}
               >
                 {otherH > 0 ? (
@@ -81,7 +96,12 @@ export function HourlySpendChart({ grain, rows, title }: ConsumptionChartProps) 
           )
         })}
       </div>
-      <HourDetail grain={grain} hour={active} />
+      {boundaries && grain === 'day' && rows.length > 1 ? (
+        <p className="text-[10px] text-slate-400 dark:text-slate-500">
+          {t('spend.periodBoundaryHint')}
+        </p>
+      ) : null}
+      <HourDetail grain={grain} hour={active} boundaries={boundaries} boundaryHourUnix={boundaryHourUnix} />
     </Card>
   )
 }
@@ -90,7 +110,17 @@ function hourLabelShown(index: number): boolean {
   return index % 3 === 0 || index === 23
 }
 
-function HourDetail({ grain, hour }: { grain: 'hour' | 'day'; hour: HourSpend | null }) {
+function HourDetail({
+  grain,
+  hour,
+  boundaries,
+  boundaryHourUnix,
+}: {
+  grain: 'hour' | 'day'
+  hour: HourSpend | null
+  boundaries?: { startUnix: number; endUnix: number }
+  boundaryHourUnix?: number
+}) {
   const { t, i18n } = useTranslation()
   if (!hour) {
     return (
@@ -103,6 +133,14 @@ function HourDetail({ grain, hour }: { grain: 'hour' | 'day'; hour: HourSpend | 
     grain === 'day'
       ? formatDate(hour.hour, i18n.language)
       : new Date(hour.hour * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  let boundaryNote = ''
+  if (boundaries && grain === 'day') {
+    if (hour.hour === boundaries.startUnix) boundaryNote = t('spend.periodStart')
+    else if (hour.hour === boundaries.endUnix) boundaryNote = t('spend.periodEnd')
+  }
+  if (boundaryHourUnix != null && grain === 'hour' && hour.hour === boundaryHourUnix) {
+    boundaryNote = t('spend.cycleStartHour')
+  }
   const people = hour.participants ?? []
   const aliases = hour.aliases?.length ? hour.aliases : hour.alias ? [hour.alias] : []
   const empty =
@@ -113,7 +151,10 @@ function HourDetail({ grain, hour }: { grain: 'hour' | 'day'; hour: HourSpend | 
   return (
     <div className="rounded-lg border border-indigo-200/80 dark:border-indigo-500/25 bg-indigo-50/70 dark:bg-indigo-950/30 px-3 py-2.5 space-y-2 min-h-[4.5rem]">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <div className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-100">{when}</div>
+        <div className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-100">
+          {when}
+          {boundaryNote ? <span className="ml-2 text-[10px] font-normal text-amber-600 dark:text-amber-400">{boundaryNote}</span> : null}
+        </div>
         {aliases.length > 0 ? (
           <div className="text-[11px] text-slate-500 dark:text-slate-400">{aliases.map((a) => `@${a}`).join(' · ')}</div>
         ) : null}
@@ -165,26 +206,4 @@ function ParticipantRow({ participant }: { participant: HourParticipant }) {
   )
 }
 
-export function padTodayHours(hours: HourSpend[] | undefined, alias?: string, now = new Date()): HourSpend[] {
-  const start = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000)
-  const byHour = new Map<number, HourSpend>()
-  for (const hour of hours ?? []) {
-    if (!belongsToUser(hour, alias)) continue
-    byHour.set(hour.hour, hour)
-  }
-  const out: HourSpend[] = []
-  for (let i = 0; i < 24; i += 1) {
-    const ts = start + i * 3600
-    out.push(byHour.get(ts) ?? { hour: ts, cursor_models_pct: 0, other_models_pct: 0, ondemand_usd: 0, participants: [] })
-  }
-  return out
-}
-
-function belongsToUser(hour: HourSpend, alias?: string): boolean {
-  if (!alias) return true
-  if (hour.alias === alias) return true
-  if (hour.aliases?.includes(alias)) return true
-  if (hour.participants?.some((p) => p.alias === alias)) return true
-  const tagged = Boolean(hour.alias) || (hour.aliases && hour.aliases.length > 0) || hour.participants?.some((p) => p.alias)
-  return !tagged
-}
+export { padTodayPersonalHours as padTodayHours } from './personalSpend'

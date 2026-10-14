@@ -152,6 +152,43 @@ func (r *FileRepository) SaveTeam(_ context.Context, members []model.TeamPerson)
 	return writeFileAtomic(authorPath, []byte(updated))
 }
 
+func (r *FileRepository) GetOrgTopology(_ context.Context) (model.OrgTopology, error) {
+	path := filepath.Join(r.settingsDir(), "org_topology.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return model.OrgTopology{Version: 1, Crews: []model.Crew{}, CrewConnectors: []model.CrewConnector{}}, nil
+		}
+		return model.OrgTopology{}, err
+	}
+	var file model.OrgTopology
+	if err := json.Unmarshal(data, &file); err != nil {
+		return model.OrgTopology{}, err
+	}
+	if file.Crews == nil {
+		file.Crews = []model.Crew{}
+	}
+	if file.CrewConnectors == nil {
+		file.CrewConnectors = []model.CrewConnector{}
+	}
+	return file, nil
+}
+
+func (r *FileRepository) SaveOrgTopology(_ context.Context, topology model.OrgTopology) error {
+	if topology.Crews == nil {
+		topology.Crews = []model.Crew{}
+	}
+	if topology.CrewConnectors == nil {
+		topology.CrewConnectors = []model.CrewConnector{}
+	}
+	data, err := json.MarshalIndent(topology, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	return writeFileAtomic(filepath.Join(r.settingsDir(), "org_topology.json"), data)
+}
+
 func writeFileAtomic(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -393,6 +430,8 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 			Role:        person.Role,
 			Access:      person.Access,
 			Focus:       person.Focus,
+			Crews:       person.Crews,
+			PulseScope:  person.PulseScope,
 			Services:    raw.Services,
 			Status:      raw.Status,
 			TaskID:      raw.TaskID,
@@ -469,13 +508,15 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 		}
 		person := roster[alias]
 		members = append(members, model.Member{
-			Alias:     alias,
-			Name:      name,
-			Role:      person.Role,
-			Access:    person.Access,
-			Focus:     person.Focus,
-			Status:    "idle",
-			UpdatedAt: now,
+			Alias:      alias,
+			Name:       name,
+			Role:       person.Role,
+			Access:     person.Access,
+			Focus:      person.Focus,
+			Crews:      person.Crews,
+			PulseScope: person.PulseScope,
+			Status:     "idle",
+			UpdatedAt:  now,
 		})
 	}
 
@@ -521,13 +562,15 @@ func (r *FileRepository) idleAuthors(authors map[string]string, roster map[strin
 	for alias, name := range authors {
 		person := roster[alias]
 		members = append(members, model.Member{
-			Alias:     alias,
-			Name:      name,
-			Role:      person.Role,
-			Access:    person.Access,
-			Focus:     person.Focus,
-			Status:    "idle",
-			UpdatedAt: now,
+			Alias:      alias,
+			Name:       name,
+			Role:       person.Role,
+			Access:     person.Access,
+			Focus:      person.Focus,
+			Crews:      person.Crews,
+			PulseScope: person.PulseScope,
+			Status:     "idle",
+			UpdatedAt:  now,
 		})
 	}
 	return members

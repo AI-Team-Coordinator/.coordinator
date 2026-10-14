@@ -84,6 +84,20 @@ type HourParticipantResponse struct {
 	Shared bool   `json:"shared,omitempty"`
 }
 
+type BillingPeriodResponse struct {
+	StartISO  string `json:"start_iso"`
+	StartUnix int64  `json:"start_unix"`
+	EndUnix   int64  `json:"end_unix"`
+}
+
+type StatsQuery struct {
+	From int64
+	To   int64
+}
+
 type StatsEnvelope struct {
-	Stats StatsResponse `json:"stats"`
+	Stats           StatsResponse           `json:"stats"`
+	BillingPeriods  []BillingPeriodResponse `json:"billing_periods,omitempty"`
+	PeriodFrom      int64                   `json:"period_from,omitempty"`
+	PeriodTo        int64                   `json:"period_to,omitempty"`
 }

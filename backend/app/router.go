@@ -17,6 +17,8 @@ func (a *App) SetupRoutes() {
 	mux.HandleFunc("GET "+api+"/pulse", a.CoordinatorController.GetPulse)
 	mux.HandleFunc("GET "+api+"/team", a.CoordinatorController.GetTeam)
 	mux.HandleFunc("PUT "+api+"/team", a.CoordinatorController.PutTeam)
+	mux.HandleFunc("GET "+api+"/org-topology", a.CoordinatorController.GetOrgTopology)
+	mux.HandleFunc("PUT "+api+"/org-topology", a.CoordinatorController.PutOrgTopology)
 	mux.HandleFunc("GET "+api+"/project", a.CoordinatorController.GetProject)
 	mux.HandleFunc("GET "+api+"/setup", a.CoordinatorController.GetSetup)
 	mux.HandleFunc("POST "+api+"/setup", a.CoordinatorController.PostSetup)
@@ -36,16 +38,17 @@ func (a *App) SetupRoutes() {
 }
 
 func (a *App) mountStatic(mux *http.ServeMux) {
+	apiOnlyStub := func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprintf(w, "<h2>Coordinator API</h2><p>See <a href='/api/v1/health'>/api/v1/health</a>. The board is Vite on UI_PORT (Alina Assist).</p>")
+	}
 	if a.config.FrontendDir == "" {
-		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			fmt.Fprintf(w, "<h2>Coordinator API</h2><p>See <a href='/api/v1/health'>/api/v1/health</a>. The board is Vite on UI_PORT (Alina Assist).</p>")
-		})
+		mux.HandleFunc("GET /{$}", apiOnlyStub)
 		return
 	}
 	indexPath := filepath.Join(a.config.FrontendDir, "index.html")
 	if _, err := os.Stat(indexPath); err != nil {
-		mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			fmt.Fprintf(w, "<h2>Coordinator API</h2><p>See <a href='/api/v1/health'>/api/v1/health</a></p>")
 		})
@@ -53,6 +56,10 @@ func (a *App) mountStatic(mux *http.ServeMux) {
 	}
 
 	fileServer := http.FileServer(http.Dir(a.config.FrontendDir))
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		http.ServeFile(w, r, indexPath)
+	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if len(r.URL.Path) >= 4 && r.URL.Path[:4] == "/api" {
 			http.NotFound(w, r)

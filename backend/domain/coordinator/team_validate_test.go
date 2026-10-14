@@ -11,7 +11,7 @@ func TestNormalizeAndValidateTeam(t *testing.T) {
 
 	members, err := normalizeAndValidateTeam([]model.TeamPerson{
 		{Alias: "ek", Name: " Evgeny ", Role: "Founder", Access: "admin", Focus: []string{"core", "core", "web_chat"}},
-	}, services)
+	}, services, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -19,30 +19,30 @@ func TestNormalizeAndValidateTeam(t *testing.T) {
 		t.Fatalf("unexpected member: %+v", members[0])
 	}
 
-	if _, err := normalizeAndValidateTeam(nil, services); err == nil {
+	if _, err := normalizeAndValidateTeam(nil, services, nil); err == nil {
 		t.Fatal("expected error for empty team")
 	}
 
-	if _, err := normalizeAndValidateTeam([]model.TeamPerson{{Alias: "TOOLONG", Name: "X"}}, services); err == nil {
+	if _, err := normalizeAndValidateTeam([]model.TeamPerson{{Alias: "TOOLONG", Name: "X"}}, services, nil); err == nil {
 		t.Fatal("expected alias error")
 	}
 
 	if _, err := normalizeAndValidateTeam([]model.TeamPerson{
 		{Alias: "EK", Name: "A", Focus: []string{"missing"}},
-	}, services); err == nil {
+	}, services, nil); err == nil {
 		t.Fatal("expected unknown service error")
 	}
 
 	if _, err := normalizeAndValidateTeam([]model.TeamPerson{
 		{Alias: "EK", Name: "A", Access: "root"},
-	}, services); err == nil {
+	}, services, nil); err == nil {
 		t.Fatal("expected access error")
 	}
 
 	if _, err := normalizeAndValidateTeam([]model.TeamPerson{
 		{Alias: "EK", Name: "A"},
 		{Alias: "ek", Name: "B"},
-	}, services); err == nil {
+	}, services, nil); err == nil {
 		t.Fatal("expected duplicate alias error")
 	}
 }

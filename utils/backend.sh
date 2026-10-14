@@ -78,14 +78,19 @@ cmd_status() {
     return 1
 }
 
+build_api() {
+    echo "📦 Compiling Go API server..."
+    (cd "$BACKEND_DIR" && go build -o coordinator-server .)
+}
+
 cmd_start() {
-    if healthy; then
+    local force="${1:-}"
+    if [ "$force" != "force" ] && healthy; then
         echo "🌐 API already on http://127.0.0.1:$PORT"
         return 0
     fi
     ensure_static_ui
-    echo "📦 Compiling Go API server..."
-    (cd "$BACKEND_DIR" && go build -o coordinator-server .)
+    build_api
     mkdir -p "$CACHE"
     echo "📂 data $DATA_DIR"
     echo "🌐 Starting API on http://127.0.0.1:$PORT (detached)..."
@@ -109,7 +114,9 @@ cmd_stop() {
 
 cmd_restart() {
     stop_port
-    cmd_start
+    ensure_static_ui
+    build_api
+    cmd_start force
 }
 
 case "${1:-start}" in
