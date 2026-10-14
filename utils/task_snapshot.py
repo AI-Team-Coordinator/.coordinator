@@ -375,6 +375,25 @@ def upsert_started(
     mirror_root(out, root, iso, root_status)
     write_snap(path, out)
 
+    try:
+        import work_task_store as wt
+
+        progress_dir = os.path.dirname(path)
+        wt.upsert_on_started(
+            progress_dir,
+            common_root,
+            alias,
+            task_id,
+            branch,
+            services_csv,
+            doc_path,
+            summary,
+            related_tasks,
+            related_docs,
+        )
+    except Exception:
+        pass
+
 
 def already_completed(events_file: str, task_id: str) -> bool:
     if not os.path.isfile(events_file):
@@ -434,6 +453,13 @@ def complete_once(path: str, events_file: str, alias: str, task_id: str, ts: str
         root, root_status = pick_root(remain)
         mirror_root(out, root, iso, root_status)
         write_snap(path, out)
+
+        try:
+            import work_task_store as wt
+
+            wt.mark_done(os.path.dirname(path), task_id)
+        except Exception:
+            pass
 
         skipped = already_completed(events_file, task_id)
         if skipped:

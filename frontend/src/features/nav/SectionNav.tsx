@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, Building2, LayoutDashboard, Users } from 'lucide-react'
+import { BarChart3, Boxes, Building2, ClipboardList, LayoutDashboard, RadioTower, Settings, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CoordinatorLogo } from '../../shared/ui/Logo'
 import { cn } from '../../shared/lib/utils'
@@ -6,10 +6,13 @@ import { SECTIONS, type SectionId } from './sections'
 
 const ICONS = {
   overview: LayoutDashboard,
+  work: ClipboardList,
   team: Users,
   organization: Building2,
+  relay: RadioTower,
   project: Boxes,
   stats: BarChart3,
+  settings: Settings,
 } as const
 
 interface SectionNavProps {

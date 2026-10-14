@@ -10,6 +10,7 @@ import { aliasFromName, sanitizeAlias } from '../../shared/lib/aliasFromName'
 import i18n from '../../shared/i18n/config'
 import { localized } from '../../shared/lib/localized'
 import { cn } from '../../shared/lib/utils'
+import { useLoadingStatus } from '../../shared/loading/LoadingStatusContext'
 import type { Crew, ServiceNode, TeamPerson } from '../../shared/types/api'
 
 const ROLES = ['founder', 'engineer'] as const
@@ -34,6 +35,7 @@ interface TeamRosterSectionProps {
 
 export function TeamRosterSection({ services, onChanged, onDirtyChange }: TeamRosterSectionProps) {
   const { t } = useTranslation()
+  const { track } = useLoadingStatus()
   const [draft, setDraft] = useState<DraftMember[]>([])
   const [saved, setSaved] = useState<DraftMember[]>([])
   const [crewOptions, setCrewOptions] = useState<Crew[]>([])
@@ -59,7 +61,10 @@ export function TeamRosterSection({ services, onChanged, onDirtyChange }: TeamRo
   }
 
   useEffect(() => {
-    load().catch((err: Error) => setError(err.message))
+    void track('team-roster', t('loading.team'), async () => {
+      await load()
+    }).catch((err: Error) => setError(err.message))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const dirtyForm = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved])

@@ -367,6 +367,18 @@ func (r *FileRepository) authorsFromMarkdown() (map[string]string, error) {
 }
 
 func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error) {
+	members, err := r.loadMembersFromProgress(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.withRepoWork(members), nil
+}
+
+func (r *FileRepository) GetMembersLight(ctx context.Context) ([]model.Member, error) {
+	return r.loadMembersFromProgress(ctx)
+}
+
+func (r *FileRepository) loadMembersFromProgress(ctx context.Context) ([]model.Member, error) {
 	authors, err := r.GetAuthors(ctx)
 	if err != nil {
 		return nil, err
@@ -380,7 +392,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 	entries, err := os.ReadDir(progressDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return r.withRepoWork(r.idleAuthors(authors, roster, time.Now())), nil
+			return r.idleAuthors(authors, roster, time.Now()), nil
 		}
 		return nil, err
 	}
@@ -499,7 +511,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 	}
 
 	if len(members) == 0 {
-		return r.withRepoWork(r.idleAuthors(authors, roster, now)), nil
+		return r.idleAuthors(authors, roster, now), nil
 	}
 
 	for alias, name := range authors {
@@ -520,7 +532,7 @@ func (r *FileRepository) GetMembers(ctx context.Context) ([]model.Member, error)
 		})
 	}
 
-	return r.withRepoWork(members), nil
+	return members, nil
 }
 
 func (r *FileRepository) withRepoWork(members []model.Member) []model.Member {

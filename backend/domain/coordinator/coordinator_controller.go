@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"coordinator/domain/coordinator/dto"
@@ -267,6 +269,20 @@ func parseStatsQuery(r *http.Request) (dto.StatsQuery, error) {
 	return q, nil
 }
 
+func (c *Controller) GetWorkItems(w http.ResponseWriter, r *http.Request) {
+	query := dto.WorkItemsQuery{
+		Status:   strings.TrimSpace(r.URL.Query().Get("status")),
+		Assignee: strings.TrimSpace(r.URL.Query().Get("assignee")),
+	}
+	out, err := c.service.GetWorkItems(r.Context(), query)
+	if err != nil {
+		infra.LogError("GetWorkItems failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to load work items", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
 func (c *Controller) GetTasks(w http.ResponseWriter, r *http.Request) {
 	query, err := parseTasksQuery(r)
 	if err != nil {
@@ -382,6 +398,212 @@ func parseTasksQuery(r *http.Request) (dto.TasksQuery, error) {
 		q.Offset = offset
 	}
 	return q, nil
+}
+
+func (c *Controller) GetUserSettings(w http.ResponseWriter, r *http.Request) {
+	out, err := c.service.GetUserSettings(r.Context())
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("GetUserSettings failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to load user settings", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) PutUserSettings(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var req dto.SaveUserSettingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		infra.ReturnError(w, "E400", "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	out, err := c.service.SaveUserSettings(r.Context(), req)
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("PutUserSettings failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to save user settings", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
+	settings, err := c.service.GetUserSettings(r.Context())
+	if err != nil || settings.AvatarURL == "" {
+		http.NotFound(w, r)
+		return
+	}
+	data, err := c.service.ReadUserAvatar(r.Context())
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Cache-Control", "private, max-age=60")
+	_, _ = w.Write(data)
+}
+
+func (c *Controller) PostUserAvatar(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 512<<10+1<<20)
+	if err := r.ParseMultipartForm(512 << 10); err != nil {
+		infra.ReturnError(w, "E400", "Invalid multipart form", http.StatusBadRequest)
+		return
+	}
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		infra.ReturnError(w, "E400", "Missing file field", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, 512<<10))
+	if err != nil {
+		infra.ReturnError(w, "E400", "Failed to read upload", http.StatusBadRequest)
+		return
+	}
+	out, err := c.service.SaveUserAvatar(r.Context(), data)
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("PostUserAvatar failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to save avatar", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) GetRelayAccess(w http.ResponseWriter, r *http.Request) {
+	out, err := c.service.GetRelayAccess(r.Context())
+	if err != nil {
+		infra.LogError("GetRelayAccess failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to load relay access", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) PostRelayConnect(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var req dto.RelayConnectRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		infra.ReturnError(w, "E400", "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	out, err := c.service.ConnectRelay(r.Context(), req.URL, req.Token)
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("PostRelayConnect failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to connect relay", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) PostRelayDisconnect(w http.ResponseWriter, r *http.Request) {
+	out, err := c.service.DisconnectRelay(r.Context())
+	if err != nil {
+		infra.LogError("PostRelayDisconnect failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to disconnect relay", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) GetRelaySources(w http.ResponseWriter, r *http.Request) {
+	out, err := c.service.GetRelaySources(r.Context())
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("GetRelaySources failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to load relay sources", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) GetRelayIssuedTokens(w http.ResponseWriter, r *http.Request) {
+	out, err := c.service.ListRelayIssuedTokens(r.Context())
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("GetRelayIssuedTokens failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to list relay tokens", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) PostRelayIssuedToken(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var req dto.RelayIssueTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		infra.ReturnError(w, "E400", "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	out, err := c.service.IssueRelayToken(r.Context(), req)
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("PostRelayIssuedToken failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to issue relay token", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) DeleteRelayIssuedToken(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	out, err := c.service.RevokeRelayIssuedToken(r.Context(), id)
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("DeleteRelayIssuedToken failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to revoke relay token", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) DeleteUserAvatar(w http.ResponseWriter, r *http.Request) {
+	out, err := c.service.DeleteUserAvatar(r.Context())
+	if err != nil {
+		var vErr *ValidationError
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("DeleteUserAvatar failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to remove avatar", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
 }
 
 func parseEventsQuery(r *http.Request) (dto.EventsQuery, error) {

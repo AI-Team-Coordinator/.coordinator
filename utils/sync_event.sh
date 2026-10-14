@@ -25,6 +25,7 @@ TO_AGENT=""
 AGENT_ID=""
 RELATED_TASKS=""
 RELATED_DOCS=""
+ASSIGNEE=""
 POS=()
 
 if [ -z "$ALIAS" ] || [ -z "$EVENT_TYPE" ]; then
@@ -35,7 +36,7 @@ fi
 shift 2
 for arg in "$@"; do
     case "$arg" in
-        doc=*|summary=*|session_id=*|findings=*|to_alias=*|to_agent=*|agent_id=*|related_tasks=*|related_docs=*)
+        doc=*|summary=*|session_id=*|findings=*|to_alias=*|to_agent=*|agent_id=*|related_tasks=*|related_docs=*|assignee=*)
             key=${arg%%=*}
             val=${arg#*=}
             case "$key" in
@@ -48,6 +49,7 @@ for arg in "$@"; do
                 agent_id) AGENT_ID=$val ;;
                 related_tasks) RELATED_TASKS=$val ;;
                 related_docs) RELATED_DOCS=$val ;;
+                assignee) ASSIGNEE=$val ;;
             esac
             ;;
         *)
@@ -226,6 +228,27 @@ if [ "$EVENT_TYPE" = "research_started" ] || [ "$EVENT_TYPE" = "research_complet
         exit "$rc"
     fi
     EVENT_JSON=""
+elif [ "$EVENT_TYPE" = "task_planned" ]; then
+    python3 "$COORD_DIR/work_task_store.py" planned "$PROGRESS_DIR" "$COMMON_ROOT" "$ALIAS" "$ISO_DATE" "$TASK_ID" "$BRANCH_NAME" "$SERVICES_CSV" "$DOC_PATH" "$SUMMARY" "$ASSIGNEE" "$RELATED_TASKS" "$RELATED_DOCS"
+    EVENT_JSON=$(python3 - "$COORD_DIR" "$TIMESTAMP" "$TASK_ID" "$ALIAS" "$BRANCH_NAME" "$ASSIGNEE" "$RELATED_TASKS" "$RELATED_DOCS" <<'PY'
+import json, sys
+coord_dir, ts, task_id, alias, branch, assignee, related_tasks, related_docs = sys.argv[1:]
+sys.path.insert(0, coord_dir)
+import task_snapshot as snap
+row = {"timestamp": int(ts), "event": "task_planned", "task_id": task_id, "alias": alias}
+if branch:
+    row["branch"] = branch
+if assignee:
+    row["assignee"] = assignee
+tasks = snap.normalize_related_tasks(related_tasks, task_id)
+docs = snap.normalize_related_docs(related_docs)
+if tasks:
+    row["related_tasks"] = tasks
+if docs:
+    row["related_docs"] = docs
+print(json.dumps(row, ensure_ascii=False))
+PY
+)
 elif [ "$EVENT_TYPE" = "task_started" ]; then
     write_current_task
     EVENT_JSON=$(python3 - "$COORD_DIR" "$TIMESTAMP" "$TASK_ID" "$ALIAS" "$BRANCH_NAME" "$RELATED_TASKS" "$RELATED_DOCS" <<'PY'

@@ -21,4 +21,4 @@
 ## Организации и внешний контур
 
 - [Команды и CrewConnector](./20261013-1711-EK-COORDINATOR_CREWS_AND_CONNECTORS.md)
-- [Внешние знания и события (Remote)](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md)
+- [Внешние знания и события (Relay)](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md)

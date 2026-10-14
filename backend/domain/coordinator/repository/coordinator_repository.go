@@ -19,6 +19,7 @@ type CoordinatorRepository interface {
 	SaveProject(ctx context.Context, profile *model.ProjectProfile) error
 	WorkspaceDir() string
 	GetMembers(ctx context.Context) ([]model.Member, error)
+	GetMembersLight(ctx context.Context) ([]model.Member, error)
 	CursorUsageSnapshot() *model.CursorUsage
 	LoadUsageSamples() []model.UsageSample
 	CompleteTask(ctx context.Context, alias, taskID string) error
@@ -28,5 +29,6 @@ type CoordinatorRepository interface {
 	SyncSettings(ctx context.Context, alias string) (*model.SyncResult, error)
 	GetTaskDoc(ctx context.Context, taskID string) (*model.TaskDoc, error)
 	TaskTitle(ctx context.Context, taskID string) string
+	ListWorkTasks(ctx context.Context) ([]model.WorkTask, error)
 	AppendEvent(ctx context.Context, ev model.Event) error
 }

@@ -69,7 +69,7 @@ func TestClassifyProductRepoLocalUnpushed(t *testing.T) {
 func TestInspectOneRepoNewBranchIsLocalNotMerged(t *testing.T) {
 	dir := initProductRepo(t)
 	gitRun(t, dir, "checkout", "-b", "feat/x")
-	work, ok := inspectOneRepo(dir, sampleServices()[0], "feat/x", "TASK-1")
+	work, ok := inspectOneRepo(dir, sampleServices()[0], "feat/x", "TASK-1", "EK")
 	if !ok {
 		t.Fatal("expected repo work")
 	}
@@ -84,7 +84,7 @@ func TestInspectOneRepoDirtyOnTaskBranch(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "wip.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	work, ok := inspectOneRepo(dir, sampleServices()[0], "feat/x", "TASK-1")
+	work, ok := inspectOneRepo(dir, sampleServices()[0], "feat/x", "TASK-1", "EK")
 	if !ok || work.State != "local" || !work.Dirty || !work.HasLocalBranch {
 		t.Fatalf("got ok=%v state=%s dirty=%v local=%v", ok, work.State, work.Dirty, work.HasLocalBranch)
 	}
@@ -97,7 +97,7 @@ func TestInspectOneRepoDirtyIgnoredOffBranch(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "wip.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	work, ok := inspectOneRepo(dir, sampleServices()[0], "feat/x", "TASK-1")
+	work, ok := inspectOneRepo(dir, sampleServices()[0], "feat/x", "TASK-1", "EK")
 	if !ok || work.Dirty {
 		t.Fatalf("got ok=%v dirty=%v", ok, work.Dirty)
 	}
@@ -108,7 +108,7 @@ func TestInspectOneRepoMergedWhenTaskOnMain(t *testing.T) {
 	gitRun(t, dir, "commit", "--allow-empty", "-m", "merge TASK-1")
 	gitRun(t, dir, "update-ref", "refs/remotes/origin/main", "HEAD")
 	gitRun(t, dir, "checkout", "-b", "feat/x")
-	work, ok := inspectOneRepo(dir, sampleServices()[0], "feat/x", "TASK-1")
+	work, ok := inspectOneRepo(dir, sampleServices()[0], "feat/x", "TASK-1", "EK")
 	if !ok || work.State != "merged" {
 		t.Fatalf("got ok=%v state=%s", ok, work.State)
 	}

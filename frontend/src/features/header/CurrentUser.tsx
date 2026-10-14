@@ -5,9 +5,11 @@ interface CurrentUserProps {
   name?: string
   role?: string
   access?: string
+  avatarUrl?: string
+  avatarBust?: number
 }
 
-export function CurrentUser({ alias, name, role, access }: CurrentUserProps) {
+export function CurrentUser({ alias, name, role, access, avatarUrl, avatarBust }: CurrentUserProps) {
   const { t } = useTranslation()
   if (!alias) {
     return (
@@ -18,11 +20,21 @@ export function CurrentUser({ alias, name, role, access }: CurrentUserProps) {
   const roleLabel = role ? t(`pulse.roles.${role}`, { defaultValue: role }) : ''
   const accessLabel = access === 'admin' ? t('setup.accessAdmin') : ''
 
+  const imgSrc = avatarUrl ? `${avatarUrl}${avatarBust ? `?v=${avatarBust}` : ''}` : undefined
+
   return (
     <div className="flex items-center gap-2 min-w-0">
-      <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 flex items-center justify-center font-bold text-[11px] text-indigo-600 dark:text-indigo-300 shrink-0">
-        {alias}
-      </div>
+      {imgSrc ? (
+        <img
+          src={imgSrc}
+          alt=""
+          className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+        />
+      ) : (
+        <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 flex items-center justify-center font-bold text-[11px] text-indigo-600 dark:text-indigo-300 shrink-0">
+          {alias}
+        </div>
+      )}
       <div className="min-w-0">
         <div className="text-sm font-medium text-slate-900 dark:text-white truncate leading-tight">
           {name || alias}

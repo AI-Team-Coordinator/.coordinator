@@ -21,6 +21,9 @@ import { formatDate } from '../shared/lib/formatters'
 import { ServiceMap } from '../features/project/ServiceMap'
 import { TeamRosterSection } from '../features/team/TeamRosterSection'
 import { OrgTopologySection } from '../features/org/OrgTopologySection'
+import { RelaySection } from '../features/relay/RelaySection'
+import { WorkItemsSection } from '../features/work/WorkItemsSection'
+import { SettingsSection } from '../features/settings/SettingsSection'
 import { SectionNav } from '../features/nav/SectionNav'
 import { parseSection, type SectionId } from '../features/nav/sections'
 import { SetupScreen } from '../features/setup/SetupScreen'
@@ -39,13 +42,28 @@ import type {
   StrayRepo,
   SyncStatus,
   TaskItem,
+  UserSettings,
+  WorkItem,
 } from '../shared/types/api'
 import { api } from '../shared/api/client'
+import {
+  consumeForceRefresh,
+  fetchJSONCached,
+  getCached,
+  isFresh,
+  shouldPoll,
+  type CacheResource,
+} from '../shared/cache/resourceRefresh'
 import i18n from '../shared/i18n/config'
+import { useLoadingStatus } from '../shared/loading/LoadingStatusContext'
+import { LoadingStatusOverlay } from '../shared/loading/LoadingStatusOverlay'
 
 export function App() {
   const { t } = useTranslation()
   const [section, setSection] = useState<SectionId>(() => parseSection(window.location.hash))
+  const [visitedSections, setVisitedSections] = useState<Set<SectionId>>(() =>
+    new Set([parseSection(window.location.hash)])
+  )
   const [members, setMembers] = useState<MemberState[]>([])
   const [stray, setStray] = useState<StrayRepo[]>([])
   const [conflicts, setConflicts] = useState<Conflict[]>([])
@@ -57,13 +75,15 @@ export function App() {
   eventsFilterRef.current = eventsFilter
   const [tasks, setTasks] = useState<TaskItem[]>([])
   const [tasksTotal, setTasksTotal] = useState(0)
+  const [workItems, setWorkItems] = useState<WorkItem[]>([])
+  const [workItemsReady, setWorkItemsReady] = useState(false)
   const [tasksFilter, setTasksFilter] = useState<TasksFilter>({ status: '', alias: '', kind: '' })
   const tasksFilterRef = useRef(tasksFilter)
   tasksFilterRef.current = tasksFilter
   const [profile, setProfile] = useState<ProjectProfile | null>(null)
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
   const [connected, setConnected] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const { track } = useLoadingStatus()
   const [formDirty, setFormDirty] = useState(false)
   const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null)
   const [setupPrefill, setSetupPrefill] = useState<SetupState | null>(null)
@@ -74,6 +94,10 @@ export function App() {
   const [statsSectionStats, setStatsSectionStats] = useState<Stats | null>(null)
   const [billingPeriods, setBillingPeriods] = useState<BillingPeriod[]>([])
   const [statsPeriodFrom, setStatsPeriodFrom] = useState(0)
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null)
+  const [userSettingsLoading, setUserSettingsLoading] = useState(true)
+  const [userSettingsLoadError, setUserSettingsLoadError] = useState(false)
+  const [avatarBust, setAvatarBust] = useState(0)
 
   const serviceNames = useMemo(() => {
     const map: Record<string, string> = {}
@@ -111,11 +135,20 @@ export function App() {
     const member = members.find((m) => m.alias === alias)
     return {
       alias,
-      name: member?.name,
-      role: member?.role,
-      access: member?.access,
+      name: userSettings?.name || member?.name,
+      role: member?.role || userSettings?.role,
+      access: member?.access || userSettings?.access,
+      avatarUrl: userSettings?.avatar_url,
+      avatarBust,
     }
-  }, [syncStatus?.alias, members])
+  }, [syncStatus?.alias, members, userSettings, avatarBust])
+
+  const onUserSettingsSaved = useCallback((next: UserSettings) => {
+    setUserSettings(next)
+    setAvatarBust(Date.now())
+    const lang = next.language?.startsWith('ru') ? 'ru' : 'en'
+    void i18n.changeLanguage(lang)
+  }, [])
 
   const changeSection = (next: SectionId) => {
     setSection(next)
@@ -154,53 +187,84 @@ export function App() {
     setTasks((prev) => (append ? [...prev, ...next] : next))
   }
 
-  const loadAll = async () => {
-    setLoading(true)
-    try {
-      const apply = async (input: Promise<Response>, onOk: (data: unknown) => void) => {
-        const res = await input
-        if (res.ok) {
-          onOk(await res.json())
+  const loadAll = useCallback(
+    async (opts?: { force?: boolean }) => {
+      const force = opts?.force ?? consumeForceRefresh()
+
+      const run = async (
+        key: CacheResource,
+        trackId: string,
+        label: string,
+        url: string,
+        apply: (data: unknown) => void,
+        urlKey = ''
+      ) => {
+        if (!force && isFresh(key, urlKey)) {
+          const cached = getCached(key, urlKey)
+          if (cached !== undefined) {
+            apply(cached)
+            return
+          }
         }
+        await track(trackId, label, async () => {
+          const data = await fetchJSONCached<unknown>(key, url, { force, urlKey })
+          if (data !== null) apply(data)
+        })
       }
 
-      await Promise.all([
-        apply(fetch(api.project), (data) => setProfile(data as ProjectProfile)),
-        apply(fetch(api.sync), (data) => setSyncStatus(data as SyncStatus)),
-        apply(fetch(api.pulse), (data) => {
-          const pulse = data as { members?: MemberState[]; conflicts?: Conflict[]; stray?: StrayRepo[] }
-          setMembers(pulse.members || [])
-          setConflicts(pulse.conflicts || [])
-          setStray(pulse.stray || [])
-        }),
-        apply(fetch(api.stats), (data) => {
-          const envelope = data as StatsEnvelope
-          if (envelope.stats) setStats(envelope.stats)
-          if (envelope.billing_periods) setBillingPeriods(envelope.billing_periods)
-          setStatsPeriodFrom(envelope.period_from ?? 0)
-        }),
-        apply(fetch(eventsURL(eventsFilter)), (data) => {
-          applyEventsPayload(data as { events?: EventItem[]; total?: number }, false)
-        }),
-        apply(fetch(tasksURL(tasksFilter)), (data) => {
-          applyTasksPayload(data as { tasks?: TaskItem[]; total?: number }, false)
-        }),
-      ])
-      setConnected(true)
-    } catch (err) {
-      console.error('Failed to load dashboard data:', err)
-      setConnected(false)
-    } finally {
-      setLoading(false)
-    }
-  }
+      try {
+        const eventsUrl = eventsURL(eventsFilter)
+        const tasksUrl = tasksURL(tasksFilter)
+
+        await Promise.all([
+          run('project', 'load-project', t('loading.project'), api.project, (data) =>
+            setProfile(data as ProjectProfile)
+          ),
+          run('sync', 'load-sync', t('loading.sync'), api.sync, (data) =>
+            setSyncStatus(data as SyncStatus)
+          ),
+          run('pulse', 'load-pulse', t('loading.pulse'), api.pulse, (data) => {
+            const pulse = data as { members?: MemberState[]; conflicts?: Conflict[]; stray?: StrayRepo[] }
+            setMembers(pulse.members || [])
+            setConflicts(pulse.conflicts || [])
+            setStray(pulse.stray || [])
+          }),
+          run('stats', 'load-stats', t('loading.stats'), api.stats, (data) => {
+            const envelope = data as StatsEnvelope
+            if (envelope.stats) setStats(envelope.stats)
+            if (envelope.billing_periods) setBillingPeriods(envelope.billing_periods)
+            setStatsPeriodFrom(envelope.period_from ?? 0)
+          }),
+          run('events', 'load-events', t('loading.events'), eventsUrl, (data) => {
+            applyEventsPayload(data as { events?: EventItem[]; total?: number }, false)
+          }, eventsUrl),
+          run('tasks', 'load-tasks', t('loading.tasks'), tasksUrl, (data) => {
+            applyTasksPayload(data as { tasks?: TaskItem[]; total?: number }, false)
+          }, tasksUrl),
+          run('workItems', 'load-work-items', t('work.loading'), api.workItems, (data) => {
+            const payload = data as { items?: WorkItem[] }
+            setWorkItems(payload.items || [])
+            setWorkItemsReady(true)
+          }),
+        ])
+        setConnected(true)
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err)
+        setConnected(false)
+      }
+    },
+    [track, t, eventsFilter, tasksFilter]
+  )
 
   const onEventsFilter = (next: EventsFilter) => {
     setEventsFilter(next)
-    fetch(eventsURL(next, 0))
-      .then((r) => r.json())
-      .then((d) => applyEventsPayload(d, false))
-      .catch(() => {})
+    const url = eventsURL(next, 0)
+    void fetchJSONCached<{ events?: EventItem[]; total?: number }>('events', url, {
+      force: true,
+      urlKey: url,
+    }).then((d) => {
+      if (d) applyEventsPayload(d, false)
+    })
   }
 
   const onEventsLoadMore = () => {
@@ -212,10 +276,13 @@ export function App() {
 
   const onTasksFilter = (next: TasksFilter) => {
     setTasksFilter(next)
-    fetch(tasksURL(next, 0))
-      .then((r) => r.json())
-      .then((d) => applyTasksPayload(d, false))
-      .catch(() => {})
+    const url = tasksURL(next, 0)
+    void fetchJSONCached<{ tasks?: TaskItem[]; total?: number }>('tasks', url, {
+      force: true,
+      urlKey: url,
+    }).then((d) => {
+      if (d) applyTasksPayload(d, false)
+    })
   }
 
   const onTasksLoadMore = () => {
@@ -237,18 +304,18 @@ export function App() {
       statsCustomFrom,
       statsCustomTo
     )
-    fetch(statsURL(api.stats, from, to))
-      .then((r) => (r.ok ? r.json() : null))
-      .then((envelope: StatsEnvelope | null) => {
-        if (!envelope?.stats) return
-        setStatsSectionStats(envelope.stats)
-        if (envelope.billing_periods) setBillingPeriods(envelope.billing_periods)
-        if (statsPeriodPreset === 'billing' && envelope.period_from) {
-          setStatsPeriodFrom(envelope.period_from)
-        }
-      })
-      .catch(() => {})
-  }, [section, statsPeriodPreset, statsCustomFrom, statsCustomTo, stats?.billing_cycle_start])
+    void track('stats-period', i18n.t('loading.statsPeriod'), async () => {
+      const r = await fetch(statsURL(api.stats, from, to))
+      if (!r.ok) return
+      const envelope = (await r.json()) as StatsEnvelope
+      if (!envelope.stats) return
+      setStatsSectionStats(envelope.stats)
+      if (envelope.billing_periods) setBillingPeriods(envelope.billing_periods)
+      if (statsPeriodPreset === 'billing' && envelope.period_from) {
+        setStatsPeriodFrom(envelope.period_from)
+      }
+    })
+  }, [section, statsPeriodPreset, statsCustomFrom, statsCustomTo, stats?.billing_cycle_start, track])
 
   const replaySetup = useCallback(() => {
     fetch(api.setup)
@@ -269,17 +336,51 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    setVisitedSections((prev) => {
+      if (prev.has(section)) return prev
+      const next = new Set(prev)
+      next.add(section)
+      return next
+    })
+  }, [section])
+
+  useEffect(() => {
     fetch(api.setup)
       .then((r) => (r.ok ? r.json() : { needed: false }))
       .then((data: SetupState) => {
         setSetupPrefill(data)
         setSetupNeeded(Boolean(data.needed))
         if (data.language) {
-          void i18n.changeLanguage(data.language)
+          void i18n.changeLanguage(data.language.startsWith('ru') ? 'ru' : 'en')
         }
       })
       .catch(() => setSetupNeeded(false))
   }, [])
+
+  useEffect(() => {
+    if (setupNeeded !== false) return
+    setUserSettingsLoadError(false)
+    void track('user-settings', i18n.t('loading.profile'), async () => {
+      setUserSettingsLoading(true)
+      try {
+        const r = await fetch(api.meSettings)
+        if (!r.ok) throw new Error('settings')
+        const data = (await r.json()) as UserSettings
+        setUserSettings(data)
+        if (data.language) {
+          const lang = data.language.startsWith('ru') ? 'ru' : 'en'
+          if (!i18n.language.startsWith(lang)) {
+            void i18n.changeLanguage(lang)
+          }
+        }
+      } catch {
+        setUserSettingsLoadError(true)
+      } finally {
+        setUserSettingsLoading(false)
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once after setup; not on every language change
+  }, [setupNeeded, track])
 
   useEffect(() => {
     if (setupNeeded !== false) return
@@ -290,24 +391,71 @@ export function App() {
     const checkServerBoot = () => {
       const now = Date.now()
       if (reloading || now - lastBootCheck < 1000) return
+      if (!shouldPoll('health')) return
       lastBootCheck = now
-      fetch(api.health)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d: { started_at?: string } | null) => {
-          const id = d?.started_at
-          if (!id || reloading) return
-          if (bootId && bootId !== id) {
-            reloading = true
-            window.location.reload()
-            return
-          }
-          bootId = id
-        })
-        .catch(() => {})
+      void fetchJSONCached<{ started_at?: string }>('health', api.health).then((d) => {
+        const id = d?.started_at
+        if (!id || reloading) return
+        if (bootId && bootId !== id) {
+          reloading = true
+          window.location.reload()
+          return
+        }
+        bootId = id
+      })
     }
 
-    loadAll()
-    checkServerBoot()
+    const pollStaleResources = () => {
+      if (shouldPoll('pulse')) {
+        void fetchJSONCached<{ members?: MemberState[]; conflicts?: Conflict[]; stray?: StrayRepo[] }>(
+          'pulse',
+          api.pulse
+        ).then((d) => {
+          if (!d) return
+          if (d.members) setMembers(d.members)
+          if (d.conflicts) setConflicts(d.conflicts)
+          if (Array.isArray(d.stray)) setStray(d.stray)
+        })
+      }
+      if (shouldPoll('stats')) {
+        void fetchJSONCached<StatsEnvelope>('stats', api.stats).then((d) => {
+          if (d?.stats) setStats(d.stats)
+        })
+      }
+      const evUrl = eventsURL(eventsFilterRef.current)
+      if (shouldPoll('events', evUrl)) {
+        void fetchJSONCached<{ events?: EventItem[]; total?: number }>('events', evUrl, { urlKey: evUrl }).then(
+          (d) => {
+            if (d) applyEventsPayload(d, false)
+          }
+        )
+      }
+      const tkUrl = tasksURL(tasksFilterRef.current)
+      if (shouldPoll('tasks', tkUrl)) {
+        void fetchJSONCached<{ tasks?: TaskItem[]; total?: number }>('tasks', tkUrl, { urlKey: tkUrl }).then((d) => {
+          if (d) applyTasksPayload(d, false)
+        })
+      }
+      if (shouldPoll('workItems')) {
+        void fetchJSONCached<{ items?: WorkItem[] }>('workItems', api.workItems).then((d) => {
+          if (!d) return
+          setWorkItems(d.items || [])
+          setWorkItemsReady(true)
+        })
+      }
+      if (shouldPoll('project')) {
+        void fetchJSONCached<ProjectProfile>('project', api.project).then((d) => {
+          if (d) setProfile(d)
+        })
+      }
+      if (shouldPoll('sync')) {
+        void fetchJSONCached<SyncStatus>('sync', api.sync).then((d) => {
+          if (d) setSyncStatus(d)
+        })
+      }
+    }
+
+    void loadAll()
 
     const eventSource = new EventSource(api.stream)
     eventSource.onopen = () => setConnected(true)
@@ -326,42 +474,10 @@ export function App() {
       checkServerBoot()
     }
 
-    const statsInterval = setInterval(() => {
+    const pollInterval = setInterval(() => {
       checkServerBoot()
-      fetch(api.pulse)
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.members) setMembers(d.members)
-          if (d.conflicts) setConflicts(d.conflicts)
-          if (Array.isArray(d.stray)) setStray(d.stray)
-        })
-        .catch(() => {})
-
-      fetch(api.stats)
-        .then((r) => r.json())
-        .then((d) => d.stats && setStats(d.stats))
-        .catch(() => {})
-
-      fetch(eventsURL(eventsFilterRef.current))
-        .then((r) => r.json())
-        .then((d) => applyEventsPayload(d, false))
-        .catch(() => {})
-
-      fetch(tasksURL(tasksFilterRef.current))
-        .then((r) => r.json())
-        .then((d) => applyTasksPayload(d, false))
-        .catch(() => {})
-
-      fetch(api.project)
-        .then((r) => r.json())
-        .then((d) => d && setProfile(d as ProjectProfile))
-        .catch(() => {})
-
-      fetch(api.sync)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => d && setSyncStatus(d))
-        .catch(() => {})
-    }, 5000)
+      pollStaleResources()
+    }, 3000)
 
     const ticker = setInterval(() => {
       setMembers((prev) =>
@@ -397,10 +513,10 @@ export function App() {
 
     return () => {
       eventSource.close()
-      clearInterval(statsInterval)
+      clearInterval(pollInterval)
       clearInterval(ticker)
     }
-  }, [setupNeeded])
+  }, [setupNeeded, loadAll])
 
   if (setupNeeded === null) {
     return (
@@ -435,12 +551,8 @@ export function App() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      {loading && (
-        <div className="fixed top-0 inset-x-0 z-30 h-0.5 overflow-hidden bg-slate-200/80 dark:bg-slate-800/80">
-          <div className="coordinator-indeterminate h-full w-1/3 bg-indigo-600" />
-        </div>
-      )}
-      <aside className="hidden md:flex md:flex-col md:sticky md:top-0 md:h-screen md:w-[88px] shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm">
+      <LoadingStatusOverlay />
+      <aside className="hidden md:flex md:flex-col md:sticky md:top-0 md:h-screen md:w-[88px] shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
         <SectionNav section={section} onChange={changeSection} teamDirty={formDirty} />
       </aside>
 
@@ -451,6 +563,10 @@ export function App() {
             profile={profile}
             currentUser={currentUser}
           />
+
+          {section === 'work' && (
+            <WorkItemsSection items={workItems} loading={!workItemsReady} />
+          )}
 
           {section === 'overview' && (
             <div className="space-y-8">
@@ -489,19 +605,45 @@ export function App() {
             </div>
           )}
 
-          <div className={section === 'team' ? 'block' : 'hidden'}>
-            <TeamRosterSection
-              services={profile?.services || []}
-              onChanged={loadAll}
-              onDirtyChange={onDirtyChange}
+          {visitedSections.has('team') && (
+            <div className={section === 'team' ? 'block' : 'hidden'}>
+              <TeamRosterSection
+                services={profile?.services || []}
+                onChanged={() => void loadAll({ force: true })}
+                onDirtyChange={onDirtyChange}
+              />
+            </div>
+          )}
+
+          {visitedSections.has('organization') && (
+            <div className={section === 'organization' ? 'block' : 'hidden'}>
+              <OrgTopologySection
+                onChanged={() => void loadAll({ force: true })}
+                onDirtyChange={onDirtyChange}
+              />
+            </div>
+          )}
+
+          {section === 'relay' && (
+            <RelaySection
+              isAdmin={currentUser.access === 'admin'}
+              currentAlias={currentUser.alias}
             />
-          </div>
+          )}
 
-          <div className={section === 'organization' ? 'block' : 'hidden'}>
-            <OrgTopologySection onChanged={loadAll} onDirtyChange={onDirtyChange} />
-          </div>
+          {visitedSections.has('settings') && (
+            <div className={section === 'settings' ? 'block' : 'hidden'}>
+              <SettingsSection
+                settings={userSettings}
+                loading={userSettingsLoading}
+                loadError={userSettingsLoadError}
+                avatarBust={avatarBust}
+                onSaved={onUserSettingsSaved}
+              />
+            </div>
+          )}
 
-          {section === 'project' && <ServiceMap profile={profile} onCreated={loadAll} />}
+          {section === 'project' && <ServiceMap profile={profile} onCreated={() => void loadAll({ force: true })} />}
 
           {section === 'stats' && (
             <div className="space-y-6">
@@ -569,7 +711,7 @@ export function App() {
         </div>
       </div>
 
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-20 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm">
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-20 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
         <SectionNav section={section} onChange={changeSection} teamDirty={formDirty} />
       </div>
     </div>

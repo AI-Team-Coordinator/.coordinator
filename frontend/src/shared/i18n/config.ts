@@ -12,13 +12,14 @@ i18n
       en: { translation: enTranslations },
       ru: { translation: ruTranslations },
     },
+    lng: 'en',
     fallbackLng: 'en',
     defaultNS: 'translation',
     interpolation: {
       escapeValue: false,
     },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'],
       caches: ['localStorage'],
       lookupLocalStorage: 'coordinator_i18nextLng',
     },

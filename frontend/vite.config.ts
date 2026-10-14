@@ -17,6 +17,10 @@ export default defineConfig({
     port: uiPort,
     strictPort: true,
     open: false,
+    hmr: {
+      host: '127.0.0.1',
+      port: uiPort,
+    },
     proxy: {
       '/api': {
         target: `http://127.0.0.1:${apiPort}`,

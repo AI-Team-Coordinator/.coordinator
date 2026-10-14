@@ -13,6 +13,15 @@ import (
 	"coordinator/model"
 )
 
+func resolveInspectBranch(repoPath, ownerAlias, slotBranch string) string {
+	for _, b := range coordination.BranchCandidates(ownerAlias, slotBranch) {
+		if gitRefExists(repoPath, "refs/heads/"+b) || gitRefExists(repoPath, "refs/remotes/origin/"+b) {
+			return b
+		}
+	}
+	return strings.TrimSpace(slotBranch)
+}
+
 func (r *FileRepository) attachRepoWork(members []model.Member) {
 	profile, err := r.GetProject(context.Background())
 	if err != nil || profile == nil {
@@ -26,7 +35,7 @@ func (r *FileRepository) attachRepoWork(members []model.Member) {
 		}
 		all := make([]model.RepoWork, 0)
 		for si := range slots {
-			repos := inspectTaskRepos(workspace, profile.Services, slots[si].Services, slots[si].Branch, slots[si].TaskID)
+			repos := inspectTaskRepos(workspace, profile.Services, slots[si].Services, slots[si].Branch, slots[si].TaskID, members[i].Alias)
 			for ri := range repos {
 				repos[ri].TaskID = slots[si].TaskID
 			}
@@ -88,16 +97,17 @@ func claimedBranches(members []model.Member) map[string]struct{} {
 	out := make(map[string]struct{})
 	for _, m := range members {
 		for _, slot := range m.Slots() {
-			b := strings.TrimSpace(slot.Branch)
-			if b != "" {
-				out[b] = struct{}{}
+			for _, b := range coordination.BranchCandidates(m.Alias, slot.Branch) {
+				if b != "" {
+					out[b] = struct{}{}
+				}
 			}
 		}
 	}
 	return out
 }
 
-func inspectTaskRepos(workspace string, services []model.ServiceNode, claimed []string, branch, taskID string) []model.RepoWork {
+func inspectTaskRepos(workspace string, services []model.ServiceNode, claimed []string, branch, taskID, ownerAlias string) []model.RepoWork {
 	out := make([]model.RepoWork, 0)
 	seen := make(map[string]struct{})
 	for _, svc := range reposToInspect(services, claimed, branch) {
@@ -112,7 +122,7 @@ func inspectTaskRepos(workspace string, services []model.ServiceNode, claimed []
 		if !isGitRepo(repoPath) {
 			continue
 		}
-		work, ok := inspectOneRepo(repoPath, svc, branch, taskID)
+		work, ok := inspectOneRepo(repoPath, svc, branch, taskID, ownerAlias)
 		if !ok {
 			continue
 		}
@@ -185,9 +195,10 @@ func isTrunkBranch(branch string) bool {
 	return b == "main" || b == "master"
 }
 
-func inspectOneRepo(repoPath string, svc model.ServiceNode, branch, taskID string) (model.RepoWork, bool) {
+func inspectOneRepo(repoPath string, svc model.ServiceNode, branch, taskID, ownerAlias string) (model.RepoWork, bool) {
+	gitBranch := resolveInspectBranch(repoPath, ownerAlias, branch)
 	if isWorkspaceService(svc) {
-		return inspectWorkspaceRepo(repoPath, svc, branch)
+		return inspectWorkspaceRepo(repoPath, svc, gitBranch, ownerAlias, branch)
 	}
 	if isTrunkBranch(branch) {
 		if taskOnMain(repoPath, taskID) {
@@ -196,8 +207,8 @@ func inspectOneRepo(repoPath string, svc model.ServiceNode, branch, taskID strin
 		return model.RepoWork{}, false
 	}
 
-	hasLocal := gitRefExists(repoPath, "refs/heads/"+branch)
-	hasRemote := gitRefExists(repoPath, "refs/remotes/origin/"+branch)
+	hasLocal := gitRefExists(repoPath, "refs/heads/"+gitBranch)
+	hasRemote := gitRefExists(repoPath, "refs/remotes/origin/"+gitBranch)
 	if !hasLocal && !hasRemote {
 		if taskOnMain(repoPath, taskID) {
 			return productRepoWork(svc, "merged", 0), true
@@ -205,18 +216,18 @@ func inspectOneRepo(repoPath string, svc model.ServiceNode, branch, taskID strin
 		return model.RepoWork{}, false
 	}
 
-	tip := branch
+	tip := gitBranch
 	if !hasLocal && hasRemote {
-		tip = "origin/" + branch
+		tip = "origin/" + gitBranch
 	}
 	ahead := countCommits(repoPath, "origin/main.."+tip)
 	unpushed := 0
 	if hasRemote && hasLocal {
-		unpushed = countCommits(repoPath, "origin/"+branch+".."+branch)
+		unpushed = countCommits(repoPath, "origin/"+gitBranch+".."+gitBranch)
 	}
 	state, shownAhead := classifyProductRepo(ahead, taskOnMain(repoPath, taskID), hasRemote, unpushed)
 	work := productRepoWork(svc, state, shownAhead)
-	work.Dirty = repoDirtyOnBranch(repoPath, branch)
+	work.Dirty = repoDirtyOnBranch(repoPath, ownerAlias, branch)
 	work.HasLocalBranch = hasLocal
 	return work, true
 }
@@ -239,8 +250,9 @@ func classifyProductRepo(ahead int, onMain, hasRemote bool, unpushed int) (state
 	return "local", ahead
 }
 
-func repoDirtyOnBranch(repoPath, branch string) bool {
-	if currentBranch(repoPath) != branch {
+func repoDirtyOnBranch(repoPath, ownerAlias, slotBranch string) bool {
+	cur := currentBranch(repoPath)
+	if !coordination.BranchMatches(ownerAlias, slotBranch, cur) {
 		return false
 	}
 	return repoDirty(repoPath)
@@ -262,14 +274,17 @@ func repoDirty(dir string) bool {
 	return strings.TrimSpace(out) != ""
 }
 
-func inspectWorkspaceRepo(repoPath string, svc model.ServiceNode, branch string) (model.RepoWork, bool) {
+func inspectWorkspaceRepo(repoPath string, svc model.ServiceNode, gitBranch, _ownerAlias, slotBranch string) (model.RepoWork, bool) {
 	ahead := 0
-	if isTrunkBranch(branch) || strings.TrimSpace(branch) == "" {
+	if isTrunkBranch(slotBranch) || strings.TrimSpace(slotBranch) == "" {
 		ahead = countCommits(repoPath, "origin/main..HEAD")
 	} else {
-		tip := branch
-		if !gitRefExists(repoPath, "refs/heads/"+branch) && gitRefExists(repoPath, "refs/remotes/origin/"+branch) {
-			tip = "origin/" + branch
+		tip := gitBranch
+		if tip == "" {
+			tip = slotBranch
+		}
+		if !gitRefExists(repoPath, "refs/heads/"+tip) && gitRefExists(repoPath, "refs/remotes/origin/"+tip) {
+			tip = "origin/" + tip
 		}
 		ahead = countCommits(repoPath, "origin/main.."+tip)
 	}

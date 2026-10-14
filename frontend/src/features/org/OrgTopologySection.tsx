@@ -9,6 +9,7 @@ import { localized } from '../../shared/lib/localized'
 import { Button } from '../../shared/ui/Button'
 import { Card } from '../../shared/ui/Card'
 import { Select } from '../../shared/ui/Select'
+import { useLoadingStatus } from '../../shared/loading/LoadingStatusContext'
 import type { Crew, CrewConnector, LocalizedText, OrgTopology } from '../../shared/types/api'
 
 const CREW_KINDS = ['internal', 'affiliated', 'external'] as const
@@ -23,6 +24,7 @@ interface OrgTopologySectionProps {
 
 export function OrgTopologySection({ onChanged, onDirtyChange }: OrgTopologySectionProps) {
   const { t } = useTranslation()
+  const { track } = useLoadingStatus()
   const [crews, setCrews] = useState<DraftCrew[]>([])
   const [connectors, setConnectors] = useState<DraftConnector[]>([])
   const [savedPayload, setSavedPayload] = useState('')
@@ -41,7 +43,10 @@ export function OrgTopologySection({ onChanged, onDirtyChange }: OrgTopologySect
   }
 
   useEffect(() => {
-    load().catch((err: Error) => setError(err.message))
+    void track('org-topology', t('loading.organization'), async () => {
+      await load()
+    }).catch((err: Error) => setError(err.message))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const dirtyForm = useMemo(

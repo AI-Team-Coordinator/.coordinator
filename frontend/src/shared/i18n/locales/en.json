@@ -6,6 +6,23 @@
     "gathering": "Gathering workspace data…",
     "noAuthor": "This machine has no current person yet"
   },
+  "loading": {
+    "kicker": "Loading",
+    "separator": ", ",
+    "combined": "{{items}}",
+    "pulse": "Team pulse and conflicts",
+    "project": "Project and services",
+    "sync": "Who is on this machine",
+    "stats": "Usage statistics",
+    "statsPeriod": "Statistics for the selected period",
+    "events": "Activity log",
+    "tasks": "Task list",
+    "profile": "Your profile",
+    "team": "Team roster",
+    "organization": "Organization",
+    "relay": "Relay connection",
+    "relayConnect": "Connecting to relay"
+  },
   "statsPeriod": {
     "billing": "Billing period",
     "7d": "7 days",
@@ -16,10 +33,13 @@
   },
   "sections": {
     "overview": "Overview",
+    "work": "Tasks",
     "team": "Team",
     "organization": "Org.",
+    "relay": "Relay",
     "project": "Project",
-    "stats": "Stats"
+    "stats": "Stats",
+    "settings": "Settings"
   },
   "radar": {
     "warning": "Conflict Detected",
@@ -218,6 +238,48 @@
       "workspace": "Workspace"
     }
   },
+  "relay": {
+    "title": "External signals",
+    "subtitle": "Events from your task tracker, repo, and CI flow through the team relay. Secrets stay on that service; this computer only keeps access.",
+    "pairTitle": "Connection",
+    "pairHelp": "HTTPS for a remote relay. Local dev — http://127.0.0.1 and the relay port. Pairing (URL + token) is stored on this machine only, not in git.",
+    "localHint": "Run relay locally; copy the bearer token from RELAY_BEARER_TOKEN or Common/data/.relay_bearer_token (created on first start).",
+    "url": "Address",
+    "token": "Access token",
+    "notConnected": "Not connected",
+    "connected": "Connected",
+    "connect": "Connect",
+    "connecting": "Connecting…",
+    "disconnect": "Disconnect",
+    "useLocalDefault": "Use local address",
+    "loadError": "Could not load connection state.",
+    "connectError": "Could not connect. Check the URL and that relay is running.",
+    "disconnectError": "Could not disconnect.",
+    "sourcesLoading": "No sources yet, or relay did not respond.",
+    "inboxTitle": "What shows up",
+    "inboxReview": "Notes tied to your branches and tasks: reviews, comments, tracker status changes",
+    "inboxCi": "Build and check results for the same branches",
+    "inboxLater": "If the computer is off, the note waits and appears the next time you open Coordinator",
+    "inboxHidden": "Without a connection these signals stay hidden.",
+    "adaptersTitle": "Sources",
+    "adaptersHelp": "Turned on by a relay admin. The list below is fetched from the connected relay; this page is read-only.",
+    "adaptersEmpty": "Connect to the relay to see which sources your team enabled (each team picks its own).",
+    "adapterOff": "Off",
+    "adapterOn": "On",
+    "tokensTitle": "Access tokens",
+    "tokensHelp": "Admins issue bearer tokens for relay API access. Each person uses their token when connecting. Secrets are shown once.",
+    "tokensMember": "Team member",
+    "tokensLabel": "Note (optional)",
+    "tokensIssue": "Issue token",
+    "tokensEmpty": "No issued tokens yet.",
+    "tokensRevoke": "Revoke",
+    "tokensCopyOnce": "Copy this token now — it will not be shown again.",
+    "tokensUseForConnect": "Paste into connection",
+    "tokensDismissSecret": "Done",
+    "tokensMeta": "by {{by}} · {{at}}",
+    "tokensIssueError": "Could not issue token.",
+    "tokensRevokeError": "Could not revoke token."
+  },
   "team": {
     "title": "Team roster",
     "subtitle": "Who is on the project: name, role, and departments.",
@@ -317,6 +379,23 @@
     "loading": "Loading document…",
     "missing": "No markdown file for this task in Common/docs."
   },
+  "settings": {
+    "title": "Settings",
+    "loading": "Loading…",
+    "loadError": "Could not load settings.",
+    "saveError": "Could not save.",
+    "save": "Save",
+    "saving": "Saving…",
+    "profile": "Profile",
+    "displayName": "Name",
+    "language": "Language",
+    "langEn": "English",
+    "langRu": "Russian",
+    "avatarUpload": "Photo",
+    "avatarRemove": "Remove photo",
+    "uploading": "Uploading…",
+    "avatarError": "Could not update the photo."
+  },
   "theme": {
     "light": "Light",
     "dark": "Dark",
@@ -325,6 +404,22 @@
   "lang": {
     "en": "English",
     "ru": "Русский"
+  },
+  "work": {
+    "title": "Work items",
+    "subtitle": "Backlog and open tasks — separate from Pulse slots.",
+    "loading": "Loading tasks…",
+    "empty": "No work items yet. Plan one with task_planned or start from Cursor.",
+    "assignee": "Assignee",
+    "branch": "Branch",
+    "services": "Services",
+    "slots": "Slots",
+    "status": {
+      "all": "All",
+      "backlog": "Backlog",
+      "open": "In progress",
+      "done": "Done"
+    }
   },
   "setup": {
     "helloLine1": "Hello, colleague!",
