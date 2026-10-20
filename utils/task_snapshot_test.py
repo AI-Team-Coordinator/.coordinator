@@ -91,7 +91,8 @@ class RelatedSlotTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmp.cleanup()
 
-    def test_stores_related_and_keeps_on_empty_resume(self) -> None:
+    def test_canonical_lists_stay_on_the_task(self) -> None:
+        parent = "20260917-2037-EK-INBOX_MESSAGE_TRANSLATION"
         ts.upsert_started(
             str(self.snap),
             "EK",
@@ -103,15 +104,19 @@ class RelatedSlotTests(unittest.TestCase):
             "",
             "broken translate",
             "",
-            "20260917-2037-EK-INBOX_MESSAGE_TRANSLATION,FIX-1",
-            "docs/20260917-2037-EK-INBOX_MESSAGE_TRANSLATION.md,Common/docs/README.md",
+            parent + ",FIX-1",
+            "docs/" + parent + ".md,Common/docs/README.md",
         )
         slot = json.loads(self.snap.read_text())["tasks"][0]
-        self.assertEqual(slot["related_tasks"], ["20260917-2037-EK-INBOX_MESSAGE_TRANSLATION"])
+        self.assertNotIn("related_tasks", slot)
+        self.assertNotIn("related_docs", slot)
+        task = json.loads((Path(self.tmp.name) / "work_tasks" / "FIX-1.json").read_text())
+        self.assertEqual(task["related_tasks"], [parent])
         self.assertEqual(
-            slot["related_docs"],
-            ["docs/20260917-2037-EK-INBOX_MESSAGE_TRANSLATION.md", "docs/README.md"],
+            task["related_docs"],
+            ["docs/" + parent + ".md", "docs/README.md"],
         )
+
         ts.upsert_started(
             str(self.snap),
             "EK",
@@ -124,11 +129,77 @@ class RelatedSlotTests(unittest.TestCase):
             "broken translate",
             "",
             "",
+            "docs/20260918-0043-EK-EXTRA.md",
+        )
+        slot = json.loads(self.snap.read_text())["tasks"][0]
+        self.assertNotIn("related_tasks", slot)
+        self.assertEqual(slot["related_docs"], ["docs/20260918-0043-EK-EXTRA.md"])
+        self.assertEqual(slot["started_at"], "2026-09-18T00:00:00Z")
+        task = json.loads((Path(self.tmp.name) / "work_tasks" / "FIX-1.json").read_text())
+        self.assertEqual(task["related_tasks"], [parent])
+        self.assertEqual(
+            task["related_docs"],
+            ["docs/" + parent + ".md", "docs/README.md"],
+        )
+
+        ts.upsert_started(
+            str(self.snap),
+            "EK",
+            "2026-09-18T00:02:00Z",
+            "FIX-1",
+            "fix/x",
+            "Core",
+            "",
+            "",
+            "broken translate",
+            "",
+            "",
             "",
         )
         slot = json.loads(self.snap.read_text())["tasks"][0]
-        self.assertEqual(slot["related_tasks"], ["20260917-2037-EK-INBOX_MESSAGE_TRANSLATION"])
-        self.assertEqual(slot["started_at"], "2026-09-18T00:00:00Z")
+        self.assertEqual(slot["related_docs"], ["docs/20260918-0043-EK-EXTRA.md"])
+        self.assertNotIn("related_tasks", slot)
+
+    def test_old_slot_copy_moves_onto_the_task(self) -> None:
+        parent = "20260917-2037-EK-INBOX_MESSAGE_TRANSLATION"
+        self.snap.write_text(
+            json.dumps(
+                {
+                    "alias": "EK",
+                    "tasks": [
+                        {
+                            "task_id": "FIX-1",
+                            "status": "in_progress",
+                            "branch": "fix/x",
+                            "services": ["Core"],
+                            "started_at": "2026-09-18T00:00:00Z",
+                            "related_tasks": [parent],
+                            "related_docs": ["docs/" + parent + ".md"],
+                        }
+                    ],
+                }
+            )
+        )
+        ts.upsert_started(
+            str(self.snap),
+            "EK",
+            "2026-09-18T00:03:00Z",
+            "FIX-1",
+            "fix/x",
+            "Core",
+            "",
+            "",
+            "broken translate",
+            "",
+            "",
+            "",
+        )
+        slot = json.loads(self.snap.read_text())["tasks"][0]
+        self.assertNotIn("related_tasks", slot)
+        self.assertNotIn("related_docs", slot)
+        task = json.loads((Path(self.tmp.name) / "work_tasks" / "FIX-1.json").read_text())
+        self.assertEqual(task["related_tasks"], [parent])
+        self.assertEqual(task["related_docs"], ["docs/" + parent + ".md"])
 
 
 if __name__ == "__main__":

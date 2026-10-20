@@ -423,10 +423,10 @@ func computeTasks(events []model.Event, members []model.Member, now time.Time) [
 				t.StartedAt = slot.UpdatedAt.Unix()
 			}
 			if related := model.NormalizeRelatedTasks(slot.RelatedTasks, slot.TaskID); len(related) > 0 {
-				t.RelatedTasks = related
+				t.RelatedTasks = model.NormalizeRelatedTasks(append(append([]string{}, t.RelatedTasks...), related...), slot.TaskID)
 			}
 			if docs := model.NormalizeRelatedDocs(slot.RelatedDocs); len(docs) > 0 {
-				t.RelatedDocs = docs
+				t.RelatedDocs = model.NormalizeRelatedDocs(append(append([]string{}, t.RelatedDocs...), docs...))
 			}
 			last := slot.LastActivityAt
 			if last.IsZero() {

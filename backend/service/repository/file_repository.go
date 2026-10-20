@@ -532,7 +532,36 @@ func (r *FileRepository) loadMembersFromProgress(ctx context.Context) ([]model.M
 		})
 	}
 
+	r.overlayWorkTaskLinks(members)
 	return members, nil
+}
+
+// overlayWorkTaskLinks shows the task's canonical links plus this slot's doc additions.
+// related_tasks live only on the task. A slot file stores docs the task does not have yet.
+func (r *FileRepository) overlayWorkTaskLinks(members []model.Member) {
+	tasks, err := r.ListWorkTasks(context.Background())
+	if err != nil || len(tasks) == 0 {
+		return
+	}
+	byID := make(map[string]model.WorkTask, len(tasks))
+	for _, wt := range tasks {
+		if wt.TaskID != "" {
+			byID[wt.TaskID] = wt
+		}
+	}
+	for i := range members {
+		for j := range members[i].Tasks {
+			slot := &members[i].Tasks[j]
+			wt, ok := byID[slot.TaskID]
+			if !ok {
+				continue
+			}
+			if len(wt.RelatedTasks) > 0 {
+				slot.RelatedTasks = wt.RelatedTasks
+			}
+			slot.RelatedDocs = model.NormalizeRelatedDocs(append(append([]string{}, wt.RelatedDocs...), slot.RelatedDocs...))
+		}
+	}
 }
 
 func (r *FileRepository) withRepoWork(members []model.Member) []model.Member {

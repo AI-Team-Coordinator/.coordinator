@@ -13,6 +13,7 @@ from task_snapshot import (
     load_snap,
     normalize_related_docs,
     normalize_related_tasks,
+    partition_related,
     slots_from,
 )
 
@@ -155,12 +156,7 @@ def upsert_on_started(
         row["summary"] = text[:280]
     elif existing.get("summary"):
         row["summary"] = existing["summary"]
-    tasks = normalize_related_tasks(related_tasks, task_id)
-    docs = normalize_related_docs(related_docs)
-    if not tasks:
-        tasks = normalize_related_tasks(existing.get("related_tasks") or [], task_id)
-    if not docs:
-        docs = normalize_related_docs(existing.get("related_docs") or [])
+    tasks, docs, _ = partition_related(existing, task_id, related_tasks, related_docs)
     if tasks:
         row["related_tasks"] = tasks
     if docs:
