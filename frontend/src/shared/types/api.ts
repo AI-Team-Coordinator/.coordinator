@@ -212,6 +212,31 @@ export interface HourParticipant {
   shared?: boolean
 }
 
+export interface WorkItemSlot {
+  alias: string
+  status: string
+  branch?: string
+  updated_at?: string
+}
+
+export interface WorkItem {
+  task_id: string
+  title?: string
+  summary?: string
+  doc?: string
+  branch?: string
+  services?: string[]
+  created_by?: string
+  assignee?: string
+  status: 'backlog' | 'open' | 'done' | string
+  related_tasks?: string[]
+  related_docs?: string[]
+  created_at?: string
+  updated_at?: string
+  completed_at?: string
+  slots?: WorkItemSlot[]
+}
+
 export interface TaskItem {
   task_id: string
   title?: string
@@ -354,6 +379,15 @@ export interface OrgTopology {
 }
 
 export type CollaborationMode = 'solo' | 'team'
+
+export interface UserSettings {
+  alias: string
+  name: string
+  role?: string
+  access?: string
+  language: string
+  avatar_url?: string
+}
 
 export interface SetupState {
   needed: boolean

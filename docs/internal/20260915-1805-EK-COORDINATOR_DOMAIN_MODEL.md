@@ -21,7 +21,7 @@ Pulse, радар и git-инспекция уже говорят «claim», н�
 | **Agent** | Исполнитель внутри Person (чат Cursor) | `Claim.Agents` из `session_ids` / вкладок; Pulse `agents[]` |
 | **Session** | Вкладка Composer | `session_id` агента |
 | **Task** | Работа; слот и статистика — проекции | пока `model.Task` |
-| **Resource** | Зона: сервис, опционально путь | `domain/coordination` |
+| **Resource** | Зона: сервис, опционально путь | `domain/claims` |
 | **Claim** | «В этой задаче это моя зона» | проекция из `services[]` + исполнители |
 | **Lock** | Политика overlap: свой product/workspace → stop, чужой product → warn | не отдельный объект |
 | **Dependency** | «Мне нужно то, что здесь происходит» | тип, ещё не пишется в снимок |
@@ -73,13 +73,18 @@ billing/invoices
 ## Пакеты
 
 ```text
-backend/domain/identity/        Person, Agent, Session
-backend/domain/coordination/    Resource, Claim, Dependency, overlap
-backend/domain/timeline/        Kind, Handoff, Decision
-backend/domain/coordinator/     HTTP, Pulse, аналитика — вызывает overlap
+backend/domain/identity/          Person, Agent, Session
+backend/domain/team/              правила ростера
+backend/domain/org/               правила оргструктуры
+backend/domain/claims/            Resource, Claim, Dependency, overlap
+backend/domain/task/              задача: смысл, ветка, статус
+backend/domain/slot/              слот: процесс на машине, ветка в git
+backend/domain/spend/             периоды биллинга и часы расходов
+backend/domain/timeline/          Kind, Handoff, Decision
+backend/service/                  HTTP, сценарии, репозиторий, dto ответов
 ```
 
-Не восемь тонких пакетов. FinOps, setup, GitHub — не тащить в эту модель.
+Не плодить пакет на каждый файл. Setup, GitHub и Relay остаются в `backend/service`, не в домене.
 
 ## Не входит
 

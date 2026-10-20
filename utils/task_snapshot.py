@@ -166,17 +166,72 @@ def normalize_related_docs(raw) -> list[str]:
     return out
 
 
-def copy_related(slot: dict, existing: dict | None, task_id: str, related_tasks: str, related_docs: str) -> None:
-    tasks = normalize_related_tasks(related_tasks, task_id)
-    docs = normalize_related_docs(related_docs)
-    if not tasks and isinstance(existing, dict):
-        tasks = normalize_related_tasks(existing.get("related_tasks") or [], task_id)
-    if not docs and isinstance(existing, dict):
-        docs = normalize_related_docs(existing.get("related_docs") or [])
-    if tasks:
-        slot["related_tasks"] = tasks
+def partition_related(existing: dict | None, task_id: str, related_tasks, related_docs):
+    """Canonical lists stay on the task. Docs the task does not have yet are slot additions.
+
+    related_tasks never become a slot field. A new doc fills the task only while the task
+    has no canonical doc list yet (first plan or first start). After that it stays on the slot.
+    """
+    existing = existing if isinstance(existing, dict) else {}
+    stored_tasks = normalize_related_tasks(existing.get("related_tasks") or [], task_id)
+    incoming_tasks = normalize_related_tasks(related_tasks, task_id)
+    tasks = list(stored_tasks)
+    seen = set(tasks)
+    for tid in incoming_tasks:
+        if tid not in seen:
+            tasks.append(tid)
+            seen.add(tid)
+
+    stored_docs = normalize_related_docs(existing.get("related_docs") or [])
+    incoming_docs = normalize_related_docs(related_docs)
+    file_exists = bool(str(existing.get("task_id") or "").strip())
+    if not file_exists or not stored_docs:
+        return tasks, (incoming_docs or stored_docs), []
+
+    known = set(stored_docs)
+    additions = [doc for doc in incoming_docs if doc not in known]
+    return tasks, stored_docs, additions
+
+
+def slot_doc_additions(existing_slot: dict | None, incoming_additions: list[str], canonical_docs: list[str]) -> list[str]:
+    known = set(normalize_related_docs(canonical_docs))
+    out: list[str] = []
+    seen: set[str] = set()
+    base: list[str] = []
+    if isinstance(existing_slot, dict):
+        base.extend(normalize_related_docs(existing_slot.get("related_docs") or []))
+    base.extend(incoming_additions or [])
+    for doc in base:
+        if doc in known or doc in seen:
+            continue
+        seen.add(doc)
+        out.append(doc)
+    return out
+
+
+def migrate_slot_lists(previous_slot: dict | None, existing_task: dict | None, related_tasks: str, related_docs: str):
+    """A slot that still holds the old full copy seeds the task once, then the copy is dropped."""
+    if not isinstance(previous_slot, dict):
+        return related_tasks, related_docs
+    task = existing_task if isinstance(existing_task, dict) else {}
+    if not str(related_tasks or "").strip() and not task.get("related_tasks"):
+        copied = normalize_related_tasks(previous_slot.get("related_tasks") or [], "")
+        if copied:
+            related_tasks = ",".join(copied)
+    if not str(related_docs or "").strip() and not task.get("related_docs"):
+        copied_docs = normalize_related_docs(previous_slot.get("related_docs") or [])
+        if copied_docs:
+            related_docs = ",".join(copied_docs)
+    return related_tasks, related_docs
+
+
+def apply_slot_additions(slot: dict, existing_slot: dict | None, additions: list[str], canonical_docs: list[str]) -> None:
+    slot.pop("related_tasks", None)
+    docs = slot_doc_additions(existing_slot, additions, canonical_docs)
     if docs:
         slot["related_docs"] = docs
+    else:
+        slot.pop("related_docs", None)
 
 
 def take_usage(coord_dir: str):
@@ -337,9 +392,11 @@ def upsert_started(
     if usage:
         slot["cursor_usage"] = usage
     sid = (session_id or "").strip()
-    replaced = False
+    previous_slot = None
+    found = False
     for i, existing in enumerate(slots):
         if existing.get("task_id") == task_id:
+            previous_slot = existing
             slot["started_at"] = existing.get("started_at") or iso
             if not slot.get("cursor_usage") and isinstance(existing.get("cursor_usage"), dict):
                 slot["cursor_usage"] = existing["cursor_usage"]
@@ -347,20 +404,43 @@ def upsert_started(
                 slot["activity_windows"] = existing["activity_windows"]
             if existing.get("last_activity_at"):
                 slot["last_activity_at"] = existing["last_activity_at"]
-            copy_related(slot, existing, task_id, related_tasks, related_docs)
             ids = merge_session_ids(existing, sid)
             if ids:
                 slot["session_ids"] = ids
                 slot["session_id"] = ids[0]
             slots[i] = slot
-            replaced = True
+            found = True
             break
-    if not replaced:
-        copy_related(slot, None, task_id, related_tasks, related_docs)
+    if not found:
         if sid:
             slot["session_id"] = sid
             slot["session_ids"] = [sid]
         slots.append(slot)
+
+    try:
+        import work_task_store as wt
+
+        progress_dir = os.path.dirname(path)
+        existing_task = wt.load_work_task(progress_dir, task_id)
+        related_tasks, related_docs = migrate_slot_lists(previous_slot, existing_task, related_tasks, related_docs)
+        _, canonical_docs, incoming_adds = partition_related(
+            existing_task, task_id, related_tasks, related_docs
+        )
+        apply_slot_additions(slot, previous_slot, incoming_adds, canonical_docs)
+        wt.upsert_on_started(
+            progress_dir,
+            common_root,
+            alias,
+            task_id,
+            branch,
+            services_csv,
+            doc_path,
+            summary,
+            related_tasks,
+            related_docs,
+        )
+    except Exception:
+        slot.pop("related_tasks", None)
 
     out = {"alias": alias, "tasks": slots}
     if last_task:
@@ -434,6 +514,13 @@ def complete_once(path: str, events_file: str, alias: str, task_id: str, ts: str
         root, root_status = pick_root(remain)
         mirror_root(out, root, iso, root_status)
         write_snap(path, out)
+
+        try:
+            import work_task_store as wt
+
+            wt.mark_done(os.path.dirname(path), task_id)
+        except Exception:
+            pass
 
         skipped = already_completed(events_file, task_id)
         if skipped:

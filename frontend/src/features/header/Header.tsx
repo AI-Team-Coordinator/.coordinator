@@ -1,7 +1,6 @@
 import { Radio } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ThemeToggle } from '../../shared/ui/ThemeToggle'
-import { LanguageSwitcher } from '../../shared/ui/LanguageSwitcher'
 import { ProjectBanner } from '../project/ProjectBanner'
 import { CurrentUser } from './CurrentUser'
 import type { ProjectProfile } from '../../shared/types/api'
@@ -14,6 +13,8 @@ interface HeaderProps {
     name?: string
     role?: string
     access?: string
+    avatarUrl?: string
+    avatarBust?: number
   }
 }
 
@@ -31,6 +32,8 @@ export function Header({ connected, profile, currentUser }: HeaderProps) {
           name={currentUser.name}
           role={currentUser.role}
           access={currentUser.access}
+          avatarUrl={currentUser.avatarUrl}
+          avatarBust={currentUser.avatarBust}
         />
       </div>
 
@@ -47,7 +50,6 @@ export function Header({ connected, profile, currentUser }: HeaderProps) {
           />
           <Radio className="w-3.5 h-3.5 text-slate-400" />
         </div>
-        <LanguageSwitcher />
         <ThemeToggle />
       </div>
     </header>

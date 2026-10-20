@@ -27,9 +27,9 @@ Services: `.coordinator`, `.cursor`, `Common`
 | Тип (код) | Контекст | В этом документе |
 |-----------|----------|------------------|
 | **CrewConnector** | Команда → команда | Да, полная спецификация |
-| Коннекторы внешних систем | Не сущность Координатора | Живут в плоскости **Remote**: [внешние знания и события](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md) |
+| Коннекторы внешних систем | Не сущность Координатора | Живут в плоскости **Relay**: [внешние знания и события](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md) |
 
-В коде, API и JSON для связей **между командами** не использовать голое `connector` / `connectors` — только **CrewConnector** и ключ **`crew_connectors`**. Коннекторы к Jira/Confluence — домен Remote, не эта модель.
+В коде, API и JSON для связей **между командами** не использовать голое `connector` / `connectors` — только **CrewConnector** и ключ **`crew_connectors`**. Адаптеры Jira/Confluence/GitHub — домен Relay, не эта модель.
 
 В UI (ru) для CrewConnector: **«Связь команд»**; в английском интерфейсе — «Crew link» или «Crew connector».
 
@@ -57,7 +57,7 @@ Person ∈ Crew (M:N)
 CrewConnector: observer_crew ──interests[]──► subject_crew
 Claim: Person+Task ──services[]──► Resource   (как сейчас)
 Dependency: Task ──► Task/Doc                 (как сейчас)
-(внешние системы — плоскость Remote, [пропозал](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md))
+(внешние системы — плоскость Relay, [пропозал](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md))
 ```
 
 CrewConnector дополняет Dependency: dependency — «эта **задача** ждёт то», CrewConnector — «эта **команда** следит за тем, что делает другая команда».
@@ -161,7 +161,7 @@ CrewConnector дополняет Dependency: dependency — «эта **зада�
 }
 ```
 
-Поле **`system_connectors`** в этом файле **не добавлять**. Подписки на внешние системы — конфиг Remote, не `org_topology.json`.
+Поле **`system_connectors`** в этом файле **не добавлять**. Подписки на внешние системы — конфиг Relay, не `org_topology.json`.
 
 Ростер остаётся `team.json`; при переходе на v2 ростера — только добавление `crews[]` / `primary_crew` у `members`, без дублирования текстов CrewConnector в двух местах.
 
@@ -220,7 +220,7 @@ GET /api/pulse?view=grouped|global&crew=<id>   # crew опционален; view
 3. **Карточка CrewConnector** — заголовок пары команд, `notes`, таблица интересов (`title`, tags, preview `detail`).
 4. **Граф (опционально, фаза 1b)** — только чтение: узлы = crew, рёбра = CrewConnector (направленные).
 
-Интеграции Jira/Confluence — не вкладка «Связи команд». Координатор показывает только уже попавшие в шину знания/события; коннекторы — в Remote. См. [пропозал](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md).
+Интеграции Jira/Confluence/GitHub — не вкладка «Связи команд». Координатор показывает только уже попавшие в шину знания/события; адаптеры — в Relay. См. [пропозал](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md).
 
 Редактирование: те же формы, что для команды — save через API → запись `org_topology.json` + sync git (team mode).
 
@@ -247,7 +247,7 @@ GET /api/pulse?view=grouped|global&crew=<id>   # crew опционален; view
 
 ### Не входит в v1
 
-- Коннекторы внешних систем и UI Remote (это другая плоскость).
+- Адаптеры внешних систем и UI Relay (это другая плоскость).
 - Автоматическое создание Dependency из CrewConnector.
 - Lock / overlap по crew вместо Resource.
 - Версионирование истории текстов интересов (достаточно git blame на `org_topology.json`).
@@ -266,7 +266,7 @@ GET /api/pulse?view=grouped|global&crew=<id>   # crew опционален; view
 
 1. Нужен ли обратный индекс «все CrewConnector, где `to_crew_id` = мы» на главной Pulse без захода в настройки?
 2. Один файл `org_topology.json` vs два (`crews.json`, `crew_connectors.json`) — пока один файл проще атомарного коммита.
-3. Внешние системы — не CrewConnector и не SystemConnector в Pulse; см. [Remote](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md).
+3. Внешние системы — не CrewConnector и не SystemConnector в Pulse; см. [Relay](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md).
 
 ## Черновик расширения API
 

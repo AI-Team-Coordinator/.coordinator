@@ -34,7 +34,7 @@ type Member struct {
 	Tasks           []MemberTask
 }
 
-// MemberTask is one open slot on a developer's snapshot (in progress or parked).
+// MemberTask is the snapshot of one slot (domain/slot): in progress or parked, with hours and chats.
 type MemberTask struct {
 	TaskID          string
 	Status          string
