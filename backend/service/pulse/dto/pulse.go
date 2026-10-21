@@ -101,11 +101,39 @@ type ConflictResponse struct {
 	AffectedAliases []string `json:"affected_aliases"`
 }
 
+type ExternalEventResponse struct {
+	ID         string         `json:"id"`
+	Source     string         `json:"source"`
+	ExternalID string         `json:"external_id,omitempty"`
+	Class      string         `json:"class"`
+	Kind       string         `json:"kind"`
+	Title      string         `json:"title,omitempty"`
+	Summary    string         `json:"summary,omitempty"`
+	URL        string         `json:"url,omitempty"`
+	ReceivedAt string         `json:"received_at,omitempty"`
+	OccurredAt string         `json:"occurred_at,omitempty"`
+	Tags       []string       `json:"tags,omitempty"`
+	Data       map[string]any `json:"data,omitempty"`
+}
+
+type PulseExternalResponse struct {
+	Events []ExternalEventResponse `json:"events"`
+}
+
+type ExternalEventsListResponse struct {
+	Events  []ExternalEventResponse `json:"events"`
+	Total   int                     `json:"total"`
+	Limit   int                     `json:"limit"`
+	Offset  int                     `json:"offset"`
+	Sources []string                `json:"sources"`
+}
+
 type PulseResponse struct {
-	UpdatedAt time.Time           `json:"updated_at"`
-	Members   []MemberResponse    `json:"members"`
-	Conflicts []ConflictResponse  `json:"conflicts"`
-	Stray     []StrayRepoResponse `json:"stray"`
+	UpdatedAt time.Time              `json:"updated_at"`
+	Members   []MemberResponse       `json:"members"`
+	Conflicts []ConflictResponse     `json:"conflicts"`
+	Stray     []StrayRepoResponse    `json:"stray"`
+	External  *PulseExternalResponse `json:"external,omitempty"`
 }
 
 type StrayRepoResponse struct {

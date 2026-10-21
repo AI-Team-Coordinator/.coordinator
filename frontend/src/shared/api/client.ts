@@ -22,4 +22,11 @@ export const api = {
   relayDisconnect: '/api/v1/relay/disconnect',
   relaySources: '/api/v1/relay/sources',
   relayTokens: '/api/v1/relay/tokens',
+  relayMarketplace: '/api/v1/relay/connectors/marketplace',
+  relayConnectorConfig: (id: string) => `/api/v1/relay/connectors/${encodeURIComponent(id)}/config`,
+  relayConnectorDisable: (id: string) => `/api/v1/relay/connectors/${encodeURIComponent(id)}/disable`,
+  relayConnectorAction: (id: string, action: string) =>
+    `/api/v1/relay/connectors/${encodeURIComponent(id)}/actions/${encodeURIComponent(action)}`,
+  relayConnectorActivity: '/api/v1/relay/connectors/activity',
+  externalEvents: '/api/v1/external/events',
 } as const

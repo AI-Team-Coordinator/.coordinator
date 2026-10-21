@@ -2,8 +2,11 @@ package poll
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
+	"relay/domain/activity"
 	"relay/domain/config"
 	"relay/domain/gateway"
 	"relay/infra"
@@ -18,7 +21,7 @@ type Job struct {
 }
 
 // Start launches all jobs until ctx is cancelled.
-func Start(ctx context.Context, gw *gateway.Gateway, runtime *config.Runtime, relaySettings *settings.RelayConnectors, jobs []Job) {
+func Start(ctx context.Context, gw *gateway.Gateway, runtime *config.Runtime, relaySettings *settings.RelayConnectors, _ *activity.Recorder, jobs []Job) {
 	if gw == nil || runtime == nil || relaySettings == nil {
 		return
 	}
@@ -30,12 +33,36 @@ func Start(ctx context.Context, gw *gateway.Gateway, runtime *config.Runtime, re
 	}
 }
 
+// FindJob returns a scheduled poll job by connector source id.
+func FindJob(jobs []Job, sourceID string) (Job, bool) {
+	sourceID = strings.TrimSpace(sourceID)
+	for _, job := range jobs {
+		if job.SourceID == sourceID {
+			return job, true
+		}
+	}
+	return Job{}, false
+}
+
+// RunNow executes one poll cycle immediately (HTTP trigger from Coordinator).
+func RunNow(ctx context.Context, runtime *config.Runtime, relaySettings *settings.RelayConnectors, job Job) error {
+	if job.Run == nil {
+		return fmt.Errorf("poll job has no runner")
+	}
+	if runtime == nil || !runtime.Enabled(job.SourceID) {
+		return fmt.Errorf("connector is not enabled")
+	}
+	ctx = activity.WithTrigger(ctx, activity.TriggerManual)
+	return job.Run(ctx, runtime, relaySettings)
+}
+
 func runLoop(ctx context.Context, gw *gateway.Gateway, runtime *config.Runtime, relaySettings *settings.RelayConnectors, job Job) {
 	tick := func() {
 		if !runtime.Enabled(job.SourceID) {
 			return
 		}
-		if err := job.Run(ctx, runtime, relaySettings); err != nil {
+		runCtx := activity.WithTrigger(ctx, activity.TriggerScheduled)
+		if err := job.Run(runCtx, runtime, relaySettings); err != nil {
 			infra.LogWarn("poll %s: %v", job.SourceID, err)
 		}
 	}
