@@ -5,7 +5,7 @@ Created: 2026-10-13 17:41
 Branch: `main`
 Services: `.coordinator`, `.cursor`, `Common`
 
-Связано: [команды и CrewConnector](./20261013-1711-EK-COORDINATOR_CREWS_AND_CONNECTORS.md), [доменная модель](./20260915-1805-EK-COORDINATOR_DOMAIN_MODEL.md), [data layer](./20260907-2225-EK-COORDINATOR_DATA_LAYER.md), [status bus](./20260910-0732-EK-COORDINATOR_STATUS_BUS_ALTERNATIVES.md), [автоматизации на пульсе](./20260926-1417-EK-COORDINATOR_AUTOMATIONS.md).
+Связано: [команды и CrewConnector](./20261013-1711-EK-COORDINATOR_CREWS_AND_CONNECTORS.md), [маркетплейс коннекторов](./20261020-1808-EK-RELAY_CONNECTOR_MARKETPLACE.md), [доменная модель](./20260915-1805-EK-COORDINATOR_DOMAIN_MODEL.md), [data layer](./20260907-2225-EK-COORDINATOR_DATA_LAYER.md), [status bus](./20260910-0732-EK-COORDINATOR_STATUS_BUS_ALTERNATIVES.md), [автоматизации на пульсе](./20260926-1417-EK-COORDINATOR_AUTOMATIONS.md).
 
 Статус: **proposal**, решения по имени и срезу **согласованы 2026-10-14** (см. конец). Код ещё не пишем.
 
@@ -79,20 +79,22 @@ Services: `.coordinator`, `.cursor`, `Common`
 Pulse: members[] + conflicts[] + stray[] + external.events[] + external.knowledge[]
 ```
 
-Черновик полей:
+Конверт (`relay/model.ExternalEvent`, `schema_version: 1`):
 
 | Поле | Смысл |
 |------|--------|
-| `id` | Id в нашей шине |
-| `source` | Откуда (`jira`, …) — метка, не объект коннектора |
-| `origin_id` | Id адаптера **в Relay** (для трассировки; Координатор его не вызывает) |
+| `received_at` | Когда Relay принял и записал строку (UTC, ставит шина) |
+| `occurred_at` | Когда случилось во внешней системе, если адаптер знает |
+| `source` | Адаптер / коннектор (`github`, позже `jira`) |
+| `class` | Как читать: `info`, `warning`, `reminder` (набор расширяется) |
+| `kind` | Что случилось (`review.commented`, `ci.failed`, …) |
+| `id` | Стабильный id в шине |
 | `external_id` | Id во внешней системе |
-| `occurred_at` | Время там |
-| `kind` | Класс (`qa.failed`, …) |
-| `title` / `summary` | Для Pulse и Отто |
-| `crew_id` | Если Relay замапил |
-| `task_id` / `alias` | Опционально |
-| `url` | Ссылка наружу |
+| `title` / `summary` / `url` | Для Pulse и Отто |
+| `tags` | Опциональные метки фильтра |
+| `data` | JSON-объект адаптера (у GitHub: `repo`, `branch`, `pr_author_login`, …) |
+
+Позже на конверте: `crew_id`, `task_id`, `alias` — когда Relay замапит на команду/слот.
 
 ### ExternalKnowledge
 
@@ -104,13 +106,30 @@ Pulse: members[] + conflicts[] + stray[] + external.events[] + external.knowledg
 
 Примеры якорей: `before_task_started`, `notify`, `brief_on_view`. Первая версия — текст, как `interest_brief`. Жёсткий stop из Jira в overlap — не v1.
 
-## Что такое адаптер (только Relay)
+## Что такое коннектор (только Relay)
 
-Адаптер — **пример реализации одного паттерна**, не выбор «первой интеграции Alina Assist». Каркас Relay не знает Jira: он принимает сырой сигнал, адаптер нормализует его в ExternalEvent или ExternalKnowledge, шина хранит результат.
+Коннектор — **плагин к внутреннему API Relay**. Сколько угодно сложная механика снаружи (webhook, poll, очередь, отдельный бинарь на проекте) на выходе даёт **стандартизированный поток** `[]ExternalEvent`. Дальше только Relay: шлюз → git-шина. Ядро не знает Jira/GitHub.
 
 ```text
-webhook / poll  →  Adapter.Normalize  →  append progress/external/…
-read(external_id)  ←  Adapter.Read     ←  запрос Координатора (refresh)
+внешняя система
+    → Connector (in-process Go или свой сервис)
+    → []ExternalEvent  — единый конверт (class, kind, data, …)
+    → Gateway.Publish / Gateway.Webhook
+    → progress/external/events/<source>/<год>.jsonl
+```
+
+### Внутренний API Relay
+
+| Вход | Кто вызывает | Смысл |
+|------|----------------|--------|
+| `POST /connectors/{source}/webhook` | Внешняя система | Сырой webhook → `Connector.Normalize` → шина |
+| `POST /api/v1/connectors/{source}/events` | Bearer (координатор или sidecar-коннектор) | Уже нормализованный JSON-массив событий → шина |
+| `GET /api/v1/sources` | Координатор | Каталог `Descriptor` зарегистрированных коннекторов |
+
+In-process: `connector.Registry` + `gateway.Gateway` в `app.New` (сейчас stock `github`). Другой проект добавляет свой `Connector` в registry или шлёт на `/events`.
+
+```text
+read(external_id)  ←  Connector.Read  ←  запрос Координатора (refresh, позже)
 ```
 
 У адаптера два входа, оба на Relay:

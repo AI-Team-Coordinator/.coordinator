@@ -15,10 +15,17 @@ type CatalogEntry struct {
 	Name         string        `json:"name"`
 	Detail       string        `json:"detail"`
 	Icon         string        `json:"icon"`
-	Capabilities []string      `json:"capabilities"` // webhook | poll
+	Capabilities []string      `json:"capabilities"` // webhook | poll (transport hints for UI)
+	Actions      []ActionMeta  `json:"actions,omitempty"`
 	Connectable  bool          `json:"connectable"`
 	ConfigSchema []ConfigField `json:"config_schema"`
 	SecretKeys   []string      `json:"-"`
+}
+
+// ActionMeta is declared in catalog; handler is registered on connector.ActionRegistry.
+type ActionMeta struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
 }
 
 // Catalog is legacy built-in tiles; stock connectors register via connectors/*/Options().

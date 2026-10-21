@@ -95,7 +95,7 @@ func (s *Service) GetRelaySources(ctx context.Context) (*relaydto.RelaySourcesRe
 	if access == nil || access.URL == "" {
 		return &relaydto.RelaySourcesResponse{Sources: nil}, nil
 	}
-	body, err := relayGET(access, "/api/v1/sources")
+	body, err := relayGETBytes(access, "/api/v1/sources")
 	if err != nil {
 		return nil, &validate.Error{Msg: err.Error()}
 	}
@@ -106,30 +106,16 @@ func (s *Service) GetRelaySources(ctx context.Context) (*relaydto.RelaySourcesRe
 	return &out, nil
 }
 
-func relayGET(access *model.RelayAccess, path string) ([]byte, error) {
-	base := strings.TrimRight(access.URL, "/")
-	req, err := http.NewRequest(http.MethodGet, base+path, nil)
+func relayGETBytes(access *model.RelayAccess, path string) ([]byte, error) {
+	data, code, err := relayRequest(access, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
-	if access.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+access.Token)
-	}
-	client := &http.Client{Timeout: 8 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("relay unreachable: %v", err)
-	}
-	defer resp.Body.Close()
-	data, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode == http.StatusUnauthorized {
+	if code == http.StatusUnauthorized {
 		return nil, fmt.Errorf("relay rejected the access token")
 	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("relay returned %d", resp.StatusCode)
+	if code != http.StatusOK {
+		return nil, fmt.Errorf("relay returned %d", code)
 	}
 	return data, nil
 }

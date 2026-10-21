@@ -8,6 +8,7 @@ import (
 	"relay/domain/config"
 	"relay/infra/settings"
 	"relay/infra/store"
+	"relay/model"
 )
 
 type Tile struct {
@@ -16,6 +17,7 @@ type Tile struct {
 	Detail       string        `json:"detail"`
 	Icon         string        `json:"icon"`
 	Capabilities []string      `json:"capabilities"`
+	Actions      []ActionMeta  `json:"actions,omitempty"`
 	Connectable  bool          `json:"connectable"`
 	ConfigSchema []ConfigField `json:"config_schema"`
 	Enabled      bool          `json:"enabled"`
@@ -34,6 +36,14 @@ type Service struct {
 	Runtime  *config.Runtime
 	Settings *settings.RelayConnectors
 	Secrets  *store.SecretStore
+	Activity *store.ActivityStore
+}
+
+type ActivityListResponse struct {
+	Entries []model.ConnectorActivityEntry `json:"entries"`
+	Total   int                            `json:"total"`
+	Limit   int                            `json:"limit"`
+	Offset  int                            `json:"offset"`
 }
 
 func (s *Service) List(ctx context.Context) ([]Tile, error) {
@@ -50,6 +60,7 @@ func (s *Service) List(ctx context.Context) ([]Tile, error) {
 			Detail:       ent.Detail,
 			Icon:         ent.Icon,
 			Capabilities: ent.Capabilities,
+			Actions:      ent.Actions,
 			Connectable:  ent.Connectable,
 			ConfigSchema: ent.ConfigSchema,
 			Enabled:      enabled,
@@ -124,6 +135,28 @@ func (s *Service) PutConfig(ctx context.Context, id string, req PutConfigRequest
 		}
 	}
 	return s.GetConfig(ctx, id)
+}
+
+func (s *Service) ListActivity(ctx context.Context, connectorID string, limit, offset int) (*ActivityListResponse, error) {
+	if s.Activity == nil {
+		return &ActivityListResponse{Entries: nil, Total: 0, Limit: limit, Offset: offset}, nil
+	}
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	entries, total, err := s.Activity.List(ctx, connectorID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	return &ActivityListResponse{
+		Entries: entries,
+		Total:   total,
+		Limit:   limit,
+		Offset:  offset,
+	}, nil
 }
 
 func (s *Service) Disable(ctx context.Context, id string, clearSecrets bool) (*ConfigView, error) {

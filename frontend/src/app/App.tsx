@@ -4,6 +4,7 @@ import { Header } from '../features/header/Header'
 import { ConflictRadar } from '../features/radar/ConflictRadar'
 import { MetricsGrid } from '../features/metrics/MetricsGrid'
 import { TeamPulseSection } from '../features/pulse/TeamPulseSection'
+import { ExternalSignalsCard } from '../features/pulse/ExternalSignalsCard'
 import { ActivityTimeline, type EventsFilter } from '../features/timeline/ActivityTimeline'
 import { TaskTable, type TasksFilter } from '../features/stats/TaskTable'
 import { SpendBreakdown } from '../features/stats/SpendBreakdown'
@@ -35,6 +36,7 @@ import type {
   Conflict,
   EventItem,
   MemberState,
+  ExternalEvent,
   ProjectProfile,
   SetupState,
   Stats,
@@ -66,6 +68,7 @@ export function App() {
   )
   const [members, setMembers] = useState<MemberState[]>([])
   const [stray, setStray] = useState<StrayRepo[]>([])
+  const [externalEvents, setExternalEvents] = useState<ExternalEvent[]>([])
   const [conflicts, setConflicts] = useState<Conflict[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [events, setEvents] = useState<EventItem[]>([])
@@ -224,10 +227,16 @@ export function App() {
             setSyncStatus(data as SyncStatus)
           ),
           run('pulse', 'load-pulse', t('loading.pulse'), api.pulse, (data) => {
-            const pulse = data as { members?: MemberState[]; conflicts?: Conflict[]; stray?: StrayRepo[] }
+            const pulse = data as {
+              members?: MemberState[]
+              conflicts?: Conflict[]
+              stray?: StrayRepo[]
+              external?: { events?: ExternalEvent[] }
+            }
             setMembers(pulse.members || [])
             setConflicts(pulse.conflicts || [])
             setStray(pulse.stray || [])
+            setExternalEvents(pulse.external?.events || [])
           }),
           run('stats', 'load-stats', t('loading.stats'), api.stats, (data) => {
             const envelope = data as StatsEnvelope
@@ -407,7 +416,12 @@ export function App() {
 
     const pollStaleResources = () => {
       if (shouldPoll('pulse')) {
-        void fetchJSONCached<{ members?: MemberState[]; conflicts?: Conflict[]; stray?: StrayRepo[] }>(
+        void fetchJSONCached<{
+          members?: MemberState[]
+          conflicts?: Conflict[]
+          stray?: StrayRepo[]
+          external?: { events?: ExternalEvent[] }
+        }>(
           'pulse',
           api.pulse
         ).then((d) => {
@@ -415,6 +429,7 @@ export function App() {
           if (d.members) setMembers(d.members)
           if (d.conflicts) setConflicts(d.conflicts)
           if (Array.isArray(d.stray)) setStray(d.stray)
+          if (d.external?.events) setExternalEvents(d.external.events)
         })
       }
       if (shouldPoll('stats')) {
@@ -465,6 +480,7 @@ export function App() {
         if (data.members) setMembers(data.members)
         if (data.conflicts) setConflicts(data.conflicts)
         if (Array.isArray(data.stray)) setStray(data.stray)
+        if (data.external?.events) setExternalEvents(data.external.events)
       } catch (err) {
         console.warn('Failed to parse SSE message:', err)
       }
@@ -571,6 +587,7 @@ export function App() {
           {section === 'overview' && (
             <div className="space-y-8">
               <ConflictRadar conflicts={conflicts} />
+              <ExternalSignalsCard events={externalEvents} />
               {quietBoard ? <NextStepCard /> : (
                 <MetricsGrid
                   stats={stats}

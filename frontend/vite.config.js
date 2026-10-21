@@ -1,30 +1,3 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-export default defineConfig({
-    plugins: [react()],
-    resolve: {
-        alias: {
-            '@': path.resolve(__dirname, './src'),
-        },
-    },
-    server: {
-        host: '127.0.0.1',
-        port: 5175,
-        strictPort: true,
-        open: false,
-        proxy: {
-            '/api': {
-                target: 'http://127.0.0.1:4321',
-                changeOrigin: true,
-                ws: true,
-                timeout: 0,
-                proxyTimeout: 0,
-            },
-            '/health': {
-                target: 'http://127.0.0.1:4321',
-                changeOrigin: true,
-            },
-        },
-    },
-});
+// Vite loads vite.config.js before vite.config.ts — keep this file delegating to TS
+// so proxy timeouts and UI_PORT/PORT stay in one place.
+export { default } from './vite.config.ts'

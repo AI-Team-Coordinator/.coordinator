@@ -3,6 +3,6 @@ export const SECTIONS = ['overview', 'work', 'team', 'organization', 'relay', 'p
 export type SectionId = (typeof SECTIONS)[number]
 
 export function parseSection(raw: string): SectionId {
-  const value = raw.replace(/^#/, '') as SectionId
-  return SECTIONS.includes(value) ? value : 'overview'
+  const segment = raw.replace(/^#/, '').split('/')[0] as SectionId
+  return SECTIONS.includes(segment) ? segment : 'overview'
 }

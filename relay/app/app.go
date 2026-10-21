@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"relay/domain/activity"
 	"relay/domain/config"
 	"relay/domain/connector"
 	"relay/domain/gateway"
@@ -51,7 +52,8 @@ type App struct {
 	gateway       *gateway.Gateway
 	runtime       *config.Runtime
 	relaySettings *settings.RelayConnectors
-	pollFactories []func(*gateway.Gateway) poll.Job
+	pollFactories []func(*gateway.Gateway, *activity.Recorder) poll.Job
+	activityLog   *activity.Recorder
 	stateCfg      statebus.Config
 	stateSink     *statebus.Sink
 	outboxStore   *store.OutboxStore
@@ -89,6 +91,8 @@ func New(cfg Config, opts ...Option) (*App, error) {
 		return nil, err
 	}
 	eventStore := store.NewEventStore(pgDB)
+	activityStore := store.NewActivityStore(pgDB)
+	activityRecorder := &activity.Recorder{Store: activityStore}
 	outboxStore := store.NewOutboxStore(pgDB)
 	relaySettings := settings.NewRelayConnectors(cfg.DataDir)
 	runtime := &config.Runtime{Settings: relaySettings, Secrets: secretStore}
@@ -132,8 +136,41 @@ func New(cfg Config, opts ...Option) (*App, error) {
 		Runtime:  runtime,
 		Settings: relaySettings,
 		Secrets:  secretStore,
+		Activity: activityStore,
 	}
-	mktCtrl := &marketplace.Controller{Service: mktSvc}
+	var pollJobs []poll.Job
+	for _, factory := range inst.pollFactories {
+		if factory == nil {
+			continue
+		}
+		pollJobs = append(pollJobs, factory(gw, activityRecorder))
+	}
+	actionReg := connector.NewActionRegistry()
+	for _, reg := range inst.actionRegs {
+		if reg != nil {
+			reg(actionReg, gw, runtime, relaySettings, pollJobs)
+		}
+	}
+	for _, job := range pollJobs {
+		if job.Run == nil || job.SourceID == "" {
+			continue
+		}
+		src := job.SourceID
+		actionReg.Register(src, connector.Action{
+			ID:    connector.ActionPollNow,
+			Label: "Run scheduled check now",
+			Run: func(ctx context.Context) error {
+				ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+				defer cancel()
+				j, ok := poll.FindJob(pollJobs, src)
+				if !ok {
+					return fmt.Errorf("poll job missing")
+				}
+				return poll.RunNow(ctx, runtime, relaySettings, j)
+			},
+		})
+	}
+	mktCtrl := &marketplace.Controller{Service: mktSvc, Actions: actionReg}
 
 	svc := &relay.Service{
 		Gateway:  gw,
@@ -150,9 +187,11 @@ func New(cfg Config, opts ...Option) (*App, error) {
 	api.HandleFunc("GET /sources", ctrl.Sources)
 	api.HandleFunc("POST /connectors/{source}/events", ctrl.ConnectorEvents)
 	api.HandleFunc("GET /connectors/marketplace", mktCtrl.Marketplace)
+	api.HandleFunc("GET /connectors/activity", mktCtrl.ListActivity)
 	api.HandleFunc("GET /connectors/{id}/config", mktCtrl.GetConfig)
 	api.Handle("PUT /connectors/{id}/config", infra.MasterBearerOnly(cfg.BearerToken, http.HandlerFunc(mktCtrl.PutConfig)))
 	api.Handle("POST /connectors/{id}/disable", infra.MasterBearerOnly(cfg.BearerToken, http.HandlerFunc(mktCtrl.Disable)))
+	api.Handle("POST /connectors/{id}/actions/{action}", infra.MasterBearerOnly(cfg.BearerToken, http.HandlerFunc(mktCtrl.RunAction)))
 
 	protected := infra.BearerAuth(cfg.BearerToken, cfg.DataDir, api)
 	mux.HandleFunc("GET /api/v1/health", ctrl.Health)
@@ -166,6 +205,7 @@ func New(cfg Config, opts ...Option) (*App, error) {
 		runtime:       runtime,
 		relaySettings: relaySettings,
 		pollFactories: inst.pollFactories,
+		activityLog:   activityRecorder,
 		stateCfg:      stateCfg,
 		stateSink:     stateSink,
 		outboxStore:   outboxPtr,
@@ -185,9 +225,9 @@ func (a *App) Start(addr string) error {
 			if factory == nil {
 				continue
 			}
-			jobs = append(jobs, factory(a.gateway))
+			jobs = append(jobs, factory(a.gateway, a.activityLog))
 		}
-		poll.Start(ctx, a.gateway, a.runtime, a.relaySettings, jobs)
+		poll.Start(ctx, a.gateway, a.runtime, a.relaySettings, a.activityLog, jobs)
 	}
 	if a.stateSink != nil && a.outboxStore != nil {
 		go statebus.RunWorker(ctx, a.stateCfg, a.outboxStore, a.stateSink)

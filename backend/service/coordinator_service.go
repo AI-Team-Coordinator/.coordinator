@@ -477,11 +477,20 @@ func (s *Service) GetPulse(ctx context.Context) (*pulsedto.PulseResponse, error)
 	}
 	conflicts := detectConflicts(members)
 	s.persistCoordinatorNotices(ctx, members, conflicts)
+	var external *pulsedto.PulseExternalResponse
+	if rows, err := s.repo.LoadExternalEvents(); err == nil && len(rows) > 0 {
+		events := make([]pulsedto.ExternalEventResponse, 0, len(rows))
+		for _, row := range rows {
+			events = append(events, mapExternalEventRow(row))
+		}
+		external = &pulsedto.PulseExternalResponse{Events: events}
+	}
 	return &pulsedto.PulseResponse{
 		UpdatedAt: time.Now(),
 		Members:   mapMembers(members),
 		Conflicts: mapConflicts(conflicts),
 		Stray:     mapStray(stray),
+		External:  external,
 	}, nil
 }
 

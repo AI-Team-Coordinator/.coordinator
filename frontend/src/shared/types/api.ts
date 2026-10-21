@@ -115,6 +115,21 @@ export interface Conflict {
   affected_aliases: string[]
 }
 
+export interface ExternalEvent {
+  id: string
+  source: string
+  external_id?: string
+  class: string
+  kind: string
+  title?: string
+  summary?: string
+  url?: string
+  received_at?: string
+  occurred_at?: string
+  tags?: string[]
+  data?: Record<string, unknown>
+}
+
 export interface BillingPeriod {
   start_iso: string
   start_unix: number

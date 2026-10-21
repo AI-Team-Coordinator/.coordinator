@@ -31,4 +31,6 @@ type CoordinatorRepository interface {
 	TaskTitle(ctx context.Context, taskID string) string
 	ListWorkTasks(ctx context.Context) ([]model.WorkTask, error)
 	AppendEvent(ctx context.Context, ev model.Event) error
+	LoadExternalEvents() ([]ExternalEventRow, error)
+	ListExternalEvents(source string, limit, offset int) ([]ExternalEventRow, int, []string, error)
 }

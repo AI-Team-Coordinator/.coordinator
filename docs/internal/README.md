@@ -22,3 +22,4 @@
 
 - [Команды и CrewConnector](./20261013-1711-EK-COORDINATOR_CREWS_AND_CONNECTORS.md)
 - [Внешние знания и события (Relay)](./20261013-1741-EK-COORDINATOR_SYSTEM_CONNECTOR.md)
+- [Relay: маркетплейс коннекторов](./20261020-1808-EK-RELAY_CONNECTOR_MARKETPLACE.md) — плитки UI, настройки проекта, секреты в Relay DB, GitHub + OpenRouter
