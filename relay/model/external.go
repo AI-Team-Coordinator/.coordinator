@@ -1,19 +1,36 @@
 package model
 
-// ExternalEvent is one normalized fact written to the coordinator-state bus.
-// It is not a human model.Event.
+// ExternalEvent is one normalized fact on the coordinator-state bus (not model.Event).
+//
+// Envelope fields are source-agnostic. Connector-specific payload lives in Data.
+// ReceivedAt is set by the bus when the line is appended.
+const ExternalEventSchemaVersion = 1
+
 type ExternalEvent struct {
-	ID          string   `json:"id"`
-	Source      string   `json:"source"`
-	OriginID    string   `json:"origin_id"`
-	ExternalID  string   `json:"external_id"`
-	OccurredAt  string   `json:"occurred_at,omitempty"`
-	Kind        string   `json:"kind"`
-	Title       string   `json:"title,omitempty"`
-	Summary     string   `json:"summary,omitempty"`
-	URL         string   `json:"url,omitempty"`
-	Repo        string   `json:"repo,omitempty"`
-	Branch      string   `json:"branch,omitempty"`
-	GitHubLogin string   `json:"github_login,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
+	SchemaVersion int            `json:"schema_version"`
+	ID            string         `json:"id"`
+	Source        string         `json:"source"`
+	ExternalID    string         `json:"external_id"`
+	ReceivedAt    string         `json:"received_at,omitempty"`
+	OccurredAt    string         `json:"occurred_at,omitempty"`
+	Class         string         `json:"class"`
+	Kind          string         `json:"kind"`
+	Title         string         `json:"title,omitempty"`
+	Summary       string         `json:"summary,omitempty"`
+	URL           string         `json:"url,omitempty"`
+	Tags          []string       `json:"tags,omitempty"`
+	Data          map[string]any `json:"data,omitempty"`
+}
+
+// Seal fills schema version and defaults before the bus writes the line.
+func (e *ExternalEvent) Seal(receivedAt string) {
+	if e.SchemaVersion == 0 {
+		e.SchemaVersion = ExternalEventSchemaVersion
+	}
+	if e.ReceivedAt == "" {
+		e.ReceivedAt = receivedAt
+	}
+	if e.Class == "" {
+		e.Class = ClassInfo
+	}
 }
