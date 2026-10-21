@@ -8,10 +8,19 @@ import (
 	"strings"
 	"time"
 
+	"relay/domain/config"
+	"relay/domain/connector"
+	"relay/domain/gateway"
+	"relay/domain/marketplace"
+	"relay/domain/poll"
 	"relay/domain/relay"
 	"relay/domain/relay/bus"
-	"relay/domain/relay/github"
 	"relay/infra"
+	"relay/infra/crypto"
+	"relay/infra/db"
+	"relay/infra/settings"
+	"relay/infra/statebus"
+	"relay/infra/store"
 )
 
 type Config struct {
@@ -35,11 +44,25 @@ func (c *Config) ApplyEnv() {
 }
 
 type App struct {
-	config Config
-	server *http.Server
+	config        Config
+	server        *http.Server
+	pg            interface{ Close() error }
+	pollCancel    context.CancelFunc
+	gateway       *gateway.Gateway
+	runtime       *config.Runtime
+	relaySettings *settings.RelayConnectors
+	pollFactories []func(*gateway.Gateway) poll.Job
+	stateCfg      statebus.Config
+	stateSink     *statebus.Sink
+	outboxStore   *store.OutboxStore
 }
 
-func New(cfg Config) (*App, error) {
+func New(cfg Config, opts ...Option) (*App, error) {
+	inst := applyOptions(opts)
+	for _, e := range inst.catalog {
+		marketplace.RegisterCatalog(e)
+	}
+
 	if cfg.DataDir == "" {
 		return nil, fmt.Errorf("data dir is empty")
 	}
@@ -50,22 +73,102 @@ func New(cfg Config) (*App, error) {
 		}
 		cfg.BearerToken = token
 	}
+
+	pgDB, err := db.Open("infra/migrator/migrations")
+	if err != nil {
+		return nil, err
+	}
+	key, err := crypto.LoadConfigKey(cfg.DataDir)
+	if err != nil {
+		_ = pgDB.Close()
+		return nil, err
+	}
+	secretStore, err := store.NewSecretStore(pgDB, key)
+	if err != nil {
+		_ = pgDB.Close()
+		return nil, err
+	}
+	eventStore := store.NewEventStore(pgDB)
+	outboxStore := store.NewOutboxStore(pgDB)
+	relaySettings := settings.NewRelayConnectors(cfg.DataDir)
+	runtime := &config.Runtime{Settings: relaySettings, Secrets: secretStore}
+
+	var stock []connector.Connector
+	for _, init := range inst.connectorInits {
+		if init != nil {
+			stock = append(stock, init(runtime, cfg))
+		}
+	}
+	stock = append(stock, inst.connectors...)
+	reg, err := connector.NewRegistry(stock...)
+	if err != nil {
+		_ = pgDB.Close()
+		return nil, err
+	}
+	var busSink gateway.Sink
+	stateCfg := statebus.LoadFromEnv()
+	stateSink := statebus.NewSink(stateCfg, cfg.DataDir)
+	if stateSink != nil {
+		infra.LogInfo("relay state bus: origin=%s worktree=%s (outbox)", stateCfg.OriginID, stateCfg.Worktree)
+	} else if strings.TrimSpace(os.Getenv("RELAY_DEBUG_JSONL")) == "1" {
+		busSink = bus.JSONL{Root: cfg.DataDir}
+	}
+	var outboxPtr *store.OutboxStore
+	if stateSink != nil && outboxStore != nil {
+		outboxPtr = outboxStore
+	}
+	gw := &gateway.Gateway{
+		Registry: reg,
+		Sink: gateway.CompositeSink{
+			Bus:    busSink,
+			Store:  eventStore,
+			Outbox: outboxPtr,
+		},
+		IsEnabled: func(source string) bool {
+			return runtime.Enabled(source)
+		},
+	}
+	mktSvc := &marketplace.Service{
+		Runtime:  runtime,
+		Settings: relaySettings,
+		Secrets:  secretStore,
+	}
+	mktCtrl := &marketplace.Controller{Service: mktSvc}
+
 	svc := &relay.Service{
-		GitHub: github.Adapter{WebhookSecret: cfg.GitHubWebhookSecret},
-		Bus:    bus.JSONL{Root: cfg.DataDir},
+		Gateway:  gw,
+		Runtime:  runtime,
+		Registry: reg,
 	}
 	ctrl := &relay.Controller{Service: svc}
+
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /connectors/{source}/webhook", ctrl.ConnectorWebhook)
 	mux.HandleFunc("POST /github/webhook", ctrl.GitHubWebhook)
 
 	api := http.NewServeMux()
-	api.HandleFunc("GET /health", ctrl.Health)
 	api.HandleFunc("GET /sources", ctrl.Sources)
+	api.HandleFunc("POST /connectors/{source}/events", ctrl.ConnectorEvents)
+	api.HandleFunc("GET /connectors/marketplace", mktCtrl.Marketplace)
+	api.HandleFunc("GET /connectors/{id}/config", mktCtrl.GetConfig)
+	api.Handle("PUT /connectors/{id}/config", infra.MasterBearerOnly(cfg.BearerToken, http.HandlerFunc(mktCtrl.PutConfig)))
+	api.Handle("POST /connectors/{id}/disable", infra.MasterBearerOnly(cfg.BearerToken, http.HandlerFunc(mktCtrl.Disable)))
+
 	protected := infra.BearerAuth(cfg.BearerToken, cfg.DataDir, api)
+	mux.HandleFunc("GET /api/v1/health", ctrl.Health)
+	mux.HandleFunc("GET /health", ctrl.Health)
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", protected))
 
 	return &App{
-		config: cfg,
+		config:        cfg,
+		pg:            pgDB,
+		gateway:       gw,
+		runtime:       runtime,
+		relaySettings: relaySettings,
+		pollFactories: inst.pollFactories,
+		stateCfg:      stateCfg,
+		stateSink:     stateSink,
+		outboxStore:   outboxPtr,
 		server: &http.Server{
 			Handler:           mux,
 			ReadHeaderTimeout: 5 * time.Second,
@@ -74,6 +177,21 @@ func New(cfg Config) (*App, error) {
 }
 
 func (a *App) Start(addr string) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	a.pollCancel = cancel
+	if a.gateway != nil && a.runtime != nil && a.relaySettings != nil {
+		var jobs []poll.Job
+		for _, factory := range a.pollFactories {
+			if factory == nil {
+				continue
+			}
+			jobs = append(jobs, factory(a.gateway))
+		}
+		poll.Start(ctx, a.gateway, a.runtime, a.relaySettings, jobs)
+	}
+	if a.stateSink != nil && a.outboxStore != nil {
+		go statebus.RunWorker(ctx, a.stateCfg, a.outboxStore, a.stateSink)
+	}
 	a.server.Addr = addr
 	infra.LogInfo("starting relay on http://%s", addr)
 	if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -83,7 +201,14 @@ func (a *App) Start(addr string) error {
 }
 
 func (a *App) Shutdown() error {
+	if a.pollCancel != nil {
+		a.pollCancel()
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	return a.server.Shutdown(ctx)
+	err := a.server.Shutdown(ctx)
+	if a.pg != nil {
+		_ = a.pg.Close()
+	}
+	return err
 }

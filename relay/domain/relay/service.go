@@ -8,36 +8,39 @@ import (
 	"net/http"
 	"strings"
 
-	"relay/domain/adapter"
-	"relay/domain/relay/github"
+	"relay/domain/config"
+	"relay/domain/connector"
+	"relay/domain/gateway"
+	"relay/domain/marketplace"
 	"relay/model"
 )
 
-// Appender writes one normalized event to the bus.
-type Appender interface {
-	Append(ctx context.Context, ev model.ExternalEvent) error
-}
-
-// Service is the Relay use-case layer.
+// Service is the Relay HTTP and use-case layer.
 type Service struct {
-	GitHub adapter.Adapter
-	Bus    Appender
+	Gateway  *gateway.Gateway
+	Runtime  *config.Runtime
+	Registry *connector.Registry
 }
 
-func (s *Service) IngestGitHub(ctx context.Context, eventName string, body []byte, signature string) error {
-	events, err := s.GitHub.Normalize(ctx, adapter.Delivery{Event: eventName, Body: body, Sig: signature})
-	if err != nil {
+func (s *Service) IngestWebhook(ctx context.Context, source string, d connector.Delivery) error {
+	if s == nil || s.Gateway == nil {
+		return errors.New("relay service not configured")
+	}
+	err := s.Gateway.Webhook(ctx, source, d)
+	if errors.Is(err, gateway.ErrIgnored) {
 		return err
 	}
-	for _, ev := range events {
-		if err := s.Bus.Append(ctx, ev); err != nil {
-			return err
-		}
-	}
-	return nil
+	return err
 }
 
-// Controller is the HTTP edge. Same shape as the Coordinator controller: decode, call service, status.
+func (s *Service) PublishEvents(ctx context.Context, source string, events []model.ExternalEvent) error {
+	if s == nil || s.Gateway == nil {
+		return errors.New("relay service not configured")
+	}
+	return s.Gateway.Publish(ctx, source, events)
+}
+
+// Controller is the HTTP edge.
 type Controller struct {
 	Service *Service
 }
@@ -47,39 +50,99 @@ func (c *Controller) Health(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte(`{"status":"ok","service":"relay"}`))
 }
 
-func (c *Controller) Sources(w http.ResponseWriter, _ *http.Request) {
+func (c *Controller) Sources(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	enabled := false
-	if c.Service != nil {
-		if gh, ok := c.Service.GitHub.(github.Adapter); ok {
-			enabled = strings.TrimSpace(gh.WebhookSecret) != ""
+	var list []connector.Descriptor
+	if c.Service != nil && c.Service.Registry != nil {
+		for _, d := range c.Service.Registry.ListDescriptors() {
+			if c.Service.Runtime != nil {
+				ent, ok := marketplace.EntryByID(d.ID)
+				if ok {
+					d.Enabled = ent.Connectable && c.Service.Runtime.Connected(r.Context(), d.ID, ent.SecretKeys)
+				} else {
+					d.Enabled = c.Service.Runtime.Enabled(d.ID)
+				}
+			}
+			list = append(list, d)
 		}
 	}
-	out := map[string]any{
-		"sources": []map[string]any{
-			{
-				"id":      "github",
-				"name":    "GitHub",
-				"detail":  "Pull requests, reviews, and Actions (read-only).",
-				"enabled": enabled,
-			},
-		},
-	}
-	_ = json.NewEncoder(w).Encode(out)
+	_ = json.NewEncoder(w).Encode(map[string]any{"sources": list})
 }
 
-func (c *Controller) GitHubWebhook(w http.ResponseWriter, r *http.Request) {
+func readWebhookDelivery(r *http.Request) (connector.Delivery, error) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		return connector.Delivery{}, err
+	}
+	return connector.Delivery{
+		Event: r.Header.Get("X-GitHub-Event"),
+		Body:  body,
+		Sig:   r.Header.Get("X-Hub-Signature-256"),
+	}, nil
+}
+
+func (c *Controller) ConnectorWebhook(w http.ResponseWriter, r *http.Request) {
+	source := strings.TrimSpace(r.PathValue("source"))
+	d, err := readWebhookDelivery(r)
 	if err != nil {
 		http.Error(w, "read body", http.StatusBadRequest)
 		return
 	}
-	err = c.Service.IngestGitHub(r.Context(), r.Header.Get("X-GitHub-Event"), body, r.Header.Get("X-Hub-Signature-256"))
-	if errors.Is(err, github.ErrIgnored) {
+	err = c.Service.IngestWebhook(r.Context(), source, d)
+	if errors.Is(err, gateway.ErrIgnored) || errors.Is(err, connector.ErrIgnored) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	if errors.Is(err, github.ErrBadSignature) {
+	if errors.Is(err, connector.ErrBadSignature) {
+		http.Error(w, "bad signature", http.StatusUnauthorized)
+		return
+	}
+	if errors.Is(err, gateway.ErrUnknownConnector) {
+		http.Error(w, "unknown connector", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, "ingest failed", http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Controller) ConnectorEvents(w http.ResponseWriter, r *http.Request) {
+	source := strings.TrimSpace(r.PathValue("source"))
+	var events []model.ExternalEvent
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&events); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+	if len(events) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if err := c.Service.PublishEvents(r.Context(), source, events); err != nil {
+		if errors.Is(err, gateway.ErrUnknownConnector) {
+			http.Error(w, "unknown connector", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "publish failed", http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// GitHubWebhook keeps the legacy path for existing GitHub App hook URLs.
+func (c *Controller) GitHubWebhook(w http.ResponseWriter, r *http.Request) {
+	d, err := readWebhookDelivery(r)
+	if err != nil {
+		http.Error(w, "read body", http.StatusBadRequest)
+		return
+	}
+	err = c.Service.IngestWebhook(r.Context(), "github", d)
+	if errors.Is(err, gateway.ErrIgnored) || errors.Is(err, connector.ErrIgnored) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if errors.Is(err, connector.ErrBadSignature) {
 		http.Error(w, "bad signature", http.StatusUnauthorized)
 		return
 	}
