@@ -475,19 +475,20 @@ func (s *Service) GetPulse(ctx context.Context) (*pulsedto.PulseResponse, error)
 	if err != nil {
 		return nil, err
 	}
-	conflicts := detectConflicts(members)
+	conflicts := s.conflictsWithDocTitles(ctx, members)
 	s.persistCoordinatorNotices(ctx, members, conflicts)
 	var external *pulsedto.PulseExternalResponse
 	if rows, err := s.repo.LoadExternalEvents(); err == nil && len(rows) > 0 {
+		triageMap := s.externalEventTriageMap()
 		events := make([]pulsedto.ExternalEventResponse, 0, len(rows))
 		for _, row := range rows {
-			events = append(events, mapExternalEventRow(row))
+			events = append(events, mapExternalEventRow(row, triageMap))
 		}
 		external = &pulsedto.PulseExternalResponse{Events: events}
 	}
 	return &pulsedto.PulseResponse{
 		UpdatedAt: time.Now(),
-		Members:   mapMembers(members),
+		Members:   s.mapMembers(members),
 		Conflicts: mapConflicts(conflicts),
 		Stray:     mapStray(stray),
 		External:  external,
@@ -579,7 +580,7 @@ func (s *Service) GetMembers(ctx context.Context) (*pulsedto.MembersResponse, er
 	if err != nil {
 		return nil, err
 	}
-	return &pulsedto.MembersResponse{Members: mapMembers(members)}, nil
+	return &pulsedto.MembersResponse{Members: s.mapMembers(members)}, nil
 }
 
 func (s *Service) GetConflicts(ctx context.Context) (*pulsedto.ConflictsResponse, error) {
@@ -587,7 +588,7 @@ func (s *Service) GetConflicts(ctx context.Context) (*pulsedto.ConflictsResponse
 	if err != nil {
 		return nil, err
 	}
-	return &pulsedto.ConflictsResponse{Conflicts: mapConflicts(detectConflicts(members))}, nil
+	return &pulsedto.ConflictsResponse{Conflicts: mapConflicts(s.conflictsWithDocTitles(ctx, members))}, nil
 }
 
 func (s *Service) GetStats(ctx context.Context, query statsdto.StatsQuery) (*statsdto.StatsEnvelope, error) {
@@ -827,7 +828,7 @@ func (s *Service) GetEvents(ctx context.Context, query eventdto.EventsQuery) (*e
 	return &eventdto.EventsResponse{Events: out, Total: total, Offset: query.Offset, Limit: query.Limit}, nil
 }
 
-func mapMembers(members []model.Member) []pulsedto.MemberResponse {
+func (s *Service) mapMembers(members []model.Member) []pulsedto.MemberResponse {
 	out := make([]pulsedto.MemberResponse, 0, len(members))
 	for _, m := range members {
 		focus := m.Focus
@@ -842,9 +843,14 @@ func mapMembers(members []model.Member) []pulsedto.MemberResponse {
 		if crews == nil {
 			crews = []string{}
 		}
+		avatarURL := ""
+		if s.repo.UserAvatarExists(m.Alias) {
+			avatarURL = "/api/v1/team/" + m.Alias + "/avatar"
+		}
 		item := pulsedto.MemberResponse{
 			Alias:           m.Alias,
 			Name:            m.Name,
+			AvatarURL:       avatarURL,
 			Role:            m.Role,
 			Access:          m.Access,
 			Focus:           focus,
@@ -868,7 +874,7 @@ func mapMembers(members []model.Member) []pulsedto.MemberResponse {
 			SpendShared:     m.SpendShared,
 		}
 		if len(m.Tasks) > 0 {
-			item.Tasks = mapMemberTasks(m.Alias, m.Tasks)
+			item.Tasks = s.mapMemberTasks(m.Alias, m.Tasks)
 			newest := m.Tasks[len(m.Tasks)-1]
 			item.DurationSeconds = newest.DurationSeconds
 			item.ClockPaused = newest.ClockPaused
@@ -905,18 +911,20 @@ func (s *Service) overlayRepoFacts(ctx context.Context, members []model.Member) 
 	}
 }
 
-func mapMemberTasks(alias string, tasks []model.MemberTask) []pulsedto.MemberTaskResponse {
+func (s *Service) mapMemberTasks(alias string, tasks []model.MemberTask) []pulsedto.MemberTaskResponse {
 	out := make([]pulsedto.MemberTaskResponse, 0, len(tasks))
 	for _, task := range tasks {
 		services := task.Services
 		if services == nil {
 			services = []string{}
 		}
+		_, hasDoc := s.repo.TaskDocHeading(context.Background(), task.TaskID)
 		out = append(out, pulsedto.MemberTaskResponse{
 			TaskID:          task.TaskID,
 			TaskTitle:       task.Title,
 			TaskDoc:         task.Doc,
 			TaskSummary:     task.Summary,
+			HasDoc:          hasDoc,
 			Branch:          task.Branch,
 			Services:        services,
 			StartedAt:       task.StartedAt,
@@ -992,14 +1000,44 @@ func mapRepos(repos []model.RepoWork) []pulsedto.RepoWorkResponse {
 	return out
 }
 
+func (s *Service) conflictsWithDocTitles(ctx context.Context, members []model.Member) []model.Conflict {
+	conflicts := detectConflicts(members)
+	for i := range conflicts {
+		for j := range conflicts[i].Tasks {
+			id := strings.TrimSpace(conflicts[i].Tasks[j].TaskID)
+			if id == "" {
+				continue
+			}
+			if heading, hasDoc := s.repo.TaskDocHeading(ctx, id); hasDoc {
+				conflicts[i].Tasks[j].HasDoc = true
+				conflicts[i].Tasks[j].DocTitle = strings.TrimSpace(heading)
+			}
+		}
+	}
+	return conflicts
+}
+
 func mapConflicts(conflicts []model.Conflict) []pulsedto.ConflictResponse {
 	out := make([]pulsedto.ConflictResponse, 0, len(conflicts))
 	for _, c := range conflicts {
+		tasks := make([]pulsedto.ConflictTaskResponse, 0, len(c.Tasks))
+		for _, t := range c.Tasks {
+			tasks = append(tasks, pulsedto.ConflictTaskResponse{
+				Alias:    t.Alias,
+				TaskID:   t.TaskID,
+				Branch:   t.Branch,
+				Title:    t.Title,
+				DocTitle: t.DocTitle,
+				HasDoc:   t.HasDoc,
+			})
+		}
 		out = append(out, pulsedto.ConflictResponse{
 			Severity:        c.Severity,
 			Title:           c.Title,
 			Description:     c.Description,
 			AffectedAliases: c.AffectedAliases,
+			Service:         c.Service,
+			Tasks:           tasks,
 		})
 	}
 	return out

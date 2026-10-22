@@ -14,7 +14,7 @@ export function UnassignedWorkCard({ items }: UnassignedWorkCardProps) {
   }
 
   return (
-    <Card className="p-5 border-amber-300/70 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-950/20 md:col-span-2 lg:col-span-1">
+    <Card className="p-5 md:col-span-2 lg:col-span-1">
       <div className="flex items-center justify-between gap-2 mb-3">
         <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{t('pulse.strayTitle')}</h3>
         <Badge variant="warning" className="text-[10px] font-medium">

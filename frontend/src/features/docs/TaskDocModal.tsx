@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../../shared/api/client'
 import { parseJSON } from '../../shared/api/http'
 import { markdownComponents } from './markdownComponents'
+import { Z_MODAL_DOC } from '../../shared/ui/modalLayers'
 
 export interface TaskDocPayload {
   task_id: string
@@ -69,8 +70,16 @@ export function TaskDocModal({ taskId, onClose }: TaskDocModalProps) {
   if (!taskId) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-8">
-      <button type="button" className="absolute inset-0 bg-slate-950/50 dark:bg-black/60" aria-label={t('docs.close')} onClick={onClose} />
+    <div
+      className="fixed inset-0 flex items-start justify-center p-4 sm:p-8"
+      style={{ zIndex: Z_MODAL_DOC }}
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-950/50 dark:bg-black/60"
+        aria-label={t('docs.close')}
+        onClick={onClose}
+      />
       <div
         role="dialog"
         aria-modal="true"
@@ -79,9 +88,12 @@ export function TaskDocModal({ taskId, onClose }: TaskDocModalProps) {
       >
         <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800">
           <div className="min-w-0">
-            <div id="task-doc-title" className="font-mono text-sm text-slate-900 dark:text-slate-100 truncate">
-              {taskId}
+            <div id="task-doc-title" className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+              {doc?.title || taskId}
             </div>
+            {doc?.title && doc.title !== taskId ? (
+              <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{taskId}</div>
+            ) : null}
             {doc?.rel_path && (
               <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{doc.rel_path}</div>
             )}

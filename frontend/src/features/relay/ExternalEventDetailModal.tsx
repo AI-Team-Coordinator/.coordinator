@@ -1,5 +1,7 @@
 import { X } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { api } from '../../shared/api/client'
 import { formatDate } from '../../shared/lib/formatters'
 import type { ExternalEvent } from '../../shared/types/api'
 import { Card } from '../../shared/ui/Card'
@@ -8,6 +10,7 @@ import { Button } from '../../shared/ui/Button'
 interface ExternalEventDetailModalProps {
   event: ExternalEvent
   onClose: () => void
+  onTriageChanged?: () => void
 }
 
 function formatTs(raw?: string, lang?: string) {
@@ -17,8 +20,12 @@ function formatTs(raw?: string, lang?: string) {
   return formatDate(ms / 1000, lang || 'en', true)
 }
 
-export function ExternalEventDetailModal({ event, onClose }: ExternalEventDetailModalProps) {
+export function ExternalEventDetailModal({ event, onClose, onTriageChanged }: ExternalEventDetailModalProps) {
   const { t, i18n } = useTranslation()
+  const [busy, setBusy] = useState(false)
+  const [taskId, setTaskId] = useState(event.triage?.linked_task_id || '')
+  const status = event.triage?.status || (event.requires_reaction ? 'open' : '')
+
   const rows: { label: string; value: string }[] = [
     { label: t('relay.events.fieldId'), value: event.id },
     { label: t('relay.events.fieldSource'), value: event.source },
@@ -32,6 +39,40 @@ export function ExternalEventDetailModal({ event, onClose }: ExternalEventDetail
     { label: t('relay.events.fieldUrl'), value: event.url || '—' },
     { label: t('relay.events.fieldTags'), value: event.tags?.length ? event.tags.join(', ') : '—' },
   ]
+  if (event.requires_reaction) {
+    rows.push({
+      label: t('relay.events.fieldTriage'),
+      value: status ? t(`relay.events.triageStatus.${status}`) : '—',
+    })
+    if (event.triage?.assigned_alias) {
+      rows.push({ label: t('relay.events.fieldAssigned'), value: event.triage.assigned_alias })
+    }
+    if (event.triage?.linked_task_id) {
+      rows.push({ label: t('relay.events.fieldLinkedTask'), value: event.triage.linked_task_id })
+    }
+  }
+
+  const patchTriage = async (nextStatus: string, extra?: { linked_task_id?: string }) => {
+    if (!event.external_id) return
+    setBusy(true)
+    try {
+      const res = await fetch(api.externalEventTriage, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: event.source,
+          external_id: event.external_id,
+          status: nextStatus,
+          linked_task_id: extra?.linked_task_id,
+        }),
+      })
+      if (!res.ok) throw new Error('triage')
+      onTriageChanged?.()
+      onClose()
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-[2px]">
@@ -77,6 +118,40 @@ export function ExternalEventDetailModal({ event, onClose }: ExternalEventDetail
               <pre className="text-xs rounded-lg bg-slate-950 text-slate-100 p-3 overflow-x-auto">
                 {JSON.stringify(event.data, null, 2)}
               </pre>
+            </div>
+          )}
+          {event.requires_reaction && event.external_id && (
+            <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">{t('relay.events.triageActions')}</p>
+              <div className="flex flex-wrap gap-2">
+                {(status === 'open' || status === '') && (
+                  <Button size="sm" disabled={busy} onClick={() => void patchTriage('in_progress')}>
+                    {t('relay.events.triageTake')}
+                  </Button>
+                )}
+                {status === 'in_progress' && (
+                  <>
+                    <input
+                      className="text-xs rounded border border-slate-300 dark:border-slate-600 px-2 py-1 min-w-[12rem]"
+                      placeholder={t('relay.events.linkedTaskPlaceholder')}
+                      value={taskId}
+                      onChange={(e) => setTaskId(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void patchTriage('resolved', { linked_task_id: taskId.trim() })}
+                    >
+                      {t('relay.events.triageResolve')}
+                    </Button>
+                  </>
+                )}
+                {status !== 'resolved' && status !== 'dismissed' && (
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => void patchTriage('dismissed')}>
+                    {t('relay.events.triageDismiss')}
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </div>

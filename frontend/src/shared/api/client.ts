@@ -29,4 +29,5 @@ export const api = {
     `/api/v1/relay/connectors/${encodeURIComponent(id)}/actions/${encodeURIComponent(action)}`,
   relayConnectorActivity: '/api/v1/relay/connectors/activity',
   externalEvents: '/api/v1/external/events',
+  externalEventTriage: '/api/v1/external/events/triage',
 } as const

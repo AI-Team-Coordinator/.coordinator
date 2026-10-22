@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"relay/domain/config"
-	"relay/infra/settings"
+	"relay/domain/connectorconfig"
 	"relay/infra/store"
 	"relay/model"
 )
@@ -34,7 +34,6 @@ type ConfigView struct {
 
 type Service struct {
 	Runtime  *config.Runtime
-	Settings *settings.RelayConnectors
 	Secrets  *store.SecretStore
 	Activity *store.ActivityStore
 }
@@ -49,7 +48,11 @@ type ActivityListResponse struct {
 func (s *Service) List(ctx context.Context) ([]Tile, error) {
 	var tiles []Tile
 	for _, ent := range allCatalogEntries() {
-		enabled := s.Settings != nil && s.Settings.IsEnabled(ent.ID)
+		if s.Runtime != nil && s.Runtime.Config != nil && s.Runtime.Secrets != nil {
+			has := s.Runtime.Secrets.HasAnySecret(ctx, ent.ID, ent.SecretKeys)
+			_ = s.Runtime.Config.ReconcileEnabledFromSecrets(ctx, has, ent.ID)
+		}
+		enabled := s.Runtime != nil && s.Runtime.Config != nil && s.Runtime.Config.IsEnabled(ent.ID)
 		connected := false
 		if s.Runtime != nil {
 			connected = ent.Connectable && s.Runtime.Connected(ctx, ent.ID, ent.SecretKeys)
@@ -75,10 +78,14 @@ func (s *Service) GetConfig(ctx context.Context, id string) (*ConfigView, error)
 	if !ok {
 		return nil, fmt.Errorf("unknown connector")
 	}
-	enabled := s.Settings != nil && s.Settings.IsEnabled(id)
+	var cfg *connectorconfig.Service
+	if s.Runtime != nil {
+		cfg = s.Runtime.Config
+	}
+	enabled := cfg != nil && cfg.IsEnabled(id)
 	nonSecret := map[string]any{}
-	if s.Settings != nil {
-		nonSecret = s.Settings.NonSecret(id)
+	if cfg != nil {
+		nonSecret = cfg.NonSecret(id)
 	}
 	masked := map[string]string{}
 	if s.Secrets != nil {
@@ -124,13 +131,17 @@ func (s *Service) PutConfig(ctx context.Context, id string, req PutConfigRequest
 			return nil, err
 		}
 	}
-	if req.NonSecret != nil && s.Settings != nil {
-		if err := s.Settings.MergeNonSecret(id, req.NonSecret); err != nil {
+	var cfg *connectorconfig.Service
+	if s.Runtime != nil {
+		cfg = s.Runtime.Config
+	}
+	if req.NonSecret != nil && cfg != nil {
+		if err := cfg.MergeNonSecret(id, req.NonSecret); err != nil {
 			return nil, err
 		}
 	}
-	if req.Enable != nil && s.Settings != nil {
-		if err := s.Settings.SetEnabled(id, *req.Enable); err != nil {
+	if req.Enable != nil && cfg != nil {
+		if err := cfg.SetEnabled(id, *req.Enable); err != nil {
 			return nil, err
 		}
 	}
@@ -139,7 +150,7 @@ func (s *Service) PutConfig(ctx context.Context, id string, req PutConfigRequest
 
 func (s *Service) ListActivity(ctx context.Context, connectorID string, limit, offset int) (*ActivityListResponse, error) {
 	if s.Activity == nil {
-		return &ActivityListResponse{Entries: nil, Total: 0, Limit: limit, Offset: offset}, nil
+		return &ActivityListResponse{Entries: []model.ConnectorActivityEntry{}, Total: 0, Limit: limit, Offset: offset}, nil
 	}
 	if limit <= 0 || limit > 200 {
 		limit = 50
@@ -150,6 +161,9 @@ func (s *Service) ListActivity(ctx context.Context, connectorID string, limit, o
 	entries, total, err := s.Activity.List(ctx, connectorID, limit, offset)
 	if err != nil {
 		return nil, err
+	}
+	if entries == nil {
+		entries = []model.ConnectorActivityEntry{}
 	}
 	return &ActivityListResponse{
 		Entries: entries,
@@ -163,8 +177,8 @@ func (s *Service) Disable(ctx context.Context, id string, clearSecrets bool) (*C
 	if _, ok := EntryByID(id); !ok {
 		return nil, fmt.Errorf("unknown connector")
 	}
-	if s.Settings != nil {
-		if err := s.Settings.SetEnabled(id, false); err != nil {
+	if s.Runtime != nil && s.Runtime.Config != nil {
+		if err := s.Runtime.Config.SetEnabled(id, false); err != nil {
 			return nil, err
 		}
 	}

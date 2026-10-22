@@ -6,6 +6,7 @@ export type LocalizedText = {
 export interface MemberState {
   alias: string
   name: string
+  avatar_url?: string
   role?: string
   access?: 'admin' | 'member' | string
   focus?: string[]
@@ -56,6 +57,7 @@ export interface MemberTaskState {
   agents?: AgentState[]
   related_tasks?: string[]
   related_docs?: string[]
+  has_doc?: boolean
 }
 
 export interface AgentState {
@@ -108,11 +110,32 @@ export interface StrayRepo {
   commits: StrayCommit[]
 }
 
+export interface ConflictTask {
+  alias?: string
+  task_id: string
+  branch?: string
+  title?: string
+  doc_title?: string
+  has_doc?: boolean
+}
+
 export interface Conflict {
   severity: 'warning' | 'critical'
   title: string
   description: string
   affected_aliases: string[]
+  service?: string
+  tasks?: ConflictTask[]
+}
+
+export interface ExternalEventTriage {
+  status: 'open' | 'in_progress' | 'resolved' | 'dismissed' | string
+  assigned_alias?: string
+  assigned_at?: string
+  linked_task_id?: string
+  resolved_by?: string
+  resolved_at?: string
+  dismiss_note?: string
 }
 
 export interface ExternalEvent {
@@ -128,6 +151,8 @@ export interface ExternalEvent {
   occurred_at?: string
   tags?: string[]
   data?: Record<string, unknown>
+  requires_reaction?: boolean
+  triage?: ExternalEventTriage
 }
 
 export interface BillingPeriod {

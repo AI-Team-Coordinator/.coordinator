@@ -20,6 +20,22 @@ func (r *FileRepository) TaskTitle(_ context.Context, taskID string) string {
 	return r.taskTitle(taskID)
 }
 
+func (r *FileRepository) TaskDocHeading(_ context.Context, taskID string) (string, bool) {
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return "", false
+	}
+	path, ok := r.findTaskDocPath(taskID)
+	if !ok {
+		return "", false
+	}
+	title := firstHeading(path)
+	if title == "" {
+		title = humanizeTaskID(taskID)
+	}
+	return title, true
+}
+
 func (r *FileRepository) taskTitle(taskID string) string {
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {

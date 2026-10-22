@@ -21,7 +21,21 @@ func relayRequest(access *model.RelayAccess, method, path string, body []byte) (
 }
 
 func relayConfigRequest(access *model.RelayAccess, method, path string, body []byte) ([]byte, int, error) {
-	return relayRequestWithTimeout(access, method, path, body, relayConfigRequestTimeout)
+	return relayRequestWithTimeout(relayAccessForConfig(access), method, path, body, relayConfigRequestTimeout)
+}
+
+func relayAccessForConfig(access *model.RelayAccess) *model.RelayAccess {
+	if access == nil {
+		return nil
+	}
+	token := strings.TrimSpace(access.AdminToken)
+	if token == "" {
+		token = strings.TrimSpace(access.Token)
+	}
+	if token == access.Token && access.AdminToken == "" {
+		return access
+	}
+	return &model.RelayAccess{URL: access.URL, Token: token, Scope: access.Scope}
 }
 
 func relayRequestWithTimeout(access *model.RelayAccess, method, path string, body []byte, timeout time.Duration) ([]byte, int, error) {

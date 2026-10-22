@@ -81,6 +81,11 @@ export function RelaySettings({
             {t('relay.settings.scope', { scope: access.scope })}
           </p>
         )}
+        {connected && access?.scope === 'read' && (
+          <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+            {t('relay.settings.readOnlyToken')}
+          </p>
+        )}
         {error && <p className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
         <label className="block">
           <span className="text-[11px] uppercase tracking-wide text-slate-500">{t('relay.url')}</span>

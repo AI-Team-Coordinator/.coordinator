@@ -20,6 +20,9 @@ interface ActivityTimelineProps {
   filter: EventsFilter
   onFilterChange: (next: EventsFilter) => void
   onLoadMore: () => void
+  preview?: boolean
+  maxRows?: number
+  hideLoadMore?: boolean
 }
 
 type KindFilter = 'all' | 'features' | 'fixes'
@@ -46,6 +49,9 @@ export function ActivityTimeline({
   filter,
   onFilterChange,
   onLoadMore,
+  preview,
+  maxRows,
+  hideLoadMore,
 }: ActivityTimelineProps) {
   const { t } = useTranslation()
   const [kind, setKind] = useState<KindFilter>('all')
@@ -77,8 +83,14 @@ export function ActivityTimeline({
 
   const patch = (part: Partial<EventsFilter>) => onFilterChange({ ...filter, ...part })
 
-  return (
-    <Card className="p-6 space-y-4 bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/80">
+  const visibleEvents = useMemo(() => {
+    const base = filteredEvents
+    return maxRows != null ? base.slice(0, maxRows) : base
+  }, [filteredEvents, maxRows])
+
+  const body = (
+    <>
+      {!preview && (
       <div className="flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -156,24 +168,35 @@ export function ActivityTimeline({
           </Select>
         </div>
       </div>
+      )}
 
       <div className="divide-y divide-slate-100 dark:divide-slate-800/60 pt-2">
-        {filteredEvents.length === 0 ? (
+        {visibleEvents.length === 0 ? (
           <div className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">
             {t('timeline.empty')}
           </div>
         ) : (
-          filteredEvents.map((ev, idx) => <TimelineItem key={`${ev.timestamp}-${idx}`} event={ev} />)
+          visibleEvents.map((ev, idx) => <TimelineItem key={`${ev.timestamp}-${idx}`} event={ev} />)
         )}
       </div>
 
-      {events.length < total && (
+      {!preview && !hideLoadMore && events.length < total && (
         <div className="pt-2">
           <Button variant="secondary" size="sm" onClick={onLoadMore}>
             {t('timeline.loadMore', { shown: events.length, total })}
           </Button>
         </div>
       )}
+    </>
+  )
+
+  if (preview) {
+    return body
+  }
+
+  return (
+    <Card className="p-6 space-y-4 bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/80">
+      {body}
     </Card>
   )
 }

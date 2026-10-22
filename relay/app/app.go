@@ -11,6 +11,7 @@ import (
 	"relay/domain/activity"
 	"relay/domain/config"
 	"relay/domain/connector"
+	"relay/domain/connectorconfig"
 	"relay/domain/gateway"
 	"relay/domain/marketplace"
 	"relay/domain/poll"
@@ -51,9 +52,9 @@ type App struct {
 	pollCancel    context.CancelFunc
 	gateway       *gateway.Gateway
 	runtime       *config.Runtime
-	relaySettings *settings.RelayConnectors
-	pollFactories []func(*gateway.Gateway, *activity.Recorder) poll.Job
+	pollFactories []func(*gateway.Gateway, *activity.Recorder, *store.EventStore) poll.Job
 	activityLog   *activity.Recorder
+	eventStore    *store.EventStore
 	stateCfg      statebus.Config
 	stateSink     *statebus.Sink
 	outboxStore   *store.OutboxStore
@@ -94,8 +95,13 @@ func New(cfg Config, opts ...Option) (*App, error) {
 	activityStore := store.NewActivityStore(pgDB)
 	activityRecorder := &activity.Recorder{Store: activityStore}
 	outboxStore := store.NewOutboxStore(pgDB)
-	relaySettings := settings.NewRelayConnectors(cfg.DataDir)
-	runtime := &config.Runtime{Settings: relaySettings, Secrets: secretStore}
+	configRepo := store.NewConnectorConfigRepository(pgDB)
+	connectorCfg := connectorconfig.NewService(configRepo)
+	if err := settings.ImportLegacyConnectorFile(context.Background(), configRepo, cfg.DataDir); err != nil {
+		infra.LogError("relay legacy connector import: %v", err)
+	}
+	instanceFiles := settings.NewInstanceFiles(cfg.DataDir)
+	runtime := &config.Runtime{Config: connectorCfg, Secrets: secretStore, Instance: instanceFiles}
 
 	var stock []connector.Connector
 	for _, init := range inst.connectorInits {
@@ -134,7 +140,6 @@ func New(cfg Config, opts ...Option) (*App, error) {
 	}
 	mktSvc := &marketplace.Service{
 		Runtime:  runtime,
-		Settings: relaySettings,
 		Secrets:  secretStore,
 		Activity: activityStore,
 	}
@@ -143,12 +148,12 @@ func New(cfg Config, opts ...Option) (*App, error) {
 		if factory == nil {
 			continue
 		}
-		pollJobs = append(pollJobs, factory(gw, activityRecorder))
+		pollJobs = append(pollJobs, factory(gw, activityRecorder, eventStore))
 	}
 	actionReg := connector.NewActionRegistry()
 	for _, reg := range inst.actionRegs {
 		if reg != nil {
-			reg(actionReg, gw, runtime, relaySettings, pollJobs)
+			reg(actionReg, gw, runtime, pollJobs)
 		}
 	}
 	for _, job := range pollJobs {
@@ -166,7 +171,7 @@ func New(cfg Config, opts ...Option) (*App, error) {
 				if !ok {
 					return fmt.Errorf("poll job missing")
 				}
-				return poll.RunNow(ctx, runtime, relaySettings, j)
+				return poll.RunNow(ctx, runtime, j)
 			},
 		})
 	}
@@ -186,6 +191,7 @@ func New(cfg Config, opts ...Option) (*App, error) {
 	api := http.NewServeMux()
 	api.HandleFunc("GET /sources", ctrl.Sources)
 	api.HandleFunc("POST /connectors/{source}/events", ctrl.ConnectorEvents)
+	api.HandleFunc("GET /auth/capabilities", infra.AuthCapabilities(cfg.BearerToken))
 	api.HandleFunc("GET /connectors/marketplace", mktCtrl.Marketplace)
 	api.HandleFunc("GET /connectors/activity", mktCtrl.ListActivity)
 	api.HandleFunc("GET /connectors/{id}/config", mktCtrl.GetConfig)
@@ -203,9 +209,9 @@ func New(cfg Config, opts ...Option) (*App, error) {
 		pg:            pgDB,
 		gateway:       gw,
 		runtime:       runtime,
-		relaySettings: relaySettings,
 		pollFactories: inst.pollFactories,
 		activityLog:   activityRecorder,
+		eventStore:    eventStore,
 		stateCfg:      stateCfg,
 		stateSink:     stateSink,
 		outboxStore:   outboxPtr,
@@ -219,15 +225,15 @@ func New(cfg Config, opts ...Option) (*App, error) {
 func (a *App) Start(addr string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	a.pollCancel = cancel
-	if a.gateway != nil && a.runtime != nil && a.relaySettings != nil {
+	if a.gateway != nil && a.runtime != nil {
 		var jobs []poll.Job
 		for _, factory := range a.pollFactories {
 			if factory == nil {
 				continue
 			}
-			jobs = append(jobs, factory(a.gateway, a.activityLog))
+			jobs = append(jobs, factory(a.gateway, a.activityLog, a.eventStore))
 		}
-		poll.Start(ctx, a.gateway, a.runtime, a.relaySettings, a.activityLog, jobs)
+		poll.Start(ctx, a.gateway, a.runtime, a.activityLog, jobs)
 	}
 	if a.stateSink != nil && a.outboxStore != nil {
 		go statebus.RunWorker(ctx, a.stateCfg, a.outboxStore, a.stateSink)

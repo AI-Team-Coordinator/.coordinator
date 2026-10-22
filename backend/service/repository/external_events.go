@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"coordinator/model"
 )
 
 // ExternalEventRow is one normalized external fact from progress/external jsonl.
@@ -24,7 +26,16 @@ type ExternalEventRow struct {
 	Summary       string         `json:"summary,omitempty"`
 	URL           string         `json:"url,omitempty"`
 	Tags          []string       `json:"tags,omitempty"`
-	Data          map[string]any `json:"data,omitempty"`
+	Data             map[string]any `json:"data,omitempty"`
+	RequiresReaction bool           `json:"requires_reaction,omitempty"`
+	Triage           *model.ExternalEventTriage `json:"-"`
+}
+
+func (r ExternalEventRow) RequiresReactionEffective() bool {
+	if r.RequiresReaction {
+		return true
+	}
+	return model.ExternalEventRequiresReaction(r.Source, r.Kind, r.RequiresReaction)
 }
 
 const pulseExternalEventCap = 100

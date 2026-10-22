@@ -3,21 +3,23 @@ package config
 import (
 	"context"
 
+	"relay/domain/connectorconfig"
 	"relay/infra/settings"
 	"relay/infra/store"
 )
 
-// Runtime merges git-safe settings with encrypted secrets for in-process connectors.
+// Runtime merges connector config from Postgres with encrypted secrets.
 type Runtime struct {
-	Settings *settings.RelayConnectors
+	Config   *connectorconfig.Service
 	Secrets  *store.SecretStore
+	Instance *settings.InstanceFiles
 }
 
 func (r *Runtime) Enabled(id string) bool {
-	if r == nil || r.Settings == nil {
+	if r == nil || r.Config == nil {
 		return false
 	}
-	return r.Settings.IsEnabled(id)
+	return r.Config.IsEnabled(id)
 }
 
 func (r *Runtime) Secret(ctx context.Context, connectorID, field string) string {

@@ -23,11 +23,31 @@ export default {
       },
       animation: {
         'pulse-slow': 'pulse-slow 2.5s infinite ease-in-out',
+        'conflict-title-shimmer': 'conflict-title-shimmer 2.8s ease-in-out infinite',
+        'conflict-border-pulse': 'conflict-border-pulse 2.5s ease-in-out infinite',
       },
       keyframes: {
         'pulse-slow': {
           '0%, 100%': { opacity: '1', transform: 'scale(1)' },
           '50%': { opacity: '0.6', transform: 'scale(0.96)' },
+        },
+        'conflict-title-shimmer': {
+          '0%, 100%': {
+            backgroundPosition: '0% 50%',
+          },
+          '50%': {
+            backgroundPosition: '100% 50%',
+          },
+        },
+        'conflict-border-pulse': {
+          '0%, 100%': {
+            borderColor: 'rgb(254 202 202 / 0.55)',
+            boxShadow: '0 0 0 0 rgb(244 63 94 / 0)',
+          },
+          '50%': {
+            borderColor: 'rgb(244 63 94 / 0.75)',
+            boxShadow: '0 0 12px -2px rgb(244 63 94 / 0.35)',
+          },
         },
       },
     },

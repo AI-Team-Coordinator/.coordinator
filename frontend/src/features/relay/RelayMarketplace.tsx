@@ -5,6 +5,11 @@ import { api } from '../../shared/api/client'
 import { Button } from '../../shared/ui/Button'
 import { Card } from '../../shared/ui/Card'
 import { RelayConnectorActionsModal } from './RelayConnectorActionsModal'
+import {
+  applyRelayConfigToForm,
+  buildConnectorSavePayload,
+  type RelayConnectorConfig,
+} from './relayConfigForm'
 import { RelayTileIcon } from './RelayTileIcon'
 
 export type MarketplaceAction = {
@@ -33,37 +38,6 @@ type ConfigField = {
   help?: string
 }
 
-type RelayConnectorConfig = {
-  non_secret?: Record<string, unknown>
-  secrets?: Record<string, string>
-}
-
-function nonSecretDisplayValue(v: unknown): string {
-  if (v === null || v === undefined) return ''
-  if (typeof v === 'boolean') return v ? 'true' : 'false'
-  if (typeof v === 'number') return String(v)
-  return String(v)
-}
-
-function applyRelayConfigToForm(tile: MarketplaceTile, cfg: RelayConnectorConfig) {
-  const next: Record<string, string> = {}
-  const savedSecrets: string[] = []
-  for (const field of tile.config_schema) {
-    if (field.type === 'secret') {
-      if (cfg.secrets?.[field.id]) {
-        savedSecrets.push(field.id)
-      }
-      next[field.id] = ''
-    } else {
-      const v = cfg.non_secret?.[field.id]
-      if (v !== undefined) {
-        next[field.id] = nonSecretDisplayValue(v)
-      }
-    }
-  }
-  return { next, savedSecrets }
-}
-
 function capabilityLabel(cap: string, t: (k: string) => string): string {
   if (cap === 'webhook') return t('relay.marketplace.capWebhook')
   if (cap === 'poll') return t('relay.marketplace.capPoll')
@@ -73,11 +47,12 @@ function capabilityLabel(cap: string, t: (k: string) => string): string {
 interface RelayMarketplaceProps {
   connected: boolean
   relayBaseUrl?: string
+  relayCanConfigure?: boolean
   isAdmin?: boolean
   onChanged?: () => void
 }
 
-export function RelayMarketplace({ connected, relayBaseUrl, isAdmin, onChanged }: RelayMarketplaceProps) {
+export function RelayMarketplace({ connected, relayBaseUrl, relayCanConfigure, isAdmin, onChanged }: RelayMarketplaceProps) {
   const { t } = useTranslation()
   const [tiles, setTiles] = useState<MarketplaceTile[]>([])
   const [loading, setLoading] = useState(false)
@@ -89,6 +64,7 @@ export function RelayMarketplace({ connected, relayBaseUrl, isAdmin, onChanged }
   const [confirmDisable, setConfirmDisable] = useState(false)
   const [configLoading, setConfigLoading] = useState(false)
   const [savedSecretFields, setSavedSecretFields] = useState<string[]>([])
+  const [loadedNonSecret, setLoadedNonSecret] = useState<Record<string, unknown>>({})
 
   const load = useCallback(() => {
     if (!connected) {
@@ -114,6 +90,7 @@ export function RelayMarketplace({ connected, relayBaseUrl, isAdmin, onChanged }
     setActive(tile)
     setSecrets({})
     setSavedSecretFields([])
+    setLoadedNonSecret({})
     setError('')
     setConfirmDisable(false)
     if (!connected) {
@@ -123,6 +100,7 @@ export function RelayMarketplace({ connected, relayBaseUrl, isAdmin, onChanged }
     fetch(`${api.relayConnectorConfig(tile.id)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('config'))))
       .then((cfg: RelayConnectorConfig) => {
+        setLoadedNonSecret(cfg.non_secret ?? {})
         const { next, savedSecrets } = applyRelayConfigToForm(tile, cfg)
         setSecrets(next)
         setSavedSecretFields(savedSecrets)
@@ -152,25 +130,14 @@ export function RelayMarketplace({ connected, relayBaseUrl, isAdmin, onChanged }
 
   const save = async (enable: boolean) => {
     if (!active || !isAdmin) return
+    if (relayCanConfigure === false) {
+      setError(t('relay.marketplace.needMasterToken'))
+      return
+    }
     setBusy(true)
     setError('')
     try {
-      const filteredSecrets: Record<string, string> = {}
-      const nonSecret: Record<string, string> = {}
-      for (const field of active.config_schema) {
-        const raw = (secrets[field.id] ?? '').trim()
-        if (!raw) continue
-        if (field.type === 'secret') {
-          filteredSecrets[field.id] = raw
-        } else {
-          nonSecret[field.id] = raw
-        }
-      }
-      const payload = {
-        secrets: filteredSecrets,
-        non_secret: Object.keys(nonSecret).length > 0 ? nonSecret : undefined,
-        enable,
-      }
+      const payload = buildConnectorSavePayload(active, secrets, loadedNonSecret, enable)
       const res = await fetch(api.relayConnectorConfig(active.id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -179,9 +146,22 @@ export function RelayMarketplace({ connected, relayBaseUrl, isAdmin, onChanged }
       })
       if (!res.ok) {
         const { readError } = await import('../../shared/api/http')
-        throw new Error(await readError(res))
+        const msg = await readError(res)
+        if (res.status === 403) {
+          throw new Error(t('relay.marketplace.needMasterToken'))
+        }
+        throw new Error(msg)
       }
-      await res.json().catch(() => undefined)
+      const saved = (await res.json().catch(() => null)) as RelayConnectorConfig | null
+      if (saved) {
+        setLoadedNonSecret(saved.non_secret ?? {})
+        const { next, savedSecrets } = applyRelayConfigToForm(active, saved)
+        setSecrets(next)
+        setSavedSecretFields(savedSecrets)
+        if (enable && !saved.enabled && !saved.connected) {
+          throw new Error(t('relay.marketplace.saveNotPersisted'))
+        }
+      }
       closeModal()
       load()
       onChanged?.()
@@ -280,9 +260,9 @@ export function RelayMarketplace({ connected, relayBaseUrl, isAdmin, onChanged }
                 {tile.name}
               </div>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-3 leading-relaxed">{tile.detail}</p>
-              {tile.capabilities.length > 0 && (
+              {(tile.capabilities?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-4">
-                  {tile.capabilities.map((cap) => (
+                  {(tile.capabilities ?? []).map((cap) => (
                     <span
                       key={cap}
                       className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
@@ -334,7 +314,7 @@ export function RelayMarketplace({ connected, relayBaseUrl, isAdmin, onChanged }
             {configLoading && (
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('relay.marketplace.configLoading')}</p>
             )}
-            {active.config_schema.map((field) => (
+            {(active.config_schema ?? []).map((field) => (
               <label key={field.id} className="block">
                 <span className="text-[11px] uppercase tracking-wide text-slate-500">{field.label}</span>
                 <input

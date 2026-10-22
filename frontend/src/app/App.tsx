@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Header } from '../features/header/Header'
-import { ConflictRadar } from '../features/radar/ConflictRadar'
 import { MetricsGrid } from '../features/metrics/MetricsGrid'
-import { TeamPulseSection } from '../features/pulse/TeamPulseSection'
-import { ExternalSignalsCard } from '../features/pulse/ExternalSignalsCard'
 import { ActivityTimeline, type EventsFilter } from '../features/timeline/ActivityTimeline'
 import { TaskTable, type TasksFilter } from '../features/stats/TaskTable'
+import { OverviewSection } from '../features/overview/OverviewSection'
 import { SpendBreakdown } from '../features/stats/SpendBreakdown'
 import { HourlySpendChart } from '../features/stats/HourlySpendChart'
-import { PersonalConsumptionChart } from '../features/stats/PersonalConsumptionChart'
 import { StatsPeriodToolbar } from '../features/stats/StatsPeriodToolbar'
 import {
   billingPeriodMarkersOnDays,
@@ -28,7 +25,6 @@ import { SettingsSection } from '../features/settings/SettingsSection'
 import { SectionNav } from '../features/nav/SectionNav'
 import { parseSection, type SectionId } from '../features/nav/sections'
 import { SetupScreen } from '../features/setup/SetupScreen'
-import { NextStepCard } from '../features/setup/NextStepCard'
 import { CoordinatorLogo } from '../shared/ui/Logo'
 import { isAlinaAssistProject } from '../shared/lib/alinaAssist'
 import type {
@@ -85,7 +81,7 @@ export function App() {
   tasksFilterRef.current = tasksFilter
   const [profile, setProfile] = useState<ProjectProfile | null>(null)
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
-  const [connected, setConnected] = useState(false)
+  const [apiSync, setApiSync] = useState<'loading' | 'live' | 'offline'>('loading')
   const { track } = useLoadingStatus()
   const [formDirty, setFormDirty] = useState(false)
   const [setupNeeded, setSetupNeeded] = useState<boolean | null>(null)
@@ -256,10 +252,10 @@ export function App() {
             setWorkItemsReady(true)
           }),
         ])
-        setConnected(true)
+        setApiSync('live')
       } catch (err) {
         console.error('Failed to load dashboard data:', err)
-        setConnected(false)
+        setApiSync('offline')
       }
     },
     [track, t, eventsFilter, tasksFilter]
@@ -473,7 +469,7 @@ export function App() {
     void loadAll()
 
     const eventSource = new EventSource(api.stream)
-    eventSource.onopen = () => setConnected(true)
+    eventSource.onopen = () => setApiSync('live')
     eventSource.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data)
@@ -486,7 +482,7 @@ export function App() {
       }
     }
     eventSource.onerror = () => {
-      setConnected(false)
+      setApiSync((s) => (s === 'loading' ? s : 'offline'))
       checkServerBoot()
     }
 
@@ -574,52 +570,37 @@ export function App() {
 
       <div className="flex-1 min-w-0 pb-24 md:pb-0">
         <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8 space-y-6">
-          <Header
-            connected={connected}
-            profile={profile}
-            currentUser={currentUser}
-          />
+          <Header apiSync={apiSync} profile={profile} currentUser={currentUser} />
 
           {section === 'work' && (
             <WorkItemsSection items={workItems} loading={!workItemsReady} />
           )}
 
           {section === 'overview' && (
-            <div className="space-y-8">
-              <ConflictRadar conflicts={conflicts} />
-              <ExternalSignalsCard events={externalEvents} />
-              {quietBoard ? <NextStepCard /> : (
-                <MetricsGrid
-                  stats={stats}
-                  countsScopeLabel={overviewCountsScope}
-                  onStatusClick={(status) => onTasksFilter({ ...tasksFilter, status })}
-                  onSpendClick={() => changeSection('stats')}
-                />
-              )}
-              <PersonalConsumptionChart stats={stats} alias={currentUser.alias} />
-              <TeamPulseSection members={members} stray={stray} serviceNames={serviceNames} />
-              {(!quietBoard || tasksTotal > 0) && (
-                <TaskTable
-                  tasks={tasks}
-                  total={tasksTotal}
-                  members={members}
-                  filter={tasksFilter}
-                  onFilterChange={onTasksFilter}
-                  onLoadMore={onTasksLoadMore}
-                />
-              )}
-              {(!quietBoard || eventsTotal > 0) && (
-                <ActivityTimeline
-                  events={events}
-                  total={eventsTotal}
-                  members={members}
-                  services={profile?.services || []}
-                  filter={eventsFilter}
-                  onFilterChange={onEventsFilter}
-                  onLoadMore={onEventsLoadMore}
-                />
-              )}
-            </div>
+            <OverviewSection
+              conflicts={conflicts}
+              externalEvents={externalEvents}
+              quietBoard={quietBoard}
+              stats={stats}
+              overviewCountsScope={overviewCountsScope}
+              onStatusClick={(status) => onTasksFilter({ ...tasksFilter, status })}
+              onSpendClick={() => changeSection('stats')}
+              currentUserAlias={currentUser.alias}
+              members={members}
+              stray={stray}
+              serviceNames={serviceNames}
+              tasks={tasks}
+              tasksTotal={tasksTotal}
+              tasksFilter={tasksFilter}
+              onTasksFilterChange={onTasksFilter}
+              onTasksLoadMore={onTasksLoadMore}
+              events={events}
+              eventsTotal={eventsTotal}
+              eventsFilter={eventsFilter}
+              onEventsFilterChange={onEventsFilter}
+              onEventsLoadMore={onEventsLoadMore}
+              profile={profile}
+            />
           )}
 
           {visitedSections.has('team') && (

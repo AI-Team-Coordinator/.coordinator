@@ -34,11 +34,33 @@ func (s *Service) GetRelayAccess(ctx context.Context) (*relaydto.RelayAccessResp
 	if access == nil || access.URL == "" {
 		return &relaydto.RelayAccessResponse{Connected: false}, nil
 	}
+	access = refreshRelayAccessScope(access)
+	if store, ok := s.repo.(relayAccessStore); ok && access != nil {
+		_ = store.SaveRelayAccess(ctx, access)
+	}
 	return &relaydto.RelayAccessResponse{
 		Connected: true,
 		URL:       access.URL,
 		Scope:     access.Scope,
 	}, nil
+}
+
+func refreshRelayAccessScope(access *model.RelayAccess) *model.RelayAccess {
+	if access == nil || access.URL == "" || access.Token == "" {
+		return access
+	}
+	configure, err := relayTokenCanConfigure(access.URL, access.Token)
+	if err != nil || !configure {
+		if access.Scope == "" {
+			access.Scope = "read"
+		}
+		return access
+	}
+	access.Scope = "admin"
+	if access.AdminToken == "" {
+		access.AdminToken = access.Token
+	}
+	return access
 }
 
 func (s *Service) ConnectRelay(ctx context.Context, rawURL, rawToken string) (*relaydto.RelayAccessResponse, error) {
@@ -57,10 +79,18 @@ func (s *Service) ConnectRelay(ctx context.Context, rawURL, rawToken string) (*r
 	if err := pingRelayHealth(normalized, token); err != nil {
 		return nil, &validate.Error{Msg: err.Error()}
 	}
+	configure, err := relayTokenCanConfigure(normalized, token)
+	if err != nil {
+		return nil, &validate.Error{Msg: err.Error()}
+	}
 	access := &model.RelayAccess{
 		URL:   normalized,
 		Token: token,
 		Scope: "read",
+	}
+	if configure {
+		access.Scope = "admin"
+		access.AdminToken = token
 	}
 	if err := store.SaveRelayAccess(ctx, access); err != nil {
 		return nil, err
@@ -118,6 +148,20 @@ func relayGETBytes(access *model.RelayAccess, path string) ([]byte, error) {
 		return nil, fmt.Errorf("relay returned %d", code)
 	}
 	return data, nil
+}
+
+func relayTokenCanConfigure(base, token string) (bool, error) {
+	body, err := relayGETBytes(&model.RelayAccess{URL: base, Token: token}, "/api/v1/auth/capabilities")
+	if err != nil {
+		return false, err
+	}
+	var probe struct {
+		Configure bool `json:"configure"`
+	}
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return false, fmt.Errorf("relay capabilities check failed")
+	}
+	return probe.Configure, nil
 }
 
 func pingRelayHealth(base, token string) error {

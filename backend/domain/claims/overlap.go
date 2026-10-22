@@ -10,6 +10,14 @@ const (
 	TitlePeerOverlap = "Peer Scope Overlap"
 )
 
+// OverlapSlot is one task in a two-way collision (self or peer).
+type OverlapSlot struct {
+	Person string
+	TaskID string
+	Branch string
+	Title  string
+}
+
 // Overlap is a derived collision between claims. Not stored; Pulse Conflict is a DTO of this.
 type Overlap struct {
 	Severity    string
@@ -17,6 +25,7 @@ type Overlap struct {
 	Description string
 	Aliases     []string
 	Service     string
+	Slots       []OverlapSlot
 }
 
 type slotKey struct {
@@ -49,6 +58,20 @@ func groupSlots(claims []Claim) []slotClaims {
 		out = append(out, *by[k])
 	}
 	return out
+}
+
+func overlapSlotFromClaims(person, taskID, title string, cs []Claim) OverlapSlot {
+	branch := ""
+	for _, c := range cs {
+		if strings.TrimSpace(c.Branch) != "" {
+			branch = strings.TrimSpace(c.Branch)
+			break
+		}
+	}
+	if title == "" {
+		title = taskID
+	}
+	return OverlapSlot{Person: person, TaskID: taskID, Branch: branch, Title: title}
 }
 
 func firstRelated(a, b []Claim, allow func(Resource) bool) (Resource, bool) {
@@ -96,6 +119,10 @@ func SelfOverlaps(claims []Claim) []Overlap {
 				Description: slots[i].person + " has two in-progress tasks claiming " + label,
 				Aliases:     []string{slots[i].person},
 				Service:     label,
+				Slots: []OverlapSlot{
+					overlapSlotFromClaims(slots[i].person, slots[i].taskID, slots[i].title, slots[i].claims),
+					overlapSlotFromClaims(slots[j].person, slots[j].taskID, slots[j].title, slots[j].claims),
+				},
 			})
 		}
 	}
@@ -129,10 +156,22 @@ func PeerOverlaps(claims []Claim) []Overlap {
 				Description: a.Person + " «" + a.Title + "» and " + b.Person + " «" + b.Title + "» both claim " + a.Resource.Label,
 				Aliases:     aliases,
 				Service:     a.Resource.Label,
+				Slots: []OverlapSlot{
+					{Person: a.Person, TaskID: a.TaskID, Branch: a.Branch, Title: fallbackTitle(a.Title, a.TaskID)},
+					{Person: b.Person, TaskID: b.TaskID, Branch: b.Branch, Title: fallbackTitle(b.Title, b.TaskID)},
+				},
 			})
 		}
 	}
 	return out
+}
+
+func fallbackTitle(title, taskID string) string {
+	title = strings.TrimSpace(title)
+	if title != "" {
+		return title
+	}
+	return taskID
 }
 
 func peerPairKey(a, b Claim) string {

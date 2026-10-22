@@ -5,19 +5,22 @@ import { Badge } from '../../shared/ui/Badge'
 import { formatDuration } from '../../shared/lib/formatters'
 import { hasUsageSpend, SharedQuotaIcon, UsageSpend } from '../../shared/ui/UsageSpend'
 import { ChatTabs } from './ChatTabs'
+import { cn } from '../../shared/lib/utils'
+import { MemberAvatar } from './MemberAvatar'
 import type { MemberState } from '../../shared/types/api'
 
 interface ResearchCardProps {
   member: MemberState
+  embedded?: boolean
 }
 
-export function ResearchCard({ member }: ResearchCardProps) {
+export function ResearchCard({ member, embedded }: ResearchCardProps) {
   const { t } = useTranslation()
   const roleLabel = member.role ? t(`pulse.roles.${member.role}`, { defaultValue: member.role }) : ''
   const summary = member.research?.summary || ''
 
-  return (
-    <Card className="p-5 transition-all duration-200 border-indigo-400/60 dark:border-indigo-500/40 bg-white/90 dark:bg-slate-900/90 shadow-md shadow-indigo-500/5">
+  const body = (
+    <div className={cn('flex flex-col', embedded ? 'gap-4' : 'gap-3')}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h3
@@ -43,9 +46,7 @@ export function ResearchCard({ member }: ResearchCardProps) {
       </div>
 
       <div className="mt-2 flex items-center space-x-2">
-        <div className="w-7 h-7 rounded-full bg-indigo-50 dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 flex items-center justify-center font-bold text-[11px] text-indigo-600 dark:text-indigo-300 shrink-0">
-          {member.alias}
-        </div>
+        <MemberAvatar alias={member.alias} avatarUrl={member.avatar_url} className="w-7 h-7" />
         <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
           {member.name}
           {' · '}@{member.alias}
@@ -92,6 +93,11 @@ export function ResearchCard({ member }: ResearchCardProps) {
         ) : null}
         <p className="text-[11px] text-slate-400 dark:text-slate-500">{t('pulse.researchNoBranch')}</p>
       </div>
-    </Card>
+    </div>
   )
+
+  if (embedded) {
+    return <div className="min-w-0">{body}</div>
+  }
+  return <Card className="p-5">{body}</Card>
 }

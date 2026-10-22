@@ -109,6 +109,7 @@ export function RelaySection({ isAdmin, currentAlias }: RelaySectionProps) {
       <RelayMarketplace
         connected={relay.connected}
         relayBaseUrl={relay.access?.url}
+        relayCanConfigure={relay.access?.scope !== 'read'}
         isAdmin={isAdmin}
       />
 

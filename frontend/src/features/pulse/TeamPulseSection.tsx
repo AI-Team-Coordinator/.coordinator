@@ -1,6 +1,9 @@
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MemberCard } from './MemberCard'
+import { MemberCardCompact } from './MemberCardCompact'
 import { ResearchCard } from './ResearchCard'
+import { ResearchCardCompact } from './ResearchCardCompact'
 import { UnassignedWorkCard } from './UnassignedWorkCard'
 import type { MemberState, MemberTaskState, StrayRepo } from '../../shared/types/api'
 
@@ -8,6 +11,10 @@ interface TeamPulseSectionProps {
   members: MemberState[]
   stray: StrayRepo[]
   serviceNames: Record<string, string>
+  maxCards?: number
+  hideTitle?: boolean
+  /** Overview preview: compact cards + modal for full detail. */
+  compact?: boolean
 }
 
 function memberTasks(member: MemberState): MemberTaskState[] {
@@ -38,40 +45,80 @@ function memberTasks(member: MemberState): MemberTaskState[] {
   return []
 }
 
-export function TeamPulseSection({ members, stray, serviceNames }: TeamPulseSectionProps) {
+export function TeamPulseSection({
+  members,
+  stray,
+  serviceNames,
+  maxCards,
+  hideTitle,
+  compact,
+}: TeamPulseSectionProps) {
   const { t } = useTranslation()
+
+  const allCards = members.flatMap((member) => {
+    const tasks = memberTasks(member)
+    const cards: ReactNode[] = tasks.map((task) =>
+      compact ? (
+        <MemberCardCompact
+          key={`${member.alias}-${task.task_id}`}
+          member={member}
+          task={task}
+          serviceNames={serviceNames}
+        />
+      ) : (
+        <MemberCard
+          key={`${member.alias}-${task.task_id}`}
+          member={member}
+          task={task}
+          serviceNames={serviceNames}
+        />
+      )
+    )
+    if (member.research?.status === 'active') {
+      cards.push(
+        compact ? (
+          <ResearchCardCompact key={`${member.alias}-research`} member={member} />
+        ) : (
+          <ResearchCard key={`${member.alias}-research`} member={member} />
+        )
+      )
+    }
+    if (cards.length === 0) {
+      cards.push(
+        compact ? (
+          <MemberCardCompact key={member.alias} member={member} serviceNames={serviceNames} />
+        ) : (
+          <MemberCard key={member.alias} member={member} serviceNames={serviceNames} />
+        )
+      )
+    }
+    return cards
+  })
+  allCards.push(<UnassignedWorkCard key="stray" items={stray} />)
+
+  const visible = maxCards != null ? allCards.slice(0, maxCards) : allCards
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-          {t('pulse.title')}
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-            ({t('pulse.trackedCount', { count: members.length })})
-          </span>
-        </h2>
-      </div>
+      {!hideTitle && (
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            {t('pulse.title')}
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+              ({t('pulse.trackedCount', { count: members.length })})
+            </span>
+          </h2>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {members.flatMap((member) => {
-          const tasks = memberTasks(member)
-          const cards = tasks.map((task) => (
-            <MemberCard
-              key={`${member.alias}-${task.task_id}`}
-              member={member}
-              task={task}
-              serviceNames={serviceNames}
-            />
-          ))
-          if (member.research?.status === 'active') {
-            cards.push(<ResearchCard key={`${member.alias}-research`} member={member} />)
-          }
-          if (cards.length === 0) {
-            cards.push(<MemberCard key={member.alias} member={member} serviceNames={serviceNames} />)
-          }
-          return cards
-        })}
-        <UnassignedWorkCard items={stray} />
+      <div
+        className={
+          compact
+            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
+            : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+        }
+      >
+        {visible}
       </div>
     </section>
   )

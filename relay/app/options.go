@@ -7,7 +7,7 @@ import (
 	"relay/domain/gateway"
 	"relay/domain/marketplace"
 	"relay/domain/poll"
-	"relay/infra/settings"
+	"relay/infra/store"
 )
 
 // ConnectorInit builds a connector after Runtime and Config exist (secrets from marketplace).
@@ -17,13 +17,13 @@ type ConnectorInit func(runtime *config.Runtime, cfg Config) connector.Connector
 type Option func(*instanceOpts)
 
 // ActionRegistrar adds connector-specific on-demand actions (beyond auto poll_now).
-type ActionRegistrar func(reg *connector.ActionRegistry, gw *gateway.Gateway, runtime *config.Runtime, settings *settings.RelayConnectors, pollJobs []poll.Job)
+type ActionRegistrar func(reg *connector.ActionRegistry, gw *gateway.Gateway, runtime *config.Runtime, pollJobs []poll.Job)
 
 type instanceOpts struct {
 	connectors      []connector.Connector
 	connectorInits  []ConnectorInit
 	catalog         []marketplace.CatalogEntry
-	pollFactories   []func(*gateway.Gateway, *activity.Recorder) poll.Job
+	pollFactories   []func(*gateway.Gateway, *activity.Recorder, *store.EventStore) poll.Job
 	actionRegs      []ActionRegistrar
 }
 
@@ -49,7 +49,7 @@ func WithCatalogEntry(e marketplace.CatalogEntry) Option {
 	}
 }
 
-func WithPoll(factory func(*gateway.Gateway, *activity.Recorder) poll.Job) Option {
+func WithPoll(factory func(*gateway.Gateway, *activity.Recorder, *store.EventStore) poll.Job) Option {
 	return func(o *instanceOpts) {
 		if factory != nil {
 			o.pollFactories = append(o.pollFactories, factory)

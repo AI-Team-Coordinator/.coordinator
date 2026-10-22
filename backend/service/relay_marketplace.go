@@ -16,14 +16,14 @@ import (
 func (s *Service) GetRelayConnectorActivity(ctx context.Context, connectorID string, limit, offset int) (*relaydto.RelayConnectorActivityResponse, error) {
 	store, ok := s.repo.(relayAccessStore)
 	if !ok {
-		return &relaydto.RelayConnectorActivityResponse{Entries: nil, Total: 0, Limit: limit, Offset: offset}, nil
+		return &relaydto.RelayConnectorActivityResponse{Entries: []relaydto.RelayConnectorActivityEntry{}, Total: 0, Limit: limit, Offset: offset}, nil
 	}
 	access, err := store.GetRelayAccess(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if access == nil || access.URL == "" {
-		return &relaydto.RelayConnectorActivityResponse{Entries: nil, Total: 0, Limit: limit, Offset: offset}, nil
+		return &relaydto.RelayConnectorActivityResponse{Entries: []relaydto.RelayConnectorActivityEntry{}, Total: 0, Limit: limit, Offset: offset}, nil
 	}
 	if limit <= 0 || limit > 200 {
 		limit = 50
@@ -48,6 +48,9 @@ func (s *Service) GetRelayConnectorActivity(ctx context.Context, connectorID str
 	var out relaydto.RelayConnectorActivityResponse
 	if err := json.Unmarshal(data, &out); err != nil {
 		return nil, err
+	}
+	if out.Entries == nil {
+		out.Entries = []relaydto.RelayConnectorActivityEntry{}
 	}
 	return &out, nil
 }

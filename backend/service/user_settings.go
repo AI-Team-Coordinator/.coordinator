@@ -153,6 +153,18 @@ func (s *Service) SaveUserAvatar(ctx context.Context, data []byte) (*settingsdto
 	return s.GetUserSettings(ctx)
 }
 
+func (s *Service) ReadTeamAvatar(_ context.Context, alias string) ([]byte, error) {
+	alias = strings.ToUpper(strings.TrimSpace(alias))
+	if alias == "" {
+		return nil, os.ErrNotExist
+	}
+	files, ok := s.repo.(userSettingsFiles)
+	if !ok || !files.UserAvatarExists(alias) {
+		return nil, os.ErrNotExist
+	}
+	return files.ReadUserAvatar(alias)
+}
+
 func (s *Service) ReadUserAvatar(ctx context.Context) ([]byte, error) {
 	current, err := s.GetUserSettings(ctx)
 	if err != nil {

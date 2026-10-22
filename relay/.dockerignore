@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+.git
+README.md
+connectors/README.md
+.relay_pack_meta.json

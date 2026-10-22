@@ -25,11 +25,24 @@ interface TaskTableProps {
   filter: TasksFilter
   onFilterChange: (next: TasksFilter) => void
   onLoadMore: () => void
+  preview?: boolean
+  maxRows?: number
+  hideLoadMore?: boolean
 }
 
 const STATUS_MODES = ['all', 'in_progress', 'parked', 'completed'] as const
 
-export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoadMore }: TaskTableProps) {
+export function TaskTable({
+  tasks,
+  total,
+  members,
+  filter,
+  onFilterChange,
+  onLoadMore,
+  preview,
+  maxRows,
+  hideLoadMore,
+}: TaskTableProps) {
   const { t, i18n } = useTranslation()
 
   const namesByAlias = useMemo(() => {
@@ -72,60 +85,64 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
   const patch = (part: Partial<TasksFilter>) => onFilterChange({ ...filter, ...part })
   const statusMode = filter.status === '' ? 'all' : filter.status
 
-  return (
-    <Card className="p-6 space-y-4 bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/80">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('tasks.title')}</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('tasks.subtitle')}</p>
-          </div>
-          <div className="flex items-center space-x-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs self-start sm:self-auto">
-            {STATUS_MODES.map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => patch({ status: mode === 'all' ? '' : mode })}
-                className={`px-3 py-1 rounded-md transition-colors ${
-                  statusMode === mode
-                    ? 'bg-indigo-600 text-white font-medium shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {t(`tasks.status.${mode}`)}
-              </button>
-            ))}
-          </div>
-        </div>
+  const visibleTasks = maxRows != null ? tasks.slice(0, maxRows) : tasks
 
-        <div className="flex flex-wrap gap-2">
-          <Select
-            density="sm"
-            className="inline-block w-auto"
-            selectClassName="w-auto min-w-[7rem] bg-slate-50 dark:bg-slate-900"
-            value={filter.alias}
-            onChange={(e) => patch({ alias: e.target.value })}
-          >
-            <option value="">{t('timeline.filterAlias')}</option>
-            {people.map((alias) => (
-              <option key={alias} value={alias}>
-                {personName(alias)}
-              </option>
-            ))}
-          </Select>
-          <Select
-            density="sm"
-            className="inline-block w-auto"
-            selectClassName="w-auto min-w-[7rem] bg-slate-50 dark:bg-slate-900"
-            value={filter.kind}
-            onChange={(e) => patch({ kind: e.target.value as TasksFilter['kind'] })}
-          >
-            <option value="">{t('timeline.filterAll')}</option>
-            <option value="feature">{t('timeline.filterFeatures')}</option>
-            <option value="fix">{t('timeline.filterFixes')}</option>
-          </Select>
+  const body = (
+    <>
+      {!preview && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('tasks.title')}</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('tasks.subtitle')}</p>
+            </div>
+            <div className="flex items-center space-x-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs self-start sm:self-auto">
+              {STATUS_MODES.map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => patch({ status: mode === 'all' ? '' : mode })}
+                  className={`px-3 py-1 rounded-md transition-colors ${
+                    statusMode === mode
+                      ? 'bg-indigo-600 text-white font-medium shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {t(`tasks.status.${mode}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Select
+              density="sm"
+              className="inline-block w-auto"
+              selectClassName="w-auto min-w-[7rem] bg-slate-50 dark:bg-slate-900"
+              value={filter.alias}
+              onChange={(e) => patch({ alias: e.target.value })}
+            >
+              <option value="">{t('timeline.filterAlias')}</option>
+              {people.map((alias) => (
+                <option key={alias} value={alias}>
+                  {personName(alias)}
+                </option>
+              ))}
+            </Select>
+            <Select
+              density="sm"
+              className="inline-block w-auto"
+              selectClassName="w-auto min-w-[7rem] bg-slate-50 dark:bg-slate-900"
+              value={filter.kind}
+              onChange={(e) => patch({ kind: e.target.value as TasksFilter['kind'] })}
+            >
+              <option value="">{t('timeline.filterAll')}</option>
+              <option value="feature">{t('timeline.filterFeatures')}</option>
+              <option value="fix">{t('timeline.filterFixes')}</option>
+            </Select>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="overflow-x-auto -mx-2 sm:mx-0">
         <table className="w-full min-w-[720px] text-left text-xs">
@@ -141,14 +158,14 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-            {tasks.length === 0 ? (
+            {visibleTasks.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">
                   {t('tasks.empty')}
                 </td>
               </tr>
             ) : (
-              tasks.map((task) => {
+              visibleTasks.map((task) => {
                 const open = task.status === 'in_progress'
                 const parked = task.status === 'parked'
                 const whenTs = open || parked ? task.started_at : task.completed_at || task.started_at
@@ -242,15 +259,25 @@ export function TaskTable({ tasks, total, members, filter, onFilterChange, onLoa
         </table>
       </div>
 
-      <EvolutionForest tasks={tasks} />
+      {!preview && <EvolutionForest tasks={tasks} />}
 
-      {tasks.length < total && (
+      {!preview && !hideLoadMore && tasks.length < total && (
         <div className="pt-2">
           <Button variant="secondary" size="sm" onClick={onLoadMore}>
             {t('timeline.loadMore', { shown: tasks.length, total })}
           </Button>
         </div>
       )}
+    </>
+  )
+
+  if (preview) {
+    return body
+  }
+
+  return (
+    <Card className="p-6 space-y-4 bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800/80">
+      {body}
     </Card>
   )
 }

@@ -26,7 +26,7 @@ export function SectionNav({ section, onChange, teamDirty }: SectionNavProps) {
 
   return (
     <nav className="flex md:flex-col items-center justify-around md:justify-start gap-1 md:gap-2 p-2 md:p-3">
-      <div className="hidden md:flex pb-2 mb-1 border-b border-slate-200 dark:border-slate-800">
+      <div className="hidden md:flex pb-1 mb-1">
         <CoordinatorLogo size={40} />
       </div>
       {SECTIONS.map((id) => {

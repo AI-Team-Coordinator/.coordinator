@@ -3,6 +3,11 @@
     "title": "Team Coordinator",
     "liveSync": "Live Sync",
     "connecting": "Connecting...",
+    "apiSync": {
+      "loading": "Loading data…",
+      "live": "Live sync",
+      "offline": "API unavailable"
+    },
     "gathering": "Gathering workspace data…",
     "noAuthor": "This machine has no current person yet"
   },
@@ -44,7 +49,11 @@
   "radar": {
     "warning": "Conflict Detected",
     "notice": "Coordinator warning",
-    "affected": "Affected"
+    "affected": "Affected",
+    "zone": "zone",
+    "colTask": "Task",
+    "colBranch": "Branch",
+    "colSummary": "Summary"
   },
   "metrics": {
     "activeNow": "Active Now",
@@ -148,8 +157,17 @@
     "evolutionHint": "A fix lists related tasks; those edges make the tree. Reopening the same feature keeps one card.",
     "related": "Related"
   },
+  "overview": {
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "showAll": "View all",
+    "previewTotal": "{{count}} total",
+    "previewEmpty": "Nothing here yet.",
+    "back": "Back to overview"
+  },
   "pulse": {
     "title": "Team Pulse",
+    "subtitle": "Live slots, research, and stray repos.",
     "trackedCount": "{{count}} members tracked",
     "inProgress": "IN PROGRESS",
     "parked": "PARKED",
@@ -163,6 +181,8 @@
     "fix": "Fix",
     "feature": "Feature",
     "related": "Related",
+    "showMore": "Show more",
+    "cardDetailTitle": "Task details",
     "planShare": "Share of plan",
     "meter": "On-demand",
     "onDemand": "on-demand",
@@ -309,7 +329,29 @@
       "fieldSummary": "Summary",
       "fieldUrl": "URL",
       "fieldTags": "Tags",
-      "fieldData": "Data"
+      "fieldData": "Data",
+      "fieldTriage": "Triage",
+      "fieldAssigned": "Assigned to",
+      "fieldLinkedTask": "Task",
+      "needsReaction": "needs reaction",
+      "colTime": "Time",
+      "colSource": "Source",
+      "colKind": "Kind",
+      "colClass": "Class",
+      "colAction": "Action",
+      "colResult": "Result",
+      "actionRequired": "required",
+      "triageActions": "Team response",
+      "triageTake": "Take",
+      "triageResolve": "Resolve",
+      "triageDismiss": "Dismiss",
+      "linkedTaskPlaceholder": "task_id (optional)",
+      "triageStatus": {
+        "open": "Open",
+        "in_progress": "In progress",
+        "resolved": "Resolved",
+        "dismissed": "Dismissed"
+      }
     },
     "activity": {
       "title": "Connector activity log",
@@ -331,14 +373,30 @@
       "triggerScheduled": "scheduled",
       "pollCheckOk": "Check ({{trigger}}): {{checked}} models, all without a sunset date.",
       "pollCheckAllNoExpiration": "Check ({{trigger}}): {{checked}} models — none have an expiration date set.",
-      "pollCheckWithFindings": "Check ({{trigger}}): {{checked}} models; {{published}} event(s) to the bus (removed: {{removed}}, expired: {{expired}}, deprecating: {{deprecating}})."
+      "pollCheckWithFindings": "Check ({{trigger}}): {{checked}} models; {{published}} event(s) to the bus (removed: {{removed}}, expired: {{expired}}, deprecating: {{deprecating}}).",
+      "colTime": "Time",
+      "colConnector": "Connector",
+      "colKind": "Kind",
+      "colLevel": "Level",
+      "colResult": "Result",
+      "detailTitle": "Activity entry",
+      "close": "Close",
+      "fieldId": "id",
+      "fieldConnector": "connector_id",
+      "fieldKind": "kind",
+      "fieldLevel": "level",
+      "fieldCreated": "created_at",
+      "fieldSummary": "summary",
+      "fieldNarrative": "formatted",
+      "fieldDetail": "detail (JSON)"
     },
     "settings": {
       "open": "Relay settings",
       "title": "Relay settings",
       "subtitle": "Pairing with the team relay and issued API tokens. Connector secrets are configured on the marketplace page.",
       "back": "Back to connectors",
-      "scope": "Token scope: {{scope}}"
+      "scope": "Token scope: {{scope}}",
+      "readOnlyToken": "This token can read the relay but cannot save connector settings. Disconnect and pair again with the master bearer token from the relay host (.relay_bearer_token or RELAY_BEARER_TOKEN)."
     },
     "marketplace": {
       "title": "Connector marketplace",
@@ -372,6 +430,9 @@
       "nonSecretOnRelay": "Value loaded from relay (edit and Save to change).",
       "saveError": "Could not save connector settings.",
       "timeoutError": "Saving connector settings took too long (Coordinator → relay → Postgres). Check relay URL and master token in Relay settings, then retry.",
+      "needMasterToken": "Connector setup requires the relay master bearer token (not a read-only issued token). Open Relay settings, disconnect, and connect again with the master token.",
+      "saveNotPersisted": "Relay did not confirm the connector as enabled. Check the master token and retry.",
+      "savedConfigTitle": "Saved on relay",
       "openSettings": "Connector settings",
       "pollNow": "Check now",
       "pollRunning": "Checking…",

@@ -3,6 +3,11 @@
     "title": "Координатор команды",
     "liveSync": "Живой поток",
     "connecting": "Подключение...",
+    "apiSync": {
+      "loading": "Загрузка данных…",
+      "live": "Живой поток",
+      "offline": "API недоступен"
+    },
     "gathering": "Собираем данные воркспейса…",
     "noAuthor": "На этой машине ещё не выбран человек"
   },
@@ -44,7 +49,11 @@
   "radar": {
     "warning": "Обнаружен конфликт",
     "notice": "Предупреждение координатора",
-    "affected": "Затронуты"
+    "affected": "Затронуты",
+    "zone": "зона",
+    "colTask": "Задача",
+    "colBranch": "Ветка",
+    "colSummary": "Смысл"
   },
   "metrics": {
     "activeNow": "Сейчас в работе",
@@ -146,10 +155,21 @@
     },
     "evolution": "Эволюция",
     "evolutionHint": "Фикс указывает связанные задачи — из этих рёбер собирается дерево. Reopen той же фичи остаётся одной карточкой.",
-    "related": "Связано"
+    "related": "Связано",
+    "showMore": "Показать больше",
+    "cardDetailTitle": "Подробности задачи"
+  },
+  "overview": {
+    "showMore": "Показать ещё",
+    "showLess": "Свернуть",
+    "showAll": "Показать все",
+    "previewTotal": "всего {{count}}",
+    "previewEmpty": "Пока пусто.",
+    "back": "К обзору"
   },
   "pulse": {
     "title": "Пульс команды",
+    "subtitle": "Слоты, ресёрч и «бродячие» репозитории.",
     "trackedCount": "участников: {{count}}",
     "inProgress": "В РАБОТЕ",
     "parked": "ОТЛОЖЕНО",
@@ -309,7 +329,29 @@
       "fieldSummary": "Кратко",
       "fieldUrl": "URL",
       "fieldTags": "Теги",
-      "fieldData": "Data"
+      "fieldData": "Data",
+      "fieldTriage": "Обработка",
+      "fieldAssigned": "В работе у",
+      "fieldLinkedTask": "Задача",
+      "needsReaction": "нужна реакция",
+      "colTime": "Время",
+      "colSource": "Источник",
+      "colKind": "kind",
+      "colClass": "class",
+      "colAction": "Действие",
+      "colResult": "Результат",
+      "actionRequired": "нужно",
+      "triageActions": "Реакция команды",
+      "triageTake": "Взять в работу",
+      "triageResolve": "Обработано",
+      "triageDismiss": "Отклонить",
+      "linkedTaskPlaceholder": "task_id (опционально)",
+      "triageStatus": {
+        "open": "Актуально",
+        "in_progress": "В работе",
+        "resolved": "Обработано",
+        "dismissed": "Отклонено"
+      }
     },
     "activity": {
       "title": "Лог активности коннекторов",
@@ -331,14 +373,30 @@
       "triggerScheduled": "по расписанию",
       "pollCheckOk": "Проверка ({{trigger}}): {{checked}} моделей, без срока снятия у всех.",
       "pollCheckAllNoExpiration": "Проверка ({{trigger}}): {{checked}} моделей — ни у одной нет установленного срока жизни.",
-      "pollCheckWithFindings": "Проверка ({{trigger}}): {{checked}} моделей; в шину — {{published}} событий (снято с каталога: {{removed}}, истекло: {{expired}}, скоро: {{deprecating}})."
+      "pollCheckWithFindings": "Проверка ({{trigger}}): {{checked}} моделей; в шину — {{published}} событий (снято с каталога: {{removed}}, истекло: {{expired}}, скоро: {{deprecating}}).",
+      "colTime": "Время",
+      "colConnector": "Коннектор",
+      "colKind": "kind",
+      "colLevel": "level",
+      "colResult": "Результат",
+      "detailTitle": "Запись activity log",
+      "close": "Закрыть",
+      "fieldId": "id",
+      "fieldConnector": "connector_id",
+      "fieldKind": "kind",
+      "fieldLevel": "level",
+      "fieldCreated": "created_at",
+      "fieldSummary": "summary",
+      "fieldNarrative": "форматированный текст",
+      "fieldDetail": "detail (JSON)"
     },
     "settings": {
       "open": "Настройки реле",
       "title": "Настройки реле",
       "subtitle": "Подключение к командному relay и выдача API-токенов. Секреты коннекторов настраиваются на странице маркетплейса.",
       "back": "К коннекторам",
-      "scope": "Scope токена: {{scope}}"
+      "scope": "Scope токена: {{scope}}",
+      "readOnlyToken": "Этот токен только читает relay и не может сохранять настройки коннекторов. Отключитесь и подключитесь снова с master bearer token с хоста relay (.relay_bearer_token или RELAY_BEARER_TOKEN)."
     },
     "marketplace": {
       "title": "Маркетплейс коннекторов",
@@ -372,6 +430,9 @@
       "nonSecretOnRelay": "Значение с relay (измените и нажмите «Сохранить»).",
       "saveError": "Не удалось сохранить настройки коннектора.",
       "timeoutError": "Сохранение настроек коннектора заняло слишком долго (Coordinator → relay → Postgres). Проверьте URL и master-токен в настройках relay и повторите.",
+      "needMasterToken": "Для настройки коннектора нужен master bearer token relay (не read-only issued token). В настройках relay отключитесь и подключитесь снова с master-токеном.",
+      "saveNotPersisted": "Relay не подтвердил включение коннектора. Проверьте master-токен и повторите.",
+      "savedConfigTitle": "Сохранено на relay",
       "openSettings": "Настройки коннектора",
       "pollNow": "Проверить сейчас",
       "pollRunning": "Проверка…",

@@ -15,16 +15,16 @@ export function ChatTabs({ chats }: ChatTabsProps) {
 
   return (
     <div>
-      <div className="text-[10px] font-medium uppercase tracking-wider text-violet-500 dark:text-violet-400/80 mb-1">
+      <div className="text-[10px] font-medium uppercase tracking-wider text-violet-500 dark:text-violet-400/80 mb-2">
         {label}
       </div>
-      <div className="flex flex-wrap gap-1 border-b border-violet-200/80 dark:border-violet-800/50">
+      <div className="flex flex-wrap gap-1.5">
         {chats.map((chat, index) => {
           const name = (chat.title || '').trim() || t('pulse.unnamedChat')
           return (
             <span
               key={chat.session_id || `${name}-${index}`}
-              className="inline-flex max-w-full items-center gap-1.5 rounded-t-md border border-b-0 border-violet-200 dark:border-violet-800/70 bg-violet-50 dark:bg-violet-950/60 px-2.5 py-[5px] text-[11px] font-medium leading-tight text-violet-900 dark:text-violet-100"
+              className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-violet-200 dark:border-violet-800/70 bg-violet-50 dark:bg-violet-950/60 px-2.5 py-1.5 text-[11px] font-medium leading-snug text-violet-900 dark:text-violet-100"
               title={name}
             >
               <MessageSquare className="w-3 h-3 shrink-0 text-violet-500 dark:text-violet-300" />

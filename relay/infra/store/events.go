@@ -66,6 +66,30 @@ func (s *EventStore) Insert(ctx context.Context, ev model.ExternalEvent) error {
 	return err
 }
 
+// HasSourceExternalID reports whether this fact was already persisted (idempotent publish).
+func (s *EventStore) HasSourceExternalID(ctx context.Context, source, externalID string) (bool, error) {
+	if s == nil || s.db == nil {
+		return false, nil
+	}
+	source = strings.TrimSpace(source)
+	externalID = strings.TrimSpace(externalID)
+	if source == "" || externalID == "" {
+		return false, nil
+	}
+	var one int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT 1 FROM external_events WHERE source = $1 AND external_id = $2 LIMIT 1`,
+		source, externalID,
+	).Scan(&one)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func parseTime(raw string) time.Time {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

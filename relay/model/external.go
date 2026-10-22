@@ -18,8 +18,9 @@ type ExternalEvent struct {
 	Title         string         `json:"title,omitempty"`
 	Summary       string         `json:"summary,omitempty"`
 	URL           string         `json:"url,omitempty"`
-	Tags          []string       `json:"tags,omitempty"`
-	Data          map[string]any `json:"data,omitempty"`
+	Tags              []string       `json:"tags,omitempty"`
+	Data              map[string]any `json:"data,omitempty"`
+	RequiresReaction  bool           `json:"requires_reaction,omitempty"`
 }
 
 // Seal fills schema version and defaults before the bus writes the line.

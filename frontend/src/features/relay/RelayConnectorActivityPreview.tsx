@@ -1,38 +1,38 @@
 import { ClipboardList } from 'lucide-react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '../../shared/ui/Button'
+import { OverviewPreviewBlock, OVERVIEW_EXPANDED_ROWS } from '../overview/OverviewPreviewBlock'
 import { ConnectorActivityTable } from './ConnectorActivityTable'
 import { relayActivityHash } from './relayNav'
 import { useConnectorActivity } from './useConnectorActivity'
 
-const PREVIEW_LIMIT = 15
-
 export function RelayConnectorActivityPreview() {
   const { t } = useTranslation()
-  const { data, loading, error } = useConnectorActivity(PREVIEW_LIMIT, 0, '')
-
-  const openAll = () => {
-    window.location.hash = relayActivityHash()
-  }
+  const [fetchLimit, setFetchLimit] = useState(OVERVIEW_EXPANDED_ROWS)
+  const bumpLimit = useCallback((visible: number) => {
+    setFetchLimit((prev) => Math.max(prev, visible))
+  }, [])
+  const { data, loading, error } = useConnectorActivity(fetchLimit, 0, '', true)
 
   return (
-    <div className="rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-950/40 p-5 space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <ClipboardList className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t('relay.activity.title')}</h3>
-          {data && (
-            <span className="text-xs text-slate-500">{t('relay.activity.total', { count: data.total })}</span>
+    <OverviewPreviewBlock
+      title={t('relay.activity.title')}
+      icon={<ClipboardList className="w-4 h-4 text-sky-600 dark:text-sky-400" />}
+      total={data?.total}
+      empty={(data?.total ?? 0) === 0 && !loading}
+      showAllHash={relayActivityHash()}
+      loadedCount={data?.entries.length}
+      onVisibleRowsChange={bumpLimit}
+    >
+      {(visibleCount) => (
+        <>
+          {loading && <p className="text-sm text-slate-500">{t('relay.activity.loading')}</p>}
+          {error && <p className="text-xs text-rose-600">{t('relay.activity.loadError')}</p>}
+          {!loading && !error && data && (
+            <ConnectorActivityTable entries={data.entries.slice(0, visibleCount)} compact />
           )}
-        </div>
-        <Button size="sm" variant="outline" onClick={openAll}>
-          {t('relay.activity.viewAll')}
-        </Button>
-      </div>
-      <p className="text-sm text-slate-500 dark:text-slate-400">{t('relay.activity.previewHelp')}</p>
-      {loading && <p className="text-sm text-slate-500">{t('relay.activity.loading')}</p>}
-      {error && <p className="text-xs text-rose-600">{t('relay.activity.loadError')}</p>}
-      {!loading && !error && data && <ConnectorActivityTable entries={data.entries} compact />}
-    </div>
+        </>
+      )}
+    </OverviewPreviewBlock>
   )
 }

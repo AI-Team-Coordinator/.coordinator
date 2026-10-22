@@ -1,5 +1,5 @@
 import { Settings, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../../shared/api/client'
 import { Button } from '../../shared/ui/Button'
@@ -31,6 +31,17 @@ export function RelayConnectorActionsModal({
   const [actionMsg, setActionMsg] = useState('')
   const [actionError, setActionError] = useState(false)
   const activity = useConnectorActivity(8, 0, tile.id)
+  const [coreBaseUrl, setCoreBaseUrl] = useState('')
+
+  useEffect(() => {
+    fetch(`${api.relayConnectorConfig(tile.id)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg: { non_secret?: Record<string, unknown> } | null) => {
+        const raw = cfg?.non_secret?.core_base_url
+        setCoreBaseUrl(raw !== undefined && raw !== null ? String(raw) : '')
+      })
+      .catch(() => setCoreBaseUrl(''))
+  }, [tile.id])
 
   const actions = useMemo(() => {
     if (tile.actions?.length) {
@@ -143,6 +154,15 @@ export function RelayConnectorActionsModal({
                   {actionMsg}
                 </p>
               )}
+            </div>
+          )}
+
+          {coreBaseUrl && (
+            <div className="space-y-1">
+              <p className="text-[11px] uppercase tracking-wide text-slate-500">Core base URL</p>
+              <code className="block text-[11px] break-all rounded-lg bg-slate-100 dark:bg-slate-900 p-2 text-slate-700 dark:text-slate-300">
+                {coreBaseUrl}
+              </code>
             </div>
           )}
 

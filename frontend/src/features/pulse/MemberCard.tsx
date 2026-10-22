@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Check, Clock, GitBranch, Pause } from 'lucide-react'
+import { Copy, Check, GitBranch } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '../../shared/ui/Card'
 import { Badge } from '../../shared/ui/Badge'
@@ -8,45 +8,52 @@ import { hasUsageSpend, SharedQuotaIcon, UsageSpend } from '../../shared/ui/Usag
 import { TaskDocLink } from '../docs/TaskDocLink'
 import { RelatedLinks } from '../docs/RelatedLinks'
 import { ChatTabs } from './ChatTabs'
+import { claimBadge } from './claimBadge'
+import { MemberAvatar } from './MemberAvatar'
+import { MemberCardHeader, MemberCardIdleFooter } from './MemberCardHeader'
+import { cn } from '../../shared/lib/utils'
+import { memberCardState } from './memberCardState'
 import type { ChatTab, MemberState, MemberTaskState } from '../../shared/types/api'
 
 interface MemberCardProps {
   member: MemberState
   serviceNames: Record<string, string>
   task?: MemberTaskState
+  /** Inside detail modal: no outer Card shell. */
+  embedded?: boolean
 }
 
-export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
+export function MemberCard({ member, serviceNames, task, embedded }: MemberCardProps) {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
-  const fromTask = Boolean(task)
-  const isParked = fromTask ? task?.status === 'parked' : member.status === 'parked'
-  const isActive = Boolean(task) || (!task && (member.status === 'in_progress' || member.status === 'parked'))
-  const isBusy = isActive
-  const taskId = fromTask ? task?.task_id : member.task_id
-  const branch = fromTask ? task?.branch : member.branch
-  const summary = fromTask ? task?.task_summary : member.task_summary
-  const isFix = Boolean(taskId && (taskId.startsWith('FIX-') || (branch && branch.startsWith('fix/'))))
+  const state = memberCardState(member, task)
+  const {
+    isParked,
+    isActive,
+    isBusy,
+    taskId,
+    branch,
+    summary,
+    isFix,
+    claimed,
+    hasDoc,
+    clockPaused,
+  } = state
   const roleLabel = member.role ? t(`pulse.roles.${member.role}`, { defaultValue: member.role }) : ''
   const accessLabel = member.access === 'admin' ? t('setup.accessAdmin') : ''
-  const claimed = (fromTask ? task?.services : member.services) || []
   const claimedLabels = claimed.map((id) => ({ id, label: claimBadge(id, serviceNames) }))
-  const repos = (fromTask ? task?.repos : member.repos) || []
+  const repos = (task ? task?.repos : member.repos) || []
   const workspaceRepos = repos.filter((repo) => repo.kind === 'workspace')
   const productRepos = repos.filter((repo) => repo.kind !== 'workspace')
   const showInfraHint = productRepos.length === 0 && (workspaceRepos.length > 0 || (isActive && claimed.length > 0))
-  const taskTitle = fromTask
-    ? task?.task_title || task?.task_id || ''
-    : member.task_title || member.task_id || ''
-  const duration = fromTask ? task?.duration_seconds : member.duration_seconds
-  const budget = fromTask ? task?.budget_usd : member.budget_usd
-  const ondemand = fromTask ? task?.ondemand_usd : member.ondemand_usd
-  const cursorModelsPct = fromTask ? task?.cursor_models_pct : member.cursor_models_pct
-  const otherModelsPct = fromTask ? task?.other_models_pct : member.other_models_pct
-  const spendKind = fromTask ? task?.spend_kind : member.spend_kind
-  const spendShared = fromTask ? task?.spend_shared : member.spend_shared
-  const clockPaused = fromTask ? Boolean(task?.clock_paused) : Boolean(member.clock_paused)
+  const duration = task ? task?.duration_seconds : member.duration_seconds
+  const budget = task ? task?.budget_usd : member.budget_usd
+  const ondemand = task ? task?.ondemand_usd : member.ondemand_usd
+  const cursorModelsPct = task ? task?.cursor_models_pct : member.cursor_models_pct
+  const otherModelsPct = task ? task?.other_models_pct : member.other_models_pct
+  const spendKind = task ? task?.spend_kind : member.spend_kind
+  const spendShared = task ? task?.spend_shared : member.spend_shared
 
   const copyBranch = () => {
     if (branch) {
@@ -56,67 +63,27 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
     }
   }
 
-  return (
-    <Card
-      className={`p-5 transition-all duration-200 ${
-        isParked
-          ? 'border-amber-400/70 dark:border-amber-500/40 bg-white/80 dark:bg-slate-900/80 shadow-md shadow-amber-500/5 opacity-90'
-          : isBusy
-            ? 'border-indigo-400/60 dark:border-indigo-500/40 bg-white/90 dark:bg-slate-900/90 shadow-md shadow-indigo-500/5'
-            : 'bg-slate-50/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800/60 opacity-80 hover:opacity-100'
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          {isActive && taskTitle ? (
-            <h3 className="font-semibold text-slate-900 dark:text-white text-sm leading-snug truncate" title={taskTitle}>
-              {taskTitle}
-            </h3>
-          ) : (
-            <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{member.name}</h3>
-          )}
-          {isActive && summary ? (
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug line-clamp-2" title={summary}>
-              {summary}
-            </p>
-          ) : null}
-          {isActive && ((task?.related_tasks && task.related_tasks.length > 0) || (task?.related_docs && task.related_docs.length > 0)) ? (
-            <div className="mt-1">
-              <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t('pulse.related')}</div>
-              <RelatedLinks taskIds={task?.related_tasks} docs={task?.related_docs} />
-            </div>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {isParked ? (
-            <Badge variant="warning" className="font-bold text-[10px]">
-              <Pause className="w-3 h-3 mr-1" />
-              {t('pulse.parked')}
-            </Badge>
-          ) : isActive ? (
-            <Badge variant="success" className="font-bold text-[10px]">
-              ● {t('pulse.inProgress')}
-            </Badge>
-          ) : (
-            <Badge variant="neutral" className="font-bold text-[10px]">
-              ○ {t('pulse.idle')}
-            </Badge>
-          )}
-          {isActive && clockPaused ? (
-            <span title={t('pulse.clockPaused')}>
-              <Clock
-                className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400"
-                aria-label={t('pulse.clockPaused')}
-              />
-            </span>
-          ) : null}
-        </div>
-      </div>
+  const Wrapper = embedded ? 'div' : Card
 
-      <div className="mt-2 flex items-center space-x-2">
-        <div className="w-7 h-7 rounded-full bg-indigo-50 dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 flex items-center justify-center font-bold text-[11px] text-indigo-600 dark:text-indigo-300 shrink-0">
-          {member.alias}
+  return (
+    <Wrapper
+      className={cn('min-w-0 flex flex-col', embedded ? 'gap-4' : 'gap-3 p-5')}
+    >
+      <MemberCardHeader member={member} state={state} />
+      {isActive && summary ? (
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3" title={summary}>
+          {summary}
+        </p>
+      ) : null}
+      {isActive && ((task?.related_tasks && task.related_tasks.length > 0) || (task?.related_docs && task.related_docs.length > 0)) ? (
+        <div className="space-y-1">
+          <div className="text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{t('pulse.related')}</div>
+          <RelatedLinks taskIds={task?.related_tasks} docs={task?.related_docs} />
         </div>
+      ) : null}
+
+      <div className="flex items-center gap-2 min-w-0">
+        <MemberAvatar alias={member.alias} avatarUrl={member.avatar_url} className="w-7 h-7" />
         <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
           {member.name}
           {' · '}@{member.alias}
@@ -125,7 +92,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
         </div>
       </div>
       {member.crews && member.crews.length > 0 ? (
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1">
           {member.crews.map((id) => (
             <Badge key={id} variant="neutral" className="text-[10px] font-mono">
               {id}
@@ -134,14 +101,10 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
         </div>
       ) : null}
 
-      {isActive ? (
-        <div className="mt-3">
-          <ChatTabs chats={taskChats(task)} />
-        </div>
-      ) : null}
+      {isActive ? <ChatTabs chats={taskChats(task)} /> : null}
 
       {repos.length > 0 ? (
-        <div className="mt-3 space-y-1.5">
+        <div className="space-y-1.5">
           {showInfraHint && (
             <div className="text-[11px] text-slate-500 dark:text-slate-400">{t('pulse.infraHint')}</div>
           )}
@@ -180,7 +143,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
           })}
         </div>
       ) : isActive && claimedLabels.length > 0 ? (
-        <div className="mt-3 space-y-1.5">
+        <div className="space-y-1.5">
           {showInfraHint && (
             <div className="text-[11px] text-slate-500 dark:text-slate-400">{t('pulse.infraHint')}</div>
           )}
@@ -195,7 +158,7 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
       ) : null}
 
       {isActive ? (
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500 dark:text-slate-400">{t('pulse.duration')}:</span>
             <span className="inline-flex items-center gap-1.5">
@@ -254,23 +217,20 @@ export function MemberCard({ member, serviceNames, task }: MemberCardProps) {
               <Badge variant={isFix ? 'warning' : 'default'} className="text-[10px] uppercase">
                 {isFix ? t('pulse.fix') : t('pulse.feature')}
               </Badge>
-              <TaskDocLink
-                taskId={taskId}
-                className="text-xs text-slate-800 dark:text-slate-200"
-              >
-                {taskId}
-              </TaskDocLink>
+              {hasDoc && taskId ? (
+                <TaskDocLink taskId={taskId} className="text-xs text-slate-800 dark:text-slate-200">
+                  {taskId}
+                </TaskDocLink>
+              ) : (
+                <span className="font-mono text-xs text-slate-800 dark:text-slate-200 truncate">{taskId}</span>
+              )}
             </div>
           </div>
         </div>
       ) : null}
 
-      {!isBusy ? (
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/40 text-xs text-slate-400 dark:text-slate-500 italic">
-          {t('pulse.noActiveTask')}
-        </div>
-      ) : null}
-    </Card>
+      <MemberCardIdleFooter isBusy={isBusy} />
+    </Wrapper>
   )
 }
 
@@ -287,8 +247,3 @@ function taskChats(task?: MemberTaskState): ChatTab[] | undefined {
   }))
 }
 
-function claimBadge(raw: string, serviceNames: Record<string, string>): string {
-  const [head, ...rest] = raw.split('/')
-  const name = serviceNames[head] || serviceNames[head.replace(/^\./, '')] || serviceNames[raw] || head
-  return rest.length > 0 ? `${name}/${rest.join('/')}` : name
-}

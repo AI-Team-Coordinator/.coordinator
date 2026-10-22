@@ -8,28 +8,28 @@ import (
 
 	"relay/domain/activity"
 	"relay/domain/config"
+	"relay/domain/connectorconfig"
 	"relay/domain/gateway"
 	"relay/infra"
-	"relay/infra/settings"
 )
 
 // Job runs on a schedule for one connector source id.
 type Job struct {
 	SourceID string
-	Interval func(file settings.ConnectorsFile, id string) time.Duration
-	Run      func(ctx context.Context, runtime *config.Runtime, settings *settings.RelayConnectors) error
+	Interval func(cfg *connectorconfig.Service, id string) time.Duration
+	Run      func(ctx context.Context, runtime *config.Runtime) error
 }
 
 // Start launches all jobs until ctx is cancelled.
-func Start(ctx context.Context, gw *gateway.Gateway, runtime *config.Runtime, relaySettings *settings.RelayConnectors, _ *activity.Recorder, jobs []Job) {
-	if gw == nil || runtime == nil || relaySettings == nil {
+func Start(ctx context.Context, gw *gateway.Gateway, runtime *config.Runtime, _ *activity.Recorder, jobs []Job) {
+	if gw == nil || runtime == nil {
 		return
 	}
 	for _, job := range jobs {
 		if job.Run == nil {
 			continue
 		}
-		go runLoop(ctx, gw, runtime, relaySettings, job)
+		go runLoop(ctx, runtime, job)
 	}
 }
 
@@ -45,7 +45,7 @@ func FindJob(jobs []Job, sourceID string) (Job, bool) {
 }
 
 // RunNow executes one poll cycle immediately (HTTP trigger from Coordinator).
-func RunNow(ctx context.Context, runtime *config.Runtime, relaySettings *settings.RelayConnectors, job Job) error {
+func RunNow(ctx context.Context, runtime *config.Runtime, job Job) error {
 	if job.Run == nil {
 		return fmt.Errorf("poll job has no runner")
 	}
@@ -53,27 +53,22 @@ func RunNow(ctx context.Context, runtime *config.Runtime, relaySettings *setting
 		return fmt.Errorf("connector is not enabled")
 	}
 	ctx = activity.WithTrigger(ctx, activity.TriggerManual)
-	return job.Run(ctx, runtime, relaySettings)
+	return job.Run(ctx, runtime)
 }
 
-func runLoop(ctx context.Context, gw *gateway.Gateway, runtime *config.Runtime, relaySettings *settings.RelayConnectors, job Job) {
+func runLoop(ctx context.Context, runtime *config.Runtime, job Job) {
 	tick := func() {
 		if !runtime.Enabled(job.SourceID) {
 			return
 		}
 		runCtx := activity.WithTrigger(ctx, activity.TriggerScheduled)
-		if err := job.Run(runCtx, runtime, relaySettings); err != nil {
+		if err := job.Run(runCtx, runtime); err != nil {
 			infra.LogWarn("poll %s: %v", job.SourceID, err)
 		}
 	}
-	file, err := relaySettings.Load()
-	if err != nil {
-		infra.LogWarn("poll %s settings: %v", job.SourceID, err)
-		return
-	}
 	interval := 24 * time.Hour
-	if job.Interval != nil {
-		interval = job.Interval(file, job.SourceID)
+	if job.Interval != nil && runtime.Config != nil {
+		interval = job.Interval(runtime.Config, job.SourceID)
 	}
 	if interval < time.Minute {
 		interval = time.Minute

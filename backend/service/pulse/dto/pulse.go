@@ -5,6 +5,7 @@ import "time"
 type MemberResponse struct {
 	Alias           string               `json:"alias"`
 	Name            string               `json:"name"`
+	AvatarURL       string               `json:"avatar_url,omitempty"`
 	Role            string               `json:"role,omitempty"`
 	Access          string               `json:"access,omitempty"`
 	Focus           []string             `json:"focus,omitempty"`
@@ -55,6 +56,7 @@ type MemberTaskResponse struct {
 	Agents          []AgentResponse    `json:"agents,omitempty"`
 	RelatedTasks    []string           `json:"related_tasks,omitempty"`
 	RelatedDocs     []string           `json:"related_docs,omitempty"`
+	HasDoc          bool               `json:"has_doc,omitempty"`
 }
 
 type AgentResponse struct {
@@ -94,26 +96,49 @@ type RepoWorkResponse struct {
 	Deployed bool   `json:"deployed,omitempty"`
 }
 
+type ConflictTaskResponse struct {
+	Alias    string `json:"alias,omitempty"`
+	TaskID   string `json:"task_id"`
+	Branch   string `json:"branch,omitempty"`
+	Title    string `json:"title,omitempty"`
+	DocTitle string `json:"doc_title,omitempty"`
+	HasDoc   bool   `json:"has_doc,omitempty"`
+}
+
 type ConflictResponse struct {
-	Severity        string   `json:"severity"`
-	Title           string   `json:"title"`
-	Description     string   `json:"description"`
-	AffectedAliases []string `json:"affected_aliases"`
+	Severity        string                 `json:"severity"`
+	Title           string                 `json:"title"`
+	Description     string                 `json:"description"`
+	AffectedAliases []string               `json:"affected_aliases"`
+	Service         string                 `json:"service,omitempty"`
+	Tasks           []ConflictTaskResponse `json:"tasks,omitempty"`
+}
+
+type ExternalEventTriageResponse struct {
+	Status        string `json:"status"`
+	AssignedAlias string `json:"assigned_alias,omitempty"`
+	AssignedAt    string `json:"assigned_at,omitempty"`
+	LinkedTaskID  string `json:"linked_task_id,omitempty"`
+	ResolvedBy    string `json:"resolved_by,omitempty"`
+	ResolvedAt    string `json:"resolved_at,omitempty"`
+	DismissNote   string `json:"dismiss_note,omitempty"`
 }
 
 type ExternalEventResponse struct {
-	ID         string         `json:"id"`
-	Source     string         `json:"source"`
-	ExternalID string         `json:"external_id,omitempty"`
-	Class      string         `json:"class"`
-	Kind       string         `json:"kind"`
-	Title      string         `json:"title,omitempty"`
-	Summary    string         `json:"summary,omitempty"`
-	URL        string         `json:"url,omitempty"`
-	ReceivedAt string         `json:"received_at,omitempty"`
-	OccurredAt string         `json:"occurred_at,omitempty"`
-	Tags       []string       `json:"tags,omitempty"`
-	Data       map[string]any `json:"data,omitempty"`
+	ID               string                       `json:"id"`
+	Source           string                       `json:"source"`
+	ExternalID       string                       `json:"external_id,omitempty"`
+	Class            string                       `json:"class"`
+	Kind             string                       `json:"kind"`
+	Title            string                       `json:"title,omitempty"`
+	Summary          string                       `json:"summary,omitempty"`
+	URL              string                       `json:"url,omitempty"`
+	ReceivedAt       string                       `json:"received_at,omitempty"`
+	OccurredAt       string                       `json:"occurred_at,omitempty"`
+	Tags             []string                     `json:"tags,omitempty"`
+	Data             map[string]any               `json:"data,omitempty"`
+	RequiresReaction bool                         `json:"requires_reaction,omitempty"`
+	Triage           *ExternalEventTriageResponse `json:"triage,omitempty"`
 }
 
 type PulseExternalResponse struct {

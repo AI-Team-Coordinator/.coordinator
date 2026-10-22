@@ -11,7 +11,11 @@ import { useConnectorActivity } from './useConnectorActivity'
 
 const PAGE_SIZE = 30
 
-export function RelayConnectorActivityPage() {
+interface RelayConnectorActivityPageProps {
+  backHash?: string
+}
+
+export function RelayConnectorActivityPage({ backHash }: RelayConnectorActivityPageProps = {} as RelayConnectorActivityPageProps) {
   const { t } = useTranslation()
   const [connectorId, setConnectorId] = useState('')
   const [offset, setOffset] = useState(0)
@@ -40,7 +44,7 @@ export function RelayConnectorActivityPage() {
   const canNext = offset + PAGE_SIZE < total
 
   const goBack = () => {
-    window.location.hash = relayMainHash()
+    window.location.hash = backHash ?? relayMainHash()
   }
 
   const onConnectorChange = (value: string) => {
@@ -61,7 +65,6 @@ export function RelayConnectorActivityPage() {
 
       <div>
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('relay.activity.allTitle')}</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">{t('relay.activity.allHelp')}</p>
       </div>
 
       <div className="flex flex-wrap items-end gap-4">

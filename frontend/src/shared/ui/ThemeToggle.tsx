@@ -15,7 +15,7 @@ export function ThemeToggle() {
   ]
 
   return (
-    <div className="flex items-center p-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60">
+    <div className="flex items-center h-9 p-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60">
       {options.map((opt) => {
         const Icon = opt.icon
         const isActive = theme === opt.value

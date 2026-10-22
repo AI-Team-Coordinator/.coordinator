@@ -96,6 +96,10 @@ Pulse: members[] + conflicts[] + stray[] + external.events[] + external.knowledg
 
 Позже на конверте: `crew_id`, `task_id`, `alias` — когда Relay замапит на команду/слот.
 
+**Triage и реакция (Координатор, не Relay):** статус «актуально / в работе / обработано», `requires_reaction`, привязка к `assigned_alias` и `linked_task_id` — overlay только в `.coordinator`. Шина хранит факт; Relay при повторном poll triage не трогает. Спека: [EXTERNAL_EVENT_TRIAGE.md](../../../Common/docs/CoordinatorRelay/20261021-2224-EK-EXTERNAL_EVENT_TRIAGE.md) (часть A).
+
+**Идемпотентность poll «не слать каждый день одно предупреждение»** — не правило pack, а **коннектор Alina Assist** `llm_model_lifecycle` в `.coordinator-relay/connectors/` (часть B того же документа).
+
 ### ExternalKnowledge
 
 Снимок, не лог: страница Confluence, выжимка epic. Markdown/текст + `updated_at` + `external_id`. Не зеркало wiki.

@@ -29,6 +29,10 @@ type CoordinatorRepository interface {
 	SyncSettings(ctx context.Context, alias string) (*model.SyncResult, error)
 	GetTaskDoc(ctx context.Context, taskID string) (*model.TaskDoc, error)
 	TaskTitle(ctx context.Context, taskID string) string
+	UserAvatarExists(alias string) bool
+	ReadUserAvatar(alias string) ([]byte, error)
+	// TaskDocHeading is the doc H1 when a task markdown file exists (humanized slug if the file has no H1).
+	TaskDocHeading(ctx context.Context, taskID string) (heading string, hasDoc bool)
 	ListWorkTasks(ctx context.Context) ([]model.WorkTask, error)
 	AppendEvent(ctx context.Context, ev model.Event) error
 	LoadExternalEvents() ([]ExternalEventRow, error)

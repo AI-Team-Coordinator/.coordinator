@@ -38,3 +38,24 @@ export function formatConnectorActivityText(entry: ConnectorActivityEntry, t: TF
   }
   return entry.summary
 }
+
+/** Compact technical one-liner for table cells. */
+export function formatConnectorActivityShort(entry: ConnectorActivityEntry): string {
+  const d = entry.detail
+  if (entry.kind === 'poll_check' && d) {
+    const trigger = d.trigger === 'manual' ? 'manual' : d.trigger === 'scheduled' ? 'scheduled' : String(d.trigger ?? '?')
+    const checked = num(d, 'models_checked')
+    const published = num(d, 'events_published') ?? 0
+    const removed = num(d, 'removed') ?? 0
+    const expired = num(d, 'expired') ?? 0
+    const deprecating = num(d, 'deprecating') ?? 0
+    const noExp = num(d, 'no_expiration')
+    let s = `trigger=${trigger}`
+    if (checked !== undefined) s += ` models_checked=${checked}`
+    if (noExp !== undefined) s += ` no_expiration=${noExp}`
+    s += ` published=${published} removed=${removed} expired=${expired} deprecating=${deprecating}`
+    return s
+  }
+  if (entry.summary.trim()) return entry.summary.trim()
+  return entry.kind
+}

@@ -889,12 +889,22 @@ func agentsOfSlot(person string, slot model.MemberTask) []identity.Agent {
 func overlapsAsConflicts(xs []claims.Overlap) []model.Conflict {
 	out := make([]model.Conflict, 0, len(xs))
 	for _, x := range xs {
+		tasks := make([]model.ConflictTask, 0, len(x.Slots))
+		for _, s := range x.Slots {
+			tasks = append(tasks, model.ConflictTask{
+				Alias:  s.Person,
+				TaskID: s.TaskID,
+				Branch: s.Branch,
+				Title:  s.Title,
+			})
+		}
 		out = append(out, model.Conflict{
 			Severity:        x.Severity,
 			Title:           x.Title,
 			Description:     x.Description,
 			AffectedAliases: x.Aliases,
 			Service:         x.Service,
+			Tasks:           tasks,
 		})
 	}
 	return out

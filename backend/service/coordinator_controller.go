@@ -332,6 +332,37 @@ func (c *Controller) GetExternalEvents(w http.ResponseWriter, r *http.Request) {
 	infra.ReturnJSON(w, http.StatusOK, out)
 }
 
+func (c *Controller) PatchExternalEventTriage(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var req PatchExternalEventTriageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		infra.ReturnError(w, "E400", "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	alias, err := c.service.CurrentAuthorAlias(r.Context())
+	if err != nil {
+		var vErr *validate.Error
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.ReturnError(w, "E500", "Failed to resolve author", http.StatusInternalServerError)
+		return
+	}
+	out, err := c.service.PatchExternalEventTriage(r.Context(), req, alias)
+	if err != nil {
+		var vErr *validate.Error
+		if errors.As(err, &vErr) {
+			infra.ReturnError(w, "E400", vErr.Msg, http.StatusBadRequest)
+			return
+		}
+		infra.LogError("PatchExternalEventTriage failed: %v", err)
+		infra.ReturnError(w, "E500", "Failed to update triage", http.StatusInternalServerError)
+		return
+	}
+	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
 func (c *Controller) GetEvents(w http.ResponseWriter, r *http.Request) {
 	query, err := parseEventsQuery(r)
 	if err != nil {
@@ -463,6 +494,22 @@ func (c *Controller) PutUserSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	infra.ReturnJSON(w, http.StatusOK, out)
+}
+
+func (c *Controller) GetTeamAvatar(w http.ResponseWriter, r *http.Request) {
+	alias := strings.TrimSpace(r.PathValue("alias"))
+	if alias == "" {
+		http.NotFound(w, r)
+		return
+	}
+	data, err := c.service.ReadTeamAvatar(r.Context(), alias)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Cache-Control", "private, max-age=300")
+	_, _ = w.Write(data)
 }
 
 func (c *Controller) GetUserAvatar(w http.ResponseWriter, r *http.Request) {

@@ -144,6 +144,9 @@ func TestDetectConflictsParallelSlotOverlap(t *testing.T) {
 	if len(got) != 1 || got[0].Title != "Parallel Slot Overlap" {
 		t.Fatalf("got %+v", got)
 	}
+	if len(got[0].Tasks) != 2 {
+		t.Fatalf("expected 2 conflict tasks, got %+v", got[0].Tasks)
+	}
 }
 
 func TestDetectConflictsParallelCoordinatorAndCoreOK(t *testing.T) {

@@ -11,12 +11,16 @@ import { useExternalEvents } from './useExternalEvents'
 
 const PAGE_SIZE = 30
 
-export function RelayExternalEventsPage() {
+interface RelayExternalEventsPageProps {
+  backHash?: string
+}
+
+export function RelayExternalEventsPage({ backHash }: RelayExternalEventsPageProps = {} as RelayExternalEventsPageProps) {
   const { t } = useTranslation()
   const [source, setSource] = useState('')
   const [offset, setOffset] = useState(0)
   const [selected, setSelected] = useState<ExternalEvent | null>(null)
-  const { data, loading, error } = useExternalEvents(PAGE_SIZE, offset, source)
+  const { data, loading, error, reload } = useExternalEvents(PAGE_SIZE, offset, source)
 
   const sourceOptions = useMemo(() => {
     const opts = [{ value: '', label: t('relay.events.filterAll') }]
@@ -33,7 +37,7 @@ export function RelayExternalEventsPage() {
   const canNext = offset + PAGE_SIZE < total
 
   const goBack = () => {
-    window.location.hash = relayMainHash()
+    window.location.hash = backHash ?? relayMainHash()
   }
 
   const onSourceChange = (value: string) => {
@@ -88,7 +92,13 @@ export function RelayExternalEventsPage() {
         </Button>
       </div>
 
-      {selected && <ExternalEventDetailModal event={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <ExternalEventDetailModal
+          event={selected}
+          onClose={() => setSelected(null)}
+          onTriageChanged={reload}
+        />
+      )}
     </div>
   )
 }
