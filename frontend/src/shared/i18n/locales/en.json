@@ -167,6 +167,7 @@
   },
   "pulse": {
     "title": "Team Pulse",
+    "loading": "Loading team pulse…",
     "subtitle": "Live slots, research, and stray repos.",
     "trackedCount": "{{count}} members tracked",
     "inProgress": "IN PROGRESS",
@@ -581,6 +582,7 @@
     "branch": "Branch",
     "services": "Services",
     "slots": "Slots",
+    "columnEmpty": "Nothing here",
     "status": {
       "all": "All",
       "backlog": "Backlog",

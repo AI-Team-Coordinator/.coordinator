@@ -5,16 +5,18 @@ import type { StrayRepo } from '../../shared/types/api'
 
 interface UnassignedWorkCardProps {
   items: StrayRepo[]
+  /** Overview pulse: span below the member card grid. */
+  fullWidth?: boolean
 }
 
-export function UnassignedWorkCard({ items }: UnassignedWorkCardProps) {
+export function UnassignedWorkCard({ items, fullWidth }: UnassignedWorkCardProps) {
   const { t } = useTranslation()
   if (items.length === 0) {
     return null
   }
 
   return (
-    <Card className="p-5 md:col-span-2 lg:col-span-1">
+    <Card className={fullWidth ? 'p-5 w-full' : 'p-5 md:col-span-2 lg:col-span-1'}>
       <div className="flex items-center justify-between gap-2 mb-3">
         <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{t('pulse.strayTitle')}</h3>
         <Badge variant="warning" className="text-[10px] font-medium">

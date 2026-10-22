@@ -169,6 +169,7 @@
   },
   "pulse": {
     "title": "Пульс команды",
+    "loading": "Загрузка Pulse…",
     "subtitle": "Слоты, ресёрч и «бродячие» репозитории.",
     "trackedCount": "участников: {{count}}",
     "inProgress": "В РАБОТЕ",
@@ -581,6 +582,7 @@
     "branch": "Ветка",
     "services": "Сервисы",
     "slots": "Слоты",
+    "columnEmpty": "Пусто",
     "status": {
       "all": "Все",
       "backlog": "Бэклог",

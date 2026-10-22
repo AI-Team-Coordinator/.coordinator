@@ -7,6 +7,7 @@ import { NextStepCard } from '../setup/NextStepCard'
 import { PersonalConsumptionChart } from '../stats/PersonalConsumptionChart'
 import { TaskTable, type TasksFilter } from '../stats/TaskTable'
 import { TeamPulseSection } from '../pulse/TeamPulseSection'
+import { TeamPulseLoading } from '../pulse/TeamPulseLoading'
 import { ActivityTimeline, type EventsFilter } from '../timeline/ActivityTimeline'
 import { ExternalSignalsCard } from '../pulse/ExternalSignalsCard'
 import { ConnectorActivityTable } from '../relay/ConnectorActivityTable'
@@ -67,6 +68,7 @@ export interface OverviewSectionProps {
   onEventsFilterChange: (next: EventsFilter) => void
   onEventsLoadMore: () => void
   profile: ProjectProfile | null
+  pulseLoading?: boolean
 }
 
 export function OverviewSection(props: OverviewSectionProps) {
@@ -97,11 +99,15 @@ export function OverviewSection(props: OverviewSectionProps) {
   if (subview === 'pulse') {
     return (
       <OverviewSubpageShell title={t('pulse.title')} subtitle={t('pulse.subtitle')}>
-        <TeamPulseSection
-          members={props.members}
-          stray={props.stray}
-          serviceNames={props.serviceNames}
-        />
+        {props.pulseLoading ? (
+          <TeamPulseLoading />
+        ) : (
+          <TeamPulseSection
+            members={props.members}
+            stray={props.stray}
+            serviceNames={props.serviceNames}
+          />
+        )}
       </OverviewSubpageShell>
     )
   }
@@ -175,20 +181,24 @@ export function OverviewSection(props: OverviewSectionProps) {
         expandedRows={OVERVIEW_PULSE_EXPANDED_ROWS}
         title={t('pulse.title')}
         icon={<Users className="w-5 h-5 text-indigo-500 shrink-0" />}
-        total={pulseCardTotal}
-        empty={pulseCardTotal === 0}
+        total={props.pulseLoading ? undefined : pulseCardTotal}
+        empty={!props.pulseLoading && pulseCardTotal === 0}
         showAllHash={overviewPulseHash()}
       >
-        {(visibleCount) => (
-          <TeamPulseSection
-            compact
-            members={props.members}
-            stray={props.stray}
-            serviceNames={props.serviceNames}
-            maxCards={visibleCount}
-            hideTitle
-          />
-        )}
+        {(visibleCount) =>
+          props.pulseLoading ? (
+            <TeamPulseLoading compact />
+          ) : (
+            <TeamPulseSection
+              compact
+              members={props.members}
+              stray={props.stray}
+              serviceNames={props.serviceNames}
+              maxCards={visibleCount}
+              hideTitle
+            />
+          )
+        }
       </OverviewPreviewBlock>
 
       {showTasks && (

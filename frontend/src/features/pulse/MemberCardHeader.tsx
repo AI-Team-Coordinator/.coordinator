@@ -1,42 +1,61 @@
 import { Clock, Pause } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '../../shared/ui/Badge'
+import { cn } from '../../shared/lib/utils'
 import type { MemberState } from '../../shared/types/api'
 import type { MemberCardState } from './memberCardState'
 
 interface MemberCardHeaderProps {
   member: MemberState
   state: MemberCardState
+  /** Overview compact cards: icon-only in progress / parked badges. */
+  compact?: boolean
 }
 
 /** First row of a pulse member card: title + status badge (unchanged across compact/full). */
-export function MemberCardHeader({ member, state }: MemberCardHeaderProps) {
+export function MemberCardHeader({ member, state, compact }: MemberCardHeaderProps) {
   const { t } = useTranslation()
   const { isParked, isActive, taskTitle, clockPaused } = state
+  const parkedLabel = t('pulse.parked')
+  const inProgressLabel = t('pulse.inProgress')
 
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex items-start justify-between gap-2">
       <div className="min-w-0 flex-1">
         {isActive && taskTitle ? (
           <h3
-            className="font-semibold text-slate-900 dark:text-white text-sm leading-snug truncate pr-1"
+            className="font-semibold text-slate-900 dark:text-white text-sm leading-snug truncate"
             title={taskTitle}
           >
             {taskTitle}
           </h3>
         ) : (
-          <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{member.name}</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white text-sm truncate">{member.name}</h3>
         )}
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         {isParked ? (
-          <Badge variant="warning" className="font-bold text-[10px]">
-            <Pause className="w-3 h-3 mr-1" />
-            {t('pulse.parked')}
+          <Badge
+            variant="warning"
+            className={compact ? 'px-1 py-0.5' : 'font-bold text-[10px]'}
+            title={parkedLabel}
+            aria-label={parkedLabel}
+          >
+            <Pause className={cn('w-3 h-3', !compact && 'mr-1')} />
+            {!compact && parkedLabel}
           </Badge>
         ) : isActive ? (
-          <Badge variant="success" className="font-bold text-[10px]">
-            ● {t('pulse.inProgress')}
+          <Badge
+            variant="success"
+            className={compact ? 'px-1.5 py-0.5' : 'font-bold text-[10px]'}
+            title={inProgressLabel}
+            aria-label={inProgressLabel}
+          >
+            {compact ? (
+              <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400 block" aria-hidden />
+            ) : (
+              <>● {inProgressLabel}</>
+            )}
           </Badge>
         ) : (
           <Badge variant="neutral" className="font-bold text-[10px]">

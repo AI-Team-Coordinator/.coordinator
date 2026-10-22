@@ -76,6 +76,7 @@ export function App() {
   const [tasksTotal, setTasksTotal] = useState(0)
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
   const [workItemsReady, setWorkItemsReady] = useState(false)
+  const [pulseReady, setPulseReady] = useState(false)
   const [tasksFilter, setTasksFilter] = useState<TasksFilter>({ status: '', alias: '', kind: '' })
   const tasksFilterRef = useRef(tasksFilter)
   tasksFilterRef.current = tasksFilter
@@ -212,6 +213,7 @@ export function App() {
       }
 
       try {
+        setPulseReady(false)
         const eventsUrl = eventsURL(eventsFilter)
         const tasksUrl = tasksURL(tasksFilter)
 
@@ -233,6 +235,7 @@ export function App() {
             setConflicts(pulse.conflicts || [])
             setStray(pulse.stray || [])
             setExternalEvents(pulse.external?.events || [])
+            setPulseReady(true)
           }),
           run('stats', 'load-stats', t('loading.stats'), api.stats, (data) => {
             const envelope = data as StatsEnvelope
@@ -256,6 +259,7 @@ export function App() {
       } catch (err) {
         console.error('Failed to load dashboard data:', err)
         setApiSync('offline')
+        setPulseReady(true)
       }
     },
     [track, t, eventsFilter, tasksFilter]
@@ -573,7 +577,7 @@ export function App() {
           <Header apiSync={apiSync} profile={profile} currentUser={currentUser} />
 
           {section === 'work' && (
-            <WorkItemsSection items={workItems} loading={!workItemsReady} />
+            <WorkItemsSection items={workItems} members={members} loading={!workItemsReady} />
           )}
 
           {section === 'overview' && (
@@ -600,6 +604,7 @@ export function App() {
               onEventsFilterChange={onEventsFilter}
               onEventsLoadMore={onEventsLoadMore}
               profile={profile}
+              pulseLoading={!pulseReady}
             />
           )}
 

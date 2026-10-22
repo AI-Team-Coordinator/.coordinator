@@ -39,7 +39,7 @@ export function MemberCardCompact({ member, serviceNames, task }: MemberCardComp
           }
         }}
       >
-        <MemberCardHeader member={member} state={state} />
+        <MemberCardHeader member={member} state={state} compact />
 
         <div className="flex items-center gap-2 min-w-0">
           <MemberAvatar alias={member.alias} avatarUrl={member.avatar_url} className="w-7 h-7" />

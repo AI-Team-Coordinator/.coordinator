@@ -55,7 +55,7 @@ export function TeamPulseSection({
 }: TeamPulseSectionProps) {
   const { t } = useTranslation()
 
-  const allCards = members.flatMap((member) => {
+  const memberCards = members.flatMap((member) => {
     const tasks = memberTasks(member)
     const cards: ReactNode[] = tasks.map((task) =>
       compact ? (
@@ -94,9 +94,12 @@ export function TeamPulseSection({
     }
     return cards
   })
-  allCards.push(<UnassignedWorkCard key="stray" items={stray} />)
 
-  const visible = maxCards != null ? allCards.slice(0, maxCards) : allCards
+  const hasStray = stray.length > 0
+  const memberLimit =
+    maxCards == null ? memberCards.length : Math.min(memberCards.length, maxCards)
+  const visibleMembers = memberCards.slice(0, memberLimit)
+  const showStrayFullWidth = hasStray && (maxCards == null || maxCards > memberCards.length)
 
   return (
     <section className="space-y-4">
@@ -111,14 +114,17 @@ export function TeamPulseSection({
         </div>
       )}
 
-      <div
-        className={
-          compact
-            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
-            : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
-        }
-      >
-        {visible}
+      <div className="space-y-3">
+        <div
+          className={
+            compact
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
+              : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+          }
+        >
+          {visibleMembers}
+        </div>
+        {showStrayFullWidth ? <UnassignedWorkCard items={stray} fullWidth /> : null}
       </div>
     </section>
   )

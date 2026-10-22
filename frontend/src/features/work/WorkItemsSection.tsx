@@ -1,129 +1,94 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { WorkItem } from '../../shared/types/api'
+import type { MemberState, WorkItem } from '../../shared/types/api'
 import { cn } from '../../shared/lib/utils'
+import { WorkItemKanbanCard } from './WorkItemKanbanCard'
 
-type StatusFilter = '' | 'backlog' | 'open' | 'done'
+const COLUMNS = ['backlog', 'open', 'done'] as const
+type ColumnKey = (typeof COLUMNS)[number]
+
+const COLUMN_STYLES: Record<ColumnKey, string> = {
+  backlog: 'border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/30',
+  open: 'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20',
+  done: 'border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/40',
+}
+
+const COLUMN_HEADER: Record<ColumnKey, string> = {
+  backlog: 'text-slate-600 dark:text-slate-400',
+  open: 'text-emerald-800 dark:text-emerald-300',
+  done: 'text-slate-500 dark:text-slate-500',
+}
 
 interface WorkItemsSectionProps {
   items: WorkItem[]
+  members?: MemberState[]
   loading?: boolean
 }
 
-export function WorkItemsSection({ items: allItems, loading = false }: WorkItemsSectionProps) {
+export function WorkItemsSection({ items: allItems, members = [], loading = false }: WorkItemsSectionProps) {
   const { t } = useTranslation()
-  const [status, setStatus] = useState<StatusFilter>('')
 
-  const items = useMemo(() => {
-    if (!status) return allItems
-    return allItems.filter((item) => item.status === status)
-  }, [allItems, status])
+  const avatarByAlias = useMemo(() => {
+    const m = new Map<string, string | undefined>()
+    for (const member of members) {
+      m.set(member.alias, member.avatar_url)
+    }
+    return m
+  }, [members])
 
-  const grouped = useMemo(() => {
-    const order = ['open', 'backlog', 'done'] as const
-    const buckets: Record<string, WorkItem[]> = { open: [], backlog: [], done: [] }
-    for (const item of items) {
-      const key = item.status in buckets ? item.status : 'backlog'
+  const columns = useMemo(() => {
+    const buckets: Record<ColumnKey, WorkItem[]> = { backlog: [], open: [], done: [] }
+    for (const item of allItems) {
+      const key: ColumnKey =
+        item.status === 'open' || item.status === 'done' ? (item.status as ColumnKey) : 'backlog'
       buckets[key].push(item)
     }
-    return order.map((k) => ({ key: k, rows: buckets[k] }))
-  }, [items])
+    return COLUMNS.map((key) => ({ key, rows: buckets[key] }))
+  }, [allItems])
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('work.title')}</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">{t('work.subtitle')}</p>
-        </div>
-        <div className="flex gap-1 rounded-lg border border-slate-200 dark:border-slate-700 p-1">
-          {(['', 'open', 'backlog', 'done'] as StatusFilter[]).map((s) => (
-            <button
-              key={s || 'all'}
-              type="button"
-              onClick={() => setStatus(s)}
-              className={cn(
-                'px-3 py-1 text-xs rounded-md font-medium transition-colors',
-                status === s
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              )}
-            >
-              {s ? t(`work.status.${s}`) : t('work.status.all')}
-            </button>
-          ))}
-        </div>
+      <div>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('work.title')}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('work.subtitle')}</p>
       </div>
 
       {loading ? (
         <p className="text-sm text-slate-500">{t('work.loading')}</p>
-      ) : items.length === 0 ? (
+      ) : allItems.length === 0 ? (
         <p className="text-sm text-slate-500">{t('work.empty')}</p>
       ) : (
-        <div className="space-y-6">
-          {grouped.map(
-            ({ key, rows }) =>
-              rows.length > 0 && (
-                <section key={key}>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                    {t(`work.status.${key}`)} ({rows.length})
-                  </h3>
-                  <ul className="space-y-2">
-                    {rows.map((item) => (
-                      <li
-                        key={item.task_id}
-                        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-4"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <p className="font-medium text-slate-900 dark:text-slate-100">
-                              {item.title || item.summary || item.task_id}
-                            </p>
-                            <p className="text-xs text-slate-500 font-mono mt-0.5">{item.task_id}</p>
-                          </div>
-                          <span
-                            className={cn(
-                              'text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full',
-                              item.status === 'open' && 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
-                              item.status === 'backlog' && 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-                              item.status === 'done' && 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                            )}
-                          >
-                            {t(`work.status.${item.status}`)}
-                          </span>
-                        </div>
-                        <dl className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-600 dark:text-slate-400">
-                          {item.assignee && (
-                            <div>
-                              <dt className="text-slate-400">{t('work.assignee')}</dt>
-                              <dd className="font-medium">{item.assignee}</dd>
-                            </div>
-                          )}
-                          {item.branch && (
-                            <div>
-                              <dt className="text-slate-400">{t('work.branch')}</dt>
-                              <dd className="font-mono">{item.branch}</dd>
-                            </div>
-                          )}
-                          {item.services && item.services.length > 0 && (
-                            <div className="col-span-2">
-                              <dt className="text-slate-400">{t('work.services')}</dt>
-                              <dd>{item.services.join(', ')}</dd>
-                            </div>
-                          )}
-                        </dl>
-                        {item.slots && item.slots.length > 0 && (
-                          <p className="mt-2 text-xs text-slate-500">
-                            {t('work.slots')}:{' '}
-                            {item.slots.map((s) => `${s.alias} (${s.status})`).join(' · ')}
-                          </p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )
-          )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start min-w-0">
+          {columns.map(({ key, rows }) => (
+            <section
+              key={key}
+              className={cn(
+                'rounded-xl border flex flex-col min-h-[12rem] max-h-[calc(100vh-12rem)] min-w-0 overflow-hidden',
+                COLUMN_STYLES[key]
+              )}
+            >
+              <header
+                className={cn(
+                  'shrink-0 px-3 py-2.5 border-b border-inherit flex items-center justify-between gap-2',
+                  COLUMN_HEADER[key]
+                )}
+              >
+                <h3 className="text-xs font-semibold uppercase tracking-wide">{t(`work.status.${key}`)}</h3>
+                <span className="text-xs font-medium tabular-nums">{rows.length}</span>
+              </header>
+              <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-2 space-y-2">
+                {rows.length === 0 ? (
+                  <p className="text-xs text-slate-400 dark:text-slate-500 px-1 py-4 text-center">
+                    {t('work.columnEmpty')}
+                  </p>
+                ) : (
+                  rows.map((item) => (
+                    <WorkItemKanbanCard key={item.task_id} item={item} avatarByAlias={avatarByAlias} />
+                  ))
+                )}
+              </div>
+            </section>
+          ))}
         </div>
       )}
     </div>

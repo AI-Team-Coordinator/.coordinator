@@ -9,7 +9,7 @@ function memberTasks(member: MemberState): MemberTaskState[] {
 }
 
 /** Matches card count in TeamPulseSection (including UnassignedWorkCard). */
-export function countPulseCards(members: MemberState[], _stray: StrayRepo[]): number {
+export function countPulseCards(members: MemberState[], stray: StrayRepo[]): number {
   let n = 0
   for (const member of members) {
     const tasks = memberTasks(member)
@@ -17,5 +17,6 @@ export function countPulseCards(members: MemberState[], _stray: StrayRepo[]): nu
     else n += 1
     if (member.research?.status === 'active') n += 1
   }
-  return n + 1
+  if (stray.length > 0) n += 1
+  return n
 }
